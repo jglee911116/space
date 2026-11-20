@@ -1,0 +1,190 @@
+import { useMemo } from 'react';
+import { BackSide, type Texture } from 'three';
+import { spatialNoise } from './shaders';
+
+const vertex = /* glsl */ `
+  varying vec3 boxPoint;
+
+  void main() {
+    boxPoint = position;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const crabDensity = /* glsl */ `
+  vec4 density(vec3 p) {
+    float shape = length(p / vec3(0.91, 0.94, 0.77));
+    if (shape > 1.08) return vec4(0.0);
+
+    // The Webb image supplies color and fine structure. Depth comes from
+    // the asymmetric 3D density field, with different sampling on the two sides.
+    float mass = noise(p * 4.4 + vec3(2.0, -3.0, 7.0));
+    vec3 warp = p + 0.12 * vec3(mass - 0.5, sin(p.z * 5.0 + p.x * 3.0), cos(p.y * 5.0 - p.x * 4.0));
+    vec2 uv = 0.5 + vec2(warp.x + warp.z * 0.23, warp.y - warp.z * 0.13) * 0.46;
+    vec3 mapped = texture2D(observation, clamp(uv, 0.002, 0.998)).rgb;
+    float brightness = dot(mapped, vec3(0.2126, 0.7152, 0.0722));
+    float shellDistance = shape - 0.70 - 0.16 * (mass - 0.5);
+    float shell = exp(-18.0 * shellDistance * shellDistance);
+    float envelope = (1.0 - smoothstep(0.72, 1.07, shape)) * smoothstep(0.16, 0.67, mass);
+    float cloud = smoothstep(0.20, 0.72, noise(warp * vec3(8.0, 11.0, 10.0)));
+    float thread = 1.0 - smoothstep(0.0, 0.16, abs(noise(warp * 17.0) - 0.51));
+    float gas = envelope * (0.45 + 0.65 * cloud) * (0.22 + brightness * 0.95);
+    float filaments = envelope * shell * thread * smoothstep(0.34, 0.70, cloud);
+    vec3 blue = mix(vec3(0.027, 0.15, 0.26), vec3(0.19, 0.53, 0.74), brightness);
+    vec3 color = mix(blue, mapped * 1.35, 0.71);
+    color = mix(color, mix(vec3(0.55, 0.16, 0.050), vec3(1.0, 0.57, 0.28), cloud), clamp(filaments * 2.7, 0.0, 0.83));
+    return vec4(color, gas * 2.2 + filaments * 1.6);
+  }
+`;
+
+const ringDensity = /* glsl */ `
+  vec4 density(vec3 p) {
+    // An inclined open barrel, with irregular walls and open ends.
+    vec3 q = vec3(p.x, p.y * 0.94 + p.z * 0.342, p.z * 0.94 - p.y * 0.342);
+    float radial = length(q.xy / vec2(1.0, 0.88));
+    float axial = abs(q.z);
+    if (radial > 0.97 || axial > 0.79) return vec4(0.0);
+    float knots = noise(q * 13.0);
+    float surface = radial - 0.56 - 0.12 * axial - (knots - 0.5) * 0.052;
+    float shell = exp(-132.0 * surface * surface) * (1.0 - smoothstep(0.30, 0.64, axial));
+    float outer = radial - 0.76;
+    float halo = 0.23 * exp(-118.0 * outer * outer) * (1.0 - smoothstep(0.19, 0.53, axial));
+    float inner = 1.0 - smoothstep(0.38, 1.0, length(q / vec3(0.31, 0.28, 0.78)));
+    vec2 uv = 0.5 + (p.xy + vec2(q.z * 0.14, -q.z * 0.11) + 0.07 * vec2(knots - 0.5, noise(q * 9.0) - 0.5)) * 0.48;
+    vec3 image = texture2D(observation, clamp(uv, 0.002, 0.998), 1.6).rgb;
+    float detail = noise(q * 27.0);
+    vec3 base = mix(vec3(0.023, 0.43, 0.52), vec3(0.85, 0.31, 0.18), smoothstep(-0.02, 0.16, surface));
+    vec3 color = mix(base, image * 1.35, 0.44);
+    return vec4(color, (5.8 * shell + 2.0 * halo + 0.26 * inner) * (0.31 + 0.69 * knots) * (0.52 + 0.66 * detail));
+  }
+`;
+
+const pillarsDensity = /* glsl */ `
+  float column(vec3 p, vec2 base, float height, float width, vec2 bend) {
+    float y = (p.y + 0.75) / height;
+    if (y < -0.18 || y > 1.02) return 0.0;
+    float t = clamp(y, 0.0, 1.0);
+    vec2 axis = base + bend * t + vec2(0.08 * sin(t * 4.1), -0.06 * sin(t * 5.4));
+    float radius = width * (1.25 - 0.60 * t + 0.15 * sin(t * 14.0));
+    radius *= sqrt(max(0.03, 1.0 - pow(smoothstep(0.84, 1.0, t), 2.0)));
+    float boundary = length((p.xz - axis) / vec2(1.0, 0.86)) / radius + 0.28 * (noise(p * 18.0) - 0.5);
+    return (1.0 - smoothstep(0.49, 1.22, boundary)) * smoothstep(-0.16, 0.03, y) * (1.0 - smoothstep(0.97, 1.02, y));
+  }
+
+  vec4 density(vec3 p) {
+    float pillars = max(column(p, vec2(-0.58, -0.12), 1.58, 0.24, vec2(0.65, 0.11)),
+                        column(p, vec2(-0.05, 0.39), 1.19, 0.155, vec2(0.53, -0.11)));
+    pillars = max(pillars, column(p, vec2(0.32, -0.43), 0.82, 0.14, vec2(0.46, 0.14)));
+    float base = 0.50 * (1.0 - smoothstep(0.46, 1.0, length(vec3(p.x * 1.12, (p.y + 0.82) * 4.2, p.z * 1.35))));
+    if (pillars + base < 0.002) return vec4(0.0);
+    float turbulence = noise(p * vec3(26.0, 15.0, 23.0));
+    float clumps = noise(p * 9.0);
+    vec2 uv = 0.5 + (p.xy + vec2(p.z * 0.18, -p.z * 0.12) + vec2(turbulence - 0.5, clumps - 0.5) * 0.10) * 0.49;
+    vec3 image = texture2D(observation, clamp(uv, 0.002, 0.998), 1.8).rgb;
+    float rim = (1.0 - smoothstep(0.12, 0.81, pillars)) * (0.4 + 0.6 * turbulence);
+    vec3 dust = mix(vec3(0.24, 0.077, 0.035), vec3(0.88, 0.43, 0.16), rim);
+    vec3 color = mix(dust, image * 1.25, 0.32 + 0.16 * clumps);
+    return vec4(color, (pillars * 13.5 + base * 3.2) * (0.28 + 0.90 * turbulence + 0.31 * clumps));
+  }
+`;
+
+const ejectaDensity = /* glsl */ `
+  float ringBand(vec3 p, float radius, float height, float width) {
+    float radial = (length(p.xy / vec2(1.0, 0.91)) - radius) / width;
+    float axial = (p.z - height) / (width * 0.78);
+    return exp(-(radial * radial + axial * axial) * 2.0);
+  }
+
+  vec4 density(vec3 p) {
+    vec3 q = vec3(p.x, p.y * 0.72 + p.z * 0.69, p.z * 0.72 - p.y * 0.69);
+    if (length(q) > 0.98) return vec4(0.0);
+    float knots = noise(q * 18.0);
+    float brightRing = ringBand(q, 0.44, 0.0, 0.089);
+    float outer = ringBand(q + vec3(0.10, 0.0, 0.0), 0.54, 0.43, 0.063)
+                + ringBand(q - vec3(0.08, 0.0, 0.0), 0.54, -0.43, 0.063);
+    float core = 1.0 - smoothstep(0.13, 1.0, length(q / vec3(0.25, 0.24, 0.23)));
+    vec3 image = texture2D(observation, clamp(0.5 + p.xy * 0.49, 0.002, 0.998), 2.0).rgb;
+    vec3 line = mix(vec3(0.75, 0.22, 0.08), vec3(1.0, 0.67, 0.31), knots);
+    vec3 color = mix(line, image * 1.55, clamp(brightRing * 0.42 + core * 0.48, 0.0, 0.72));
+    return vec4(color, brightRing * (8.0 + 17.0 * knots) + outer * (2.2 + knots * 2.2) + core * 1.7);
+  }
+`;
+
+const stellarNurseryDensity = /* glsl */ `
+  vec4 density(vec3 p) {
+    float shape = length(p / vec3(0.96, 0.91, 0.73));
+    if (shape > 1.03) return vec4(0.0);
+    float mass = noise(p * 4.2);
+    vec3 warp = p + vec3(noise(p * 5.0 + 9.0), mass, noise(p * 5.0 + 15.0)) * 0.20 - 0.10;
+    vec2 uv = 0.5 + warp.xy * 0.49 + warp.z * vec2(0.18, -0.11);
+    vec3 image = texture2D(observation, clamp(uv, 0.002, 0.998), 1.8).rgb;
+    float clumps = smoothstep(0.29, 0.73, noise(warp * vec3(10.0, 14.0, 12.0)));
+    float envelope = (1.0 - smoothstep(0.61, 1.03, shape)) * smoothstep(0.18, 0.77, mass);
+    float cavity = smoothstep(0.14, 0.68, length((warp - vec3(0.17, 0.05, 0.08)) * vec3(1.2, 1.0, 1.36)));
+    vec3 dust = mix(vec3(0.085, 0.12, 0.27), vec3(0.74, 0.28, 0.13), clumps);
+    vec3 color = mix(dust, image * 1.60, 0.57);
+    return vec4(color, 5.5 * envelope * cavity * (0.24 + 0.76 * clumps));
+  }
+`;
+
+const densityByShape = { crab: crabDensity, ring: ringDensity, pillars: pillarsDensity, ejecta: ejectaDensity, nursery: stellarNurseryDensity };
+export type NebulaVolumeShape = keyof typeof densityByShape;
+
+function fragment(shape: NebulaVolumeShape) {
+  return /* glsl */ `
+  varying vec3 boxPoint;
+  uniform sampler2D observation;
+  uniform float radius;
+
+  ${spatialNoise}
+  ${shape === 'crab' ? '#define CRAB_VOLUME' : ''}
+  ${densityByShape[shape]}
+
+  void main() {
+    vec3 eye = cameraPosition / radius;
+    vec3 direction = normalize(boxPoint - eye);
+    vec3 inverseDirection = 1.0 / (direction + vec3(0.000001));
+    vec3 a = (-1.0 - eye) * inverseDirection;
+    vec3 b = ( 1.0 - eye) * inverseDirection;
+    vec3 entry = min(a, b);
+    vec3 exit = max(a, b);
+    float start = max(0.0, max(entry.x, max(entry.y, entry.z)));
+    float end = min(exit.x, min(exit.y, exit.z));
+    if (end <= start) discard;
+
+    const int steps = 44;
+    float stepSize = (end - start) / float(steps);
+    vec3 accumulated = vec3(0.0);
+    float transmission = 1.0;
+    float sampleOffset = 0.5;
+    #ifndef CRAB_VOLUME
+      // Stagger samples across pixels to avoid visible slices at grazing angles.
+      sampleOffset = 0.17 + 0.66 * fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+    #endif
+    for (int i = 0; i < steps; ++i) {
+      vec3 p = eye + direction * (start + (float(i) + sampleOffset) * stepSize);
+      vec4 samplePoint = density(p);
+      float alpha = 1.0 - exp(-stepSize * samplePoint.a);
+      accumulated += transmission * alpha * samplePoint.rgb;
+      transmission *= 1.0 - alpha;
+      if (transmission < 0.02) break;
+    }
+
+    float opacity = 1.0 - transmission;
+    gl_FragColor = vec4(accumulated / max(opacity, 0.001), opacity);
+    #include <colorspace_fragment>
+  }
+`;
+}
+
+export function NebulaVolume({ texture, radius, shape }: { texture: Texture; radius: number; shape: NebulaVolumeShape }) {
+  const uniforms = useMemo(() => ({ observation: { value: texture }, radius: { value: radius } }), [texture, radius]);
+
+  const fragmentShader = useMemo(() => fragment(shape), [shape]);
+  return (
+    <mesh scale={radius} raycast={() => {}}>
+      <boxGeometry args={[2, 2, 2]} />
+      <shaderMaterial uniforms={uniforms} vertexShader={vertex} fragmentShader={fragmentShader} transparent depthWrite={false} depthTest={false} side={BackSide} />
+    </mesh>
+  );
+}

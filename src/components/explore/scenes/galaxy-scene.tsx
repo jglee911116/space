@@ -7,6 +7,9 @@ import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } f
 import { Color, MathUtils, Vector3, type Group, type Points, type ShaderMaterial } from 'three';
 import { featuredObjects, type FeaturedObject, milkyWay, type Body, type StarSystem } from '@/constants/space';
 import { UNITS_PER_AU } from '../utils/orbit';
+import { GalaxyObservationDisk } from '../three/galaxy-observation-disk';
+import { galaxyObservationPoints } from '../three/galaxy-observation-points';
+import { useSurfaceMap } from '../three/use-surface-map';
 import { updatePointDetail } from '../three/map-detail';
 import { GalacticLabelLayer, GalacticMarker } from '../three/galactic-marker';
 import { useCursorZoom } from '../three/use-cursor-zoom';
@@ -35,6 +38,7 @@ type GalaxySceneProps = {
   onZoomOut: (handoff: ZoomHandoff) => void;
   groupEntry?: ZoomHandoff;
   blackHoleView: boolean;
+  showCenterPolarization: boolean;
   centerEntry?: ZoomHandoff;
   onCenterZoom: (close: boolean, entry: ZoomHandoff) => void;
 };
@@ -158,6 +162,8 @@ const shadowVertex = /* glsl */ `
 
 const shadowFragment = /* glsl */ `
   uniform float time;
+  uniform sampler2D observationMap;
+  uniform bool hasObservation;
   varying vec2 screenPoint;
 
   float gaussian(float x) {
@@ -167,6 +173,13 @@ const shadowFragment = /* glsl */ `
   void main() {
     vec2 p = screenPoint;
     float r = length(p);
+    if (hasObservation) {
+      vec3 observed = texture2D(observationMap, p * 0.5 + 0.5).rgb;
+      float edge = 1.0 - smoothstep(0.72, 1.0, r);
+      gl_FragColor = vec4(observed, edge);
+      #include <colorspace_fragment>
+      return;
+    }
     float angle = atan(p.y, p.x);
     float asymmetry = 0.52 + 0.42 * pow(0.5 + 0.5 * cos(angle + 1.65), 1.8);
     float knots = 0.76 + 0.24 * sin(angle * 3.0 + 0.5 + sin(angle * 2.0 - time * 0.17));
@@ -304,7 +317,20 @@ function GalacticMap({
   sun: RefObject<Group | null>;
   cloudOpacity: RefObject<number>;
 }) {
-  const model = useMemo(() => buildGalaxy(), []);
+  const observation = milkyWay.diskObservation;
+  const texture = useSurfaceMap(observation?.file);
+  const diskOpacity = useRef(0);
+  const model = useMemo(() => {
+    if (observation && texture) {
+      const points = galaxyObservationPoints(texture, observation, milkyWay.modelRadiusKpc, 12_000);
+      if (points) {
+        const sizes = Float32Array.from({ length: points.positions.length / 3 }, (_, i) => 0.24 + ((i * 131) % 997) / 1994);
+        return { ...points, sizes };
+      }
+      return null;
+    }
+    return buildGalaxy();
+  }, [observation, texture]);
   const dpr = useThree((state) => state.viewport.dpr);
   const pointsMaterial = useRef<ShaderMaterial>(null);
   const galaxyPoints = useRef<Points>(null);
@@ -320,8 +346,11 @@ function GalacticMap({
   const uniforms = useMemo(() => ({ pixelRatio: { value: dpr }, layerOpacity: { value: 0 } }), [dpr]);
   useFrame(({ camera, size }) => {
     const opacity = 1 - cloudOpacity.current;
+    const centerDistance = camera.position.length();
+    const solarDistance = sun.current ? camera.position.distanceTo(sun.current.position) : centerDistance;
+    diskOpacity.current = opacity * MathUtils.smoothstep(Math.min(centerDistance, solarDistance), 1.5, 15);
     if (galaxyPoints.current) updatePointDetail(galaxyPoints.current, lodPosition, camera, size.height, milkyWay.modelRadiusKpc, opacity);
-    if (pointsMaterial.current) pointsMaterial.current.uniforms.layerOpacity.value = opacity;
+    if (pointsMaterial.current) pointsMaterial.current.uniforms.layerOpacity.value = opacity * (texture ? 0.62 : 1);
     if (orbitLine.current) {
       const hovered = hoveredOrbitRef.current === anchor.id;
       orbitLine.current.material.opacity = orbitOpacity(cloudOpacity.current, hovered, activeSystemId === anchor.id);
@@ -342,14 +371,19 @@ function GalacticMap({
 
   return (
     <>
-      <points ref={galaxyPoints} raycast={() => {}}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[model.positions, 3]} />
-          <bufferAttribute attach="attributes-tint" args={[model.colors, 3]} />
-          <bufferAttribute attach="attributes-grain" args={[model.sizes, 1]} />
-        </bufferGeometry>
-        <shaderMaterial ref={pointsMaterial} uniforms={uniforms} vertexShader={galaxyVertex} fragmentShader={galaxyFragment} transparent depthWrite={false} />
-      </points>
+      {texture && observation && (
+        <GalaxyObservationDisk texture={texture} radius={milkyWay.modelRadiusKpc} center={observation.center} span={observation.span} rotation={observation.rotation} opacity={diskOpacity} />
+      )}
+      {model && (
+        <points ref={galaxyPoints} raycast={() => {}}>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[model.positions, 3]} />
+            <bufferAttribute attach="attributes-tint" args={[model.colors, 3]} />
+            <bufferAttribute attach="attributes-grain" args={[model.sizes, 1]} />
+          </bufferGeometry>
+          <shaderMaterial ref={pointsMaterial} uniforms={uniforms} vertexShader={galaxyVertex} fragmentShader={galaxyFragment} transparent depthWrite={false} />
+        </points>
+      )}
       <Line
         ref={orbitLine}
         points={orbit}
@@ -420,6 +454,7 @@ function Scene({
   onZoomOut,
   groupEntry,
   blackHoleView,
+  showCenterPolarization,
   centerEntry,
   onCenterZoom,
 }: GalaxySceneProps) {
@@ -455,7 +490,15 @@ function Scene({
   const close = centerFocused && blackHoleView;
   const handoffRadius = galaxyHandoffDistanceAu(system) / AU_PER_KPC;
   const initialRecenter = useRef(recenter);
-  const uniforms = useMemo(() => ({ time: { value: 0 } }), []);
+  const observationMaps = milkyWay.center.observationMaps;
+  const intensityMap = useSurfaceMap(observationMaps?.intensity, close);
+  const polarizationMap = useSurfaceMap(observationMaps?.polarization, close && showCenterPolarization);
+  const observationMap = showCenterPolarization ? polarizationMap ?? intensityMap : intensityMap;
+  const uniforms = useMemo(() => ({
+    time: { value: 0 },
+    observationMap: { value: observationMap ?? null },
+    hasObservation: { value: observationMap !== undefined },
+  }), [observationMap]);
   const scratch = useMemo(() => ({ offset: new Vector3(), center: new Vector3(), sun: new Vector3(), selected: new Vector3() }), []);
   const selectedPath = selectedNeighbor?.system.galacticPath;
   const anchorRadius = star.galacticOrbit?.radiusKpc ?? 0;

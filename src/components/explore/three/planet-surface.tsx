@@ -9,9 +9,10 @@ const shaderStyle: Record<Exclude<Appearance, 'craters'>, number> = { clouds: 0,
 
 const surfaceFeatureStyle: Record<NonNullable<Body['surfaceFeatures']>, number> = { jupiter: 1, saturn: 2, mars: 3, neptune: 4, io: 5, europa: 6 };
 
-export function PlanetMaterial({ body, lightOffset, loadSurfaceMap }: { body: Body; lightOffset: Vector3; loadSurfaceMap: boolean }) {
+export function PlanetMaterial({ body, lightOffset, loadSurfaceMap, showSurfaceMap = true }: { body: Body; lightOffset: Vector3; loadSurfaceMap: boolean; showSurfaceMap?: boolean }) {
   const { appearance = 'rock', colors, surfaceMap, surfaceFeatures, polarCaps = false, radiusKm } = body;
-  const texture = useSurfaceMap(surfaceMap?.file, loadSurfaceMap);
+  const map = useSurfaceMap(surfaceMap?.file, loadSurfaceMap);
+  const texture = showSurfaceMap ? map : undefined;
   const longitudeOffset = surfaceMap?.longitudeOffset ?? 0;
 
   const fillMissing = surfaceMap?.fillMissing ?? false;
@@ -38,7 +39,46 @@ export function PlanetMaterial({ body, lightOffset, loadSurfaceMap }: { body: Bo
   return uniforms ? <shaderMaterial vertexShader={planetVertex} fragmentShader={planetFragment} uniforms={uniforms} /> : <CraterSurface seed={Math.round(radiusKm ?? 1)} fallback={colors[1]} />;
 }
 
+const ringVertex = /* glsl */ `
+  varying vec2 ringPoint;
+  void main() {
+    ringPoint = position.xy;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const ringFragment = /* glsl */ `
+  varying vec2 ringPoint;
+  uniform sampler2D ringMap;
+  uniform float innerRadius;
+  uniform float outerRadius;
+  void main() {
+    float radial = (length(ringPoint) - innerRadius) / (outerRadius - innerRadius);
+    vec4 band = texture2D(ringMap, vec2(clamp(radial, 0.00025, 0.99975), 0.5));
+    gl_FragColor = band;
+    #include <colorspace_fragment>
+  }
+`;
+
 export function PlanetRings({ body }: { body: Body }) {
+  const { displayRadius, ringMap } = body;
+  const texture = useSurfaceMap(ringMap?.file);
+  const innerRadius = (ringMap?.inner ?? 0) * displayRadius;
+  const outerRadius = (ringMap?.outer ?? 0) * displayRadius;
+  const uniforms = useMemo(
+    () => ({ ringMap: { value: texture }, innerRadius: { value: innerRadius }, outerRadius: { value: outerRadius } }),
+    [texture, innerRadius, outerRadius],
+  );
+
+  if (texture && ringMap) {
+    return (
+      <mesh rotation-x={Math.PI / 2} raycast={() => {}}>
+        <ringGeometry args={[innerRadius, outerRadius, 192]} />
+        <shaderMaterial uniforms={uniforms} vertexShader={ringVertex} fragmentShader={ringFragment} side={DoubleSide} transparent depthWrite={false} />
+      </mesh>
+    );
+  }
+
   return body.rings?.map(({ inner, outer, color, opacity }) => (
     <mesh key={inner} rotation-x={Math.PI / 2} raycast={() => {}}>
       <ringGeometry args={[inner * body.displayRadius, outer * body.displayRadius, 128]} />

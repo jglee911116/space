@@ -1,3 +1,4 @@
+import { message } from '@/i18n/messages';
 import type { Body, Source } from '../../types';
 
 const textureRoot = '/textures/galaxies/milky-way/systems/solar';
@@ -6,7 +7,7 @@ const scopeSource: Source = { label: 'Solar System Scope · CC BY 4.0', href: 'h
 const scopePlanets = new Set(['mercury', 'venus', 'earth', 'mars', 'saturn', 'uranus', 'neptune']);
 const jplMoonSystems: Record<string, string> = {
   io: 'jupiter', europa: 'jupiter', ganymede: 'jupiter', callisto: 'jupiter',
-  mimas: 'saturn', enceladus: 'saturn', tethys: 'saturn', dione: 'saturn', rhea: 'saturn', iapetus: 'saturn',
+  mimas: 'saturn', tethys: 'saturn', dione: 'saturn', rhea: 'saturn', iapetus: 'saturn',
   miranda: 'uranus', ariel: 'uranus', umbriel: 'uranus', titania: 'uranus', oberon: 'uranus',
   triton: 'neptune',
 };
@@ -23,6 +24,30 @@ export function withSolarSurfaceMap(body: Body): Body {
   }
   if (id === 'pluto') {
     return { ...body, surfaceMap: { file: `${textureRoot}/pluto/pluto-new-horizons.jpg`, fillMissing: true }, sources: [...sources, { label: 'NASA/JHUAPL/SwRI · New Horizons', href: 'https://science.nasa.gov/resource/pluto-global-color-map/' }] };
+  }
+  if (id === 'charon') {
+    return { ...body, surfaceMap: { file: `${textureRoot}/charon/charon-new-horizons.jpg`, fillMissing: true }, sources: [...sources, {
+      label: 'NASA/JHUAPL/SwRI/USGS · New Horizons',
+      href: 'https://astrogeology.usgs.gov/search/map/charon_new_horizons_lorri_mvic_global_mosaic_300m',
+    }] };
+  }
+  if (id === 'phobos' || id === 'deimos' || id === 'arrokoth') {
+    const href = id === 'arrokoth'
+      ? 'https://science.nasa.gov/resource/arrokoth-3d-model/'
+      : `https://science.nasa.gov/resource/${id}-mars-moon-3d-model/`;
+    return { ...body, shapeModel: `${textureRoot}/${id}/${id}-nasa.glb`, sources: [...sources, { label: 'NASA · Observed 3D model', href }] };
+  }
+  if (id === 'titan') {
+    return { ...body, note: message('catalog.titan.surfaceNote'), surfaceMap: { file: `${textureRoot}/titan/titan-cassini.jpg`, fillMissing: true }, sources: [...sources, {
+      label: 'NASA/JPL-Caltech/Univ. Arizona · Cassini ISS',
+      href: 'https://science.nasa.gov/resource/titan-mosaic-the-surface-under-the-haze/',
+    }] };
+  }
+  if (id === 'enceladus') {
+    return { ...body, note: message('catalog.enceladus.surfaceNote'), surfaceMap: { file: `${textureRoot}/enceladus/enceladus-cassini.jpg`, fillMissing: true }, sources: [...sources, {
+      label: 'NASA/JPL-Caltech/SSI/Lunar and Planetary Institute · Cassini',
+      href: 'https://science.nasa.gov/photojournal/color-maps-of-enceladus-2014/',
+    }, { label: 'NASA/JPL · Cassini south polar jets', href: 'https://science.nasa.gov/resource/bursting-at-the-seams-the-geyser-basin-of-enceladus/' }] };
   }
   const system = jplMoonSystems[id];
   if (system) {

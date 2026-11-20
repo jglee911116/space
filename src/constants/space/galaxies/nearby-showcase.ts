@@ -21,7 +21,11 @@ export const whirlpoolMembers = [
     modelRadiusKpc: 17,
     morphology: 'open-spiral',
     color: '#9cbaff',
-    sources: [whirlpoolSource],
+    diskObservation: { file: '/textures/galaxies/m51/disk-hubble.jpg', center: [0.392, 0.51], span: [0.40, 0.54] },
+    sources: [
+      { label: 'NASA, ESA, S. Beckwith (STScI), the Hubble Heritage Team (STScI/AURA) · CC BY 4.0', href: 'https://esahubble.org/images/heic0506a/' },
+      whirlpoolSource,
+    ],
   },
   {
     id: 'ngc-5195',

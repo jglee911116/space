@@ -29,6 +29,7 @@ test('검색 결과와 언어 전환은 선택한 천체를 유지한다', async
 test('우리은하의 태양 라벨은 항성 상세 화면을 열고 뒤로 가면 지도로 돌아온다', async ({ page }) => {
   await page.goto(`${milkyWay}?view=galaxy`);
   await waitForRenderedMap(page);
+  await expect(details(page).getByRole('list', { name: '은하 공전 궤도 색' })).toHaveCount(0);
 
   const canvas = await page.locator('main canvas').boundingBox();
   if (!canvas) throw new Error('Milky Way canvas not mounted');
@@ -96,9 +97,10 @@ test('목성과 토성의 대기 특징을 표시하고 행성 셰이더를 컴�
     }
   });
 
+  const saturnRings = page.waitForResponse((response) => response.url().endsWith('/saturn/rings-sss.png') && response.ok());
   const jupiterMap = page.waitForResponse((response) => response.url().endsWith('/textures/galaxies/milky-way/systems/solar/jupiter/jupiter-cassini-pia07782.jpg') && (response.ok() || response.status() === 304));
   await page.goto(`${milkyWay}?system=solar&target=jupiter`);
-  await jupiterMap;
+  await Promise.all([jupiterMap, saturnRings]);
   await expect(details(page)).toContainText('남위 약 22°에 대적점');
   await waitForRenderedMap(page);
 
@@ -132,5 +134,73 @@ test('태양 코로나와 새 행성·위성 표면의 설명을 열고 WebGL �
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   }
 
+  expect(shaderErrors).toEqual([]);
+});
+
+test('태양계 밖 성운의 관측 텍스처를 로드한다', async ({ page }) => {
+  const shaderErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) {
+      shaderErrors.push(message.text());
+    }
+  });
+
+  for (const target of ['m57', 'pillars-of-creation', 'crab-nebula']) {
+    const image = page.waitForResponse((response) => response.url().endsWith(`/objects/${target}/webb.jpg`) && response.ok());
+    await page.goto(`${milkyWay}?view=object&target=${target}`);
+    await image;
+    await expect(details(page)).toContainText('3D 가스 모형');
+    await waitForRenderedMap(page);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  }
+
+  expect(shaderErrors).toEqual([]);
+});
+
+test('세레스를 검색하고 Dawn 지도를 로드한다', async ({ page }) => {
+  await page.goto(milkyWay);
+  const map = page.waitForResponse((response) => response.url().endsWith('/ceres/ceres-dawn.jpg') && response.ok());
+  await search(page, '세레스', /^세레스 /);
+  await map;
+  await expect(page).toHaveURL(/system=solar&target=ceres$/);
+  await expect(details(page).getByRole('heading', { name: '세레스', exact: true })).toBeVisible();
+  await waitForRenderedMap(page);
+});
+
+test('타이탄의 대기와 관측 지표를 전환한다', async ({ page }) => {
+  await page.goto(`${milkyWay}?system=solar&target=titan`);
+  await waitForRenderedMap(page);
+  const toggle = page.getByRole('button', { name: '타이탄 지표 보기' });
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  const map = page.waitForResponse((response) => response.url().endsWith('/titan/titan-cassini.jpg') && response.ok());
+  await toggle.click();
+  await map;
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('궁수자리 A*에서 EHT 기본 영상과 편광 영상을 전환한다', async ({ page }) => {
+  const shaderErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) {
+      shaderErrors.push(message.text());
+    }
+  });
+
+  const intensity = page.waitForResponse((response) => response.url().endsWith('/sgr-a/eht-2022.jpg') && response.ok());
+  await page.goto(`${milkyWay}?target=sgr-a`);
+  await intensity;
+  await expect(details(page)).toContainText('2017년 전파 관측');
+
+  const toggle = details(page).getByRole('checkbox', { name: '편광 보기' });
+  await expect(toggle).not.toBeChecked();
+  const polarization = page.waitForResponse((response) => response.url().endsWith('/sgr-a/eht-polarized-2024.jpg') && response.ok());
+  await toggle.check();
+  await polarization;
+  await expect(details(page)).toContainText('2024년에 공개한 편광 이미지');
+  await toggle.uncheck();
+  await expect(details(page)).toContainText('2017년 전파 관측');
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   expect(shaderErrors).toEqual([]);
 });

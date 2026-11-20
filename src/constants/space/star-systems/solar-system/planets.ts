@@ -103,6 +103,11 @@ export const planets: Body[] = [
       { inner: 1.98, outer: 2.13, color: '#99836e', opacity: 0.62 },
       { inner: 2.13, outer: 2.29, color: '#d6bd9e', opacity: 0.72 },
     ],
+    ringMap: {
+      file: '/textures/galaxies/milky-way/systems/solar/saturn/rings-sss.png',
+      inner: 69_300 / 60_268,
+      outer: 141_040 / 60_268,
+    },
     focusScale: 9,
     surfaceFeatures: 'saturn',
     note: message('catalog.planets.saturn.atmosphere'),

@@ -49,6 +49,8 @@ export type Body = {
   appearance?: Appearance;
   orbit?: OrbitElements;
   rings?: readonly Ring[];
+  ringMap?: { file: string; inner: number; outer: number };
+  shapeModel?: string;
   surfaceMap?: { file: string; longitudeOffset?: number; fillMissing?: boolean };
   surfaceFeatures?: 'jupiter' | 'saturn' | 'mars' | 'neptune' | 'io' | 'europa';
   polarCaps?: boolean;
@@ -118,6 +120,7 @@ export type Galaxy = {
   color: string;
   /** 국부은하군 장면에서 원반의 X축 기울기(라디안). */
   diskTilt?: number;
+  diskObservation?: { file: string; previewFile?: string; center: readonly [number, number]; span: readonly [number, number]; rotation?: number };
   sources: readonly Source[];
 };
 
@@ -131,7 +134,7 @@ export type HostGalaxy = Galaxy & {
   notes: readonly CatalogText[];
   orbitSource: Source;
   demoYearsPerSecond: number;
-  center: { id: string; name: CatalogText; distanceLightYears: number; massSolar: number; shadowDiameterMicroarcseconds: number; sources: readonly Source[] };
+  center: { id: string; name: CatalogText; distanceLightYears: number; massSolar: number; shadowDiameterMicroarcseconds: number; observationMaps?: { intensity: string; polarization: string }; sources: readonly Source[] };
 };
 
 export type LocalGroup = {
@@ -174,6 +177,7 @@ export type FeaturedObject = {
   radiusKm?: number;
   spinSeconds?: number;
   variabilityDays?: number;
+  observationImage?: { file: string; shape: 'crab' | 'ring' | 'pillars' | 'ejecta' | 'nursery' };
   photosphere?: { dark: string; bright: string; cellScale: number };
   expansionPerYear?: number;
   blackHoleMassSolar?: number;

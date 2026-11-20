@@ -128,6 +128,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const cosmicView = universeView || !!region;
   const association = searchParams.get('view') === 'cluster' ? galaxyAssociations.find((item) => item.mapRegionId === region?.id && item.id === (searchParams.get('cluster') ?? 'virgo')) : undefined;
   const distantObject = universeView ? distantObjects.find(({ id }) => id === searchParams.get('target')) : undefined;
+  const [showCenterPolarization, setShowCenterPolarization] = useState(false);
   const [showCounterjet, setShowCounterjet] = useState(false);
   const groupView = pathname === LOCAL_GROUP_PATH;
   const pathGalaxy = galaxies.find(({ id }) => pathname === galaxyPath(id));
@@ -418,6 +419,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             groupEntry={spaceEntry}
             target={focusGalacticCenter ? milkyWay.center.id : target}
             blackHoleView={focusBlackHole}
+            showCenterPolarization={showCenterPolarization}
             centerEntry={centerZoom?.entry}
             onCenterZoom={zoomGalacticCenter}
             simulationDaysRef={simulationDaysRef}
@@ -654,7 +656,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
         ) : neighborhoodView ? (
           <NeighborhoodDetails />
         ) : focusBlackHole ? (
-          <BlackHoleDetails key={recenter} />
+          <BlackHoleDetails key={recenter} showPolarization={showCenterPolarization} onPolarizationChange={setShowCenterPolarization} />
         ) : body && !oortView && (galaxyView || target !== null) ? (
           <BodyDetails key={`${body.id}:${recenter}`} system={system} body={body} onSelect={navigateTo} />
         ) : galaxyView ? (

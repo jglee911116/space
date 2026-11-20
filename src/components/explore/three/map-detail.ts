@@ -19,12 +19,16 @@ export function pointBudget(total: number, diameter: number) {
   return total;
 }
 
+export function projectedDiameter(object: Points, scratch: Vector3, camera: Camera, height: number, radius: number) {
+  object.getWorldPosition(scratch).applyMatrix4(camera.matrixWorldInverse);
+  const depth = -scratch.z;
+  return depth <= radius ? Infinity : (radius * camera.projectionMatrix.elements[5] * height) / depth;
+}
+
 export function updatePointDetail(points: Points, scratch: Vector3, camera: Camera, height: number, radius: number, opacity = 1) {
   points.visible = opacity > 0.005;
   if (!points.visible) return;
-  points.getWorldPosition(scratch).applyMatrix4(camera.matrixWorldInverse);
-  const depth = -scratch.z;
-  const diameter = depth <= radius ? Infinity : (radius * camera.projectionMatrix.elements[5] * height) / depth;
+  const diameter = projectedDiameter(points, scratch, camera, height, radius);
   const count = pointBudget(points.geometry.attributes.position.count, diameter);
   if (points.geometry.drawRange.count !== count) points.geometry.setDrawRange(0, count);
 }

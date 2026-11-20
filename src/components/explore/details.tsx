@@ -18,7 +18,6 @@ import {
 import { cosmologicalDistances } from './utils/cosmology';
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR, SOLAR_RADIUS_KM } from '@/constants/space/units';
-import { galacticOrbitColor, isNearbySystem } from './utils/nearby-positions';
 import { bodySize, formatAxis, formatPeriod, formatSpin, kindLabel } from './utils/format';
 import type { Target } from './scenes/system-scene';
 import styles from './explore.module.scss';
@@ -91,7 +90,8 @@ export function BodyTooltip({ body, x, y }: { body: Body; x: number; y: number }
           {size.label} {size.value}
         </span>
       )}
-      <span>{body.orbit ? t('details.orbitValue', [formatPeriod(body, t, number)]) : t('details.rotationValue', [formatSpin(body, t, number, catalogText)])}</span>
+      {body.orbit && <span>{t('details.orbitValue', [formatPeriod(body, t, number)])}</span>}
+      <span>{t('details.rotationValue', [formatSpin(body, t, number, catalogText)])}</span>
     </aside>
   );
 }
@@ -223,7 +223,7 @@ function RadiantPower({ watts }: { watts: number }) {
   );
 }
 
-export function BlackHoleDetails() {
+export function BlackHoleDetails({ showPolarization, onPolarizationChange }: { showPolarization: boolean; onPolarizationChange: (visible: boolean) => void }) {
   const { t, catalogText, number, measurement } = useLanguage();
   const center = milkyWay.center;
   return (
@@ -246,8 +246,12 @@ export function BlackHoleDetails() {
           <dd>{t('units.approxMicroarcseconds', [center.shadowDiameterMicroarcseconds])}</dd>
         </div>
       </dl>
+      <label className={styles.counterjetToggle}>
+        <input type="checkbox" checked={showPolarization} onChange={(event) => onPolarizationChange(event.currentTarget.checked)} />
+        {t('details.ehtPolarizationToggle')}
+      </label>
       <ModelNotes>
-        {t('details.blackHoleShadow')} {t('details.unscaledModel')}
+        {t(showPolarization ? 'details.ehtPolarizationImage' : 'details.ehtIntensityImage')} {t('details.blackHoleShadow')} {t('details.unscaledModel')}
       </ModelNotes>
       <DetailSources sources={center.sources} />
     </DetailPanel>
@@ -257,21 +261,9 @@ export function BlackHoleDetails() {
 export function GalaxyDetails({ systems }: { systems: readonly StarSystem[] }) {
   const { t, catalogText } = useLanguage();
   const modeled = systems.filter(({ galacticPath }) => galacticPath);
-  const orbits = systems.filter(isNearbySystem).map((system) => ({
-    id: system.id,
-    name: system.id === milkyWay.systemId ? system.bodies[0].name : system.name,
-    color: galacticOrbitColor(system),
-  }));
   return (
     <section className={styles.details} aria-labelledby="body-name">
       <h2 id="body-name">{catalogText(milkyWay.name)}</h2>
-      <ul className={styles.legend} aria-label={t('details.galacticOrbitColors')}>
-        {orbits.map(({ id, name, color }) => (
-          <li key={id} style={{ '--swatch': color } as CSSProperties}>
-            {catalogText(name)}
-          </li>
-        ))}
-      </ul>
       <ModelNotes>
         {catalogText(milkyWay.summary)} {milkyWay.notes.map(catalogText).join(' ')}
         {modeled.length > 0 && ` ${t('details.modeledOrbits', [modeled.map(({ name }) => catalogText(name)).join(' · ')])}`}
@@ -367,6 +359,7 @@ export function GalaxySummaryDetails({ galaxy }: { galaxy: Galaxy }) {
         </dl>
       )}
       <p>{catalogText(galaxy.summary)}</p>
+      {galaxy.diskObservation && <p>{t('details.galaxyObservationDisk')}</p>}
       <ModelNotes>{t('details.galaxyModelScale')}</ModelNotes>
       <DetailSources sources={galaxy.sources} />
     </section>
@@ -411,6 +404,7 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
         )}
       </dl>
       <p>{catalogText(object.description)}</p>
+      {object.observationImage && <p>{t('details.nebulaObservationVolume')}</p>}
       {radiusRatio !== undefined && (
         <div className={styles.radiusComparison}>
           <h3>{t('details.compareSolarRadius')}</h3>
@@ -458,7 +452,7 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange }: 
       <section className={styles.details} aria-labelledby="body-name">
         <h2 id="body-name">{catalogText(observableUniverse.name)}</h2>
         <p>{t('details.universeRadius')}</p>
-        <ModelNotes>{t('details.universeLayout')}</ModelNotes>
+        <ModelNotes>{t('details.universeLayout')} {t('details.cosmicMapSymbols')}</ModelNotes>
         <DetailSources sources={observableUniverse.sources} />
       </section>
     );
@@ -538,7 +532,7 @@ export function SuperclusterDetails({
             </button>
           ))}
         </p>
-        <ModelNotes>{t('details.virgoClusterScale')}</ModelNotes>
+        <ModelNotes>{t('details.virgoClusterScale')} {t('details.cosmicMapSymbols')}</ModelNotes>
         <DetailSources sources={[...association.sources, ...association.members.flatMap(({ sources }) => sources)]} />
       </section>
     );
@@ -557,7 +551,7 @@ export function SuperclusterDetails({
             </button>
           ))}
       </p>
-      <ModelNotes>{t('details.superclusterBoundaries')}</ModelNotes>
+      <ModelNotes>{t('details.superclusterBoundaries')} {t('details.cosmicMapSymbols')}</ModelNotes>
       <DetailSources sources={region.sources} />
     </section>
   );

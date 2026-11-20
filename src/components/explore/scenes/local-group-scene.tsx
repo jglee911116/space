@@ -5,12 +5,16 @@ import { useLanguage } from '@/i18n/language';
 import { Line, OrbitControls, Stars } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, type ComponentRef } from 'react';
-import { Box3, Color, MathUtils, Quaternion, Vector3, type Group, type Points } from 'three';
+import { Box3, Color, MathUtils, Quaternion, Vector3, type Group, type Points, type PointsMaterial } from 'three';
 import { localGroup, type Galaxy } from '@/constants/space';
 import { AU_PER_KPC, KM_PER_AU } from '@/constants/space/units';
 import { useCursorZoom } from '../three/use-cursor-zoom';
 import { CanvasBoundary } from '../three/canvas-boundary';
-import { updatePointDetail } from '../three/map-detail';
+import { GalaxyObservationDisk } from '../three/galaxy-observation-disk';
+import { galaxyObservationPoints } from '../three/galaxy-observation-points';
+import { useSurfaceMap } from '../three/use-surface-map';
+import { GalaxyPreview } from '../three/galaxy-preview';
+import { pointBudget, projectedDiameter, updatePointDetail } from '../three/map-detail';
 import { GalacticLabelLayer, GalacticMarker } from '../three/galactic-marker';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { EXTERNAL_SYSTEM_ENTRY_KPC, EXTERNAL_SYSTEM_RETURN_KPC, GALAXY_ENTRY_KPC, GALAXY_EXIT_KPC, LOCAL_GROUP_EXIT_KPC, type ZoomHandoff } from '../utils/zoom';
@@ -111,20 +115,45 @@ function model(galaxy: Galaxy, count: number) {
 }
 
 function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
-  const points = useMemo(() => model(galaxy, compact ? 3000 : 28_000), [compact, galaxy]);
+  const observation = galaxy.diskObservation;
+  const texture = useSurfaceMap(compact ? observation?.previewFile : observation?.file);
+  const points = useMemo(() => {
+    if (texture && observation) return galaxyObservationPoints(texture, observation, galaxy.modelRadiusKpc, compact ? 1400 : 12_000);
+    return model(galaxy, compact ? 1400 : 28_000);
+  }, [texture, observation, galaxy, compact]);
   const disk = useRef<Points>(null);
   const position = useMemo(() => new Vector3(), []);
   useFrame(({ camera, size }) => {
-    if (disk.current) updatePointDetail(disk.current, position, camera, size.height, galaxy.modelRadiusKpc);
+    const pointCloud = disk.current;
+    if (!pointCloud) return;
+    if (!compact) {
+      updatePointDetail(pointCloud, position, camera, size.height, galaxy.modelRadiusKpc);
+      return;
+    }
+
+    const diameter = projectedDiameter(pointCloud, position, camera, size.height, galaxy.modelRadiusKpc);
+    const opacity = MathUtils.smoothstep(diameter, 12, 52) * (texture ? 0.38 : 0.46);
+    (pointCloud.material as PointsMaterial).opacity = opacity;
+    pointCloud.visible = opacity > 0.005;
+    const count = pointBudget(pointCloud.geometry.attributes.position.count, diameter);
+    if (pointCloud.geometry.drawRange.count !== count) pointCloud.geometry.setDrawRange(0, count);
   });
   return (
-    <points ref={disk} rotation-x={galaxy.diskTilt ?? 0} raycast={() => {}}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[points.positions, 3]} />
-        <bufferAttribute attach="attributes-color" args={[points.colors, 3]} />
-      </bufferGeometry>
-      <pointsMaterial vertexColors size={compact ? 1.7 : 1.35} sizeAttenuation={false} transparent opacity={0.82} depthWrite={false} />
-    </points>
+    <group rotation-x={galaxy.diskTilt ?? 0}>
+      {compact && <GalaxyPreview galaxy={galaxy} texture={texture} />}
+      {!compact && texture && observation && (
+        <GalaxyObservationDisk texture={texture} radius={galaxy.modelRadiusKpc} center={observation.center} span={observation.span} rotation={observation.rotation} />
+      )}
+      {points && (
+        <points ref={disk} raycast={() => {}}>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[points.positions, 3]} />
+            <bufferAttribute attach="attributes-color" args={[points.colors, 3]} />
+          </bufferGeometry>
+          <pointsMaterial vertexColors size={compact ? 1.25 : 1.35} sizeAttenuation={false} transparent opacity={compact ? 0 : texture ? 0.45 : 0.82} depthWrite={false} />
+        </points>
+      )}
+    </group>
   );
 }
 

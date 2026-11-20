@@ -6,11 +6,12 @@ import { Line, OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, type ComponentRef } from 'react';
 import { AdditiveBlending, Box3, MathUtils, Vector3 } from 'three';
-import { observableUniverse, distantObjects, type DistantObject, superclusters, type Supercluster } from '@/constants/space';
+import { observableUniverse, distantObjects, galaxies, type DistantObject, superclusters, type Supercluster } from '@/constants/space';
 import { cosmologicalDistances } from '../utils/cosmology';
 import type { GalaxyAssociation } from '@/constants/space/galaxy-associations';
 import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
 import { AccretionModel } from '../three/accretion-model';
+import { CosmicMapMarkers, type CosmicMapMarker } from '../three/cosmic-map-markers';
 import { CanvasBoundary } from '../three/canvas-boundary';
 import { GalacticLabelLayer, GalacticMarker } from '../three/galactic-marker';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
@@ -108,6 +109,24 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
       })) ?? []
     );
   }, [association, region]);
+  const bodies = useMemo(() => {
+    const result: CosmicMapMarker[] = markers.map(({ galaxyId, position, color }) => {
+      const morphology = galaxies.find((galaxy) => galaxy.id === galaxyId)?.morphology;
+      return {
+        position,
+        color,
+        style: !galaxyId ? 'cluster' : morphology?.includes('elliptical') ? 'elliptical' : morphology?.includes('irregular') ? 'irregular' : 'spiral',
+      };
+    });
+    if (!association) result.push({ position: ORIGIN, color: '#ffd195', style: 'cluster' });
+    if (!region) {
+      for (const object of landmarks) {
+        const style = object.kind === 'early-galaxy' ? 'irregular' : object.visibleJet ? 'jet' : 'quasar';
+        result.push({ position: object.position, color: object.color, style });
+      }
+    }
+    return result;
+  }, [association, markers, region]);
   const mapCenter = useMemo(() => (association ? new Box3().setFromPoints(markers.map(({ position }) => position)).getCenter(new Vector3()) : ORIGIN), [association, markers]);
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const initialDistance = useRef(0);
@@ -161,7 +180,8 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
           )}
         </group>
       ))}
-      {!association && <GalacticMarker name={innerName} priority={2} color="#ffd195" labelOffset={-0.35} onSelect={() => onStepIn()} />}
+      <CosmicMapMarkers markers={bodies} referenceDepth={preset} />
+      {!association && <GalacticMarker name={innerName} priority={2} color="#ffd195" labelOffset={-0.92} onSelect={() => onStepIn()} />}
       {markers.map(({ name, position, color, galaxyId, clusterId }, index) => (
         <MapMarker
           key={typeof name === 'string' ? name : name.key}

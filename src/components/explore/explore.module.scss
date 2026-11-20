@@ -177,6 +177,150 @@
   outline-offset: 2px;
 }
 
+.details {
+  pointer-events: auto;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  min-width: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.65rem;
+  background: #101119c9;
+}
+
+.brand h1 {
+  flex: none;
+  margin: 0;
+  font-size: clamp(1rem, 2.2vw, 1.4rem);
+  font-weight: 680;
+  letter-spacing: -0.045em;
+}
+
+.currentLocation {
+  overflow: hidden;
+  margin: 0;
+  color: #c3bec6;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exploreTrigger,
+.language {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  block-size: 2.35rem;
+  padding-inline: 0.75rem 1.9rem;
+  border: 1px solid #ffffff32;
+  border-radius: 0.65rem;
+  background: #101119;
+  color: $space-fg;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.25;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.languageField {
+  position: relative;
+  display: flex;
+}
+
+.language {
+  appearance: none;
+}
+
+.exploreTrigger::after,
+.languageField::after {
+  position: absolute;
+  inset-inline-end: 0.8rem;
+  top: 50%;
+  width: 0.34rem;
+  height: 0.34rem;
+  border-right: 1.5px solid #ffc58d;
+  border-bottom: 1.5px solid #ffc58d;
+  content: '';
+  pointer-events: none;
+  transform: translateY(-70%) rotate(45deg);
+}
+
+.exploreMenu {
+  --edge: clamp(1.125rem, 4vw, 3rem);
+  position: fixed;
+  inset: calc(var(--edge) + 2.85rem) var(--edge) auto auto;
+  width: min(22rem, calc(100vw - var(--edge) * 2));
+  max-height: min(36rem, calc(100dvh - var(--edge) * 2 - 2.85rem));
+  overflow: auto;
+  margin: 0;
+  padding: 0.65rem;
+  box-sizing: border-box;
+  border: 1px solid #ffffff2e;
+  border-radius: 0.8rem;
+  background: #11111af7;
+  box-shadow: 0 0.8rem 2rem #0008;
+  color: $space-fg;
+  pointer-events: auto;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.controls + .controls {
+  margin-top: 0.65rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #ffffff1c;
+}
+
+.controls h2 {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.4rem 0.5rem;
+  color: #c3bec6;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.controls button {
+  min-width: 0;
+  padding: 0.45rem 0.5rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: $space-fg;
+  font: inherit;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+  text-align: left;
+  cursor: pointer;
+}
+
+.controls button:hover,
+.exploreTrigger:hover,
+.language:hover {
+  background: #ffffff18;
+}
+
+.controls button[aria-pressed='true'] {
+  background: #f5e2ca;
+  color: #2a160b;
+}
+
+.exploreTrigger:focus-visible,
+.language:focus-visible,
+.controls button:focus-visible,
+.details a:focus-visible {
+  outline: 2px solid #ffb977;
+  outline-offset: 2px;
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;
@@ -511,6 +655,23 @@
   background: #070f21;
   color: #f0f7ff;
   cursor: pointer;
+}
+
+.surfaceViewButton {
+  position: absolute;
+  bottom: 3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #7792b4;
+  border-radius: 0.4rem;
+  background: #070f21;
+  color: #f0f7ff;
+  cursor: pointer;
+}
+
+.surfaceViewButton[aria-pressed='true'] {
+  background: #20354a;
 }
 
 .radiusComparison {

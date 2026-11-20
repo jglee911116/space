@@ -1,5 +1,5 @@
 // Value noise shared by the sun and planet surfaces.
-const noise = /* glsl */ `
+export const spatialNoise = /* glsl */ `
 float hash(vec3 p) {
   p = fract(p * 0.3183099 + 0.1) * 17.0;
   return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
@@ -45,7 +45,7 @@ export const surfaceFragment = /* glsl */ `
   varying vec3 viewNormal;
   varying vec3 viewDirection;
 
-  ${noise}
+  ${spatialNoise}
 
   void main() {
     vec3 p = normalize(surface);
@@ -85,7 +85,7 @@ export const supergiantFragment = /* glsl */ `
   varying vec3 viewNormal;
   varying vec3 viewDirection;
 
-  ${noise}
+  ${spatialNoise}
 
   void main() {
     vec3 p = normalize(surface);
@@ -121,7 +121,7 @@ export const coronaFragment = /* glsl */ `
   uniform bool solar;
   varying vec2 offset;
 
-  ${noise}
+  ${spatialNoise}
 
   void main() {
     float distance = length(offset) / radius;
@@ -195,7 +195,7 @@ export const planetFragment = /* glsl */ `
   varying vec3 viewOffset;
   varying vec3 viewNormal;
 
-  ${noise}
+  ${spatialNoise}
 
   vec3 saturnClouds(vec3 p, vec3 color, float detail) {
     if (p.y < 0.90) return color;

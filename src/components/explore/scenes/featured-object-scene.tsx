@@ -11,6 +11,8 @@ import styles from '../explore.module.scss';
 import { AccretionModel } from '../three/accretion-model';
 import { CanvasBoundary } from '../three/canvas-boundary';
 import { surfaceVertex, supergiantFragment } from '../three/shaders';
+import { NebulaVolume } from '../three/nebula-volume';
+import { useSurfaceMap } from '../three/use-surface-map';
 import { StellarGlow } from '../three/stellar-glow';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { REALTIME_DAYS_PER_SECOND } from '../utils/orbit';
@@ -31,10 +33,11 @@ const vertexShader = /* glsl */ `
 `;
 const fragmentShader = /* glsl */ `
   varying vec3 particleColor;
+  uniform float particleOpacity;
   void main() {
     float radius = length(gl_PointCoord - 0.5) * 2.0;
     if (radius > 1.0) discard;
-    gl_FragColor = vec4(particleColor, 0.32 * pow(1.0 - radius, 2.0));
+    gl_FragColor = vec4(particleColor, 0.32 * particleOpacity * pow(1.0 - radius, 2.0));
     #include <colorspace_fragment>
   }
 `;
@@ -225,7 +228,9 @@ function childObject(object: FeaturedObject) {
 function Scene({ object, reportDistance, simulationDaysRef, onLeave, placeChildButton }: Props & { placeChildButton: PlaceChildButton }) {
   const center = useMemo(() => new Vector3(), []);
   const scale = object.kind === 'pillars' || object.kind === 'supernova-remnant' ? 1 : object.extentLightYears / 6;
-  const uniforms = useMemo(() => ({ particleScale: { value: scale }, expansion: { value: 0 } }), [scale]);
+  const image = object.observationImage;
+  const texture = useSurfaceMap(image?.file);
+  const uniforms = useMemo(() => ({ particleScale: { value: scale }, expansion: { value: 0 }, particleOpacity: { value: texture ? 0.29 : 1 } }), [scale, texture]);
   const particles = useMemo(() => nebulaParticles(object), [object]);
   const material = useRef<ShaderMaterial>(null);
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
@@ -244,7 +249,8 @@ function Scene({ object, reportDistance, simulationDaysRef, onLeave, placeChildB
   return (
     <>
       <Stars radius={46 * scale} depth={23 * scale} count={1800} factor={3} saturation={0} fade speed={0} />
-      <points scale={scale}>
+      {texture && image && <NebulaVolume texture={texture} radius={object.extentLightYears * (image.shape === 'crab' ? 0.71 : 0.61)} shape={image.shape} />}
+      <points scale={scale} visible={!texture || image?.shape === 'crab' || image?.shape === 'ejecta'}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[particles.positions, 3]} />
           <bufferAttribute attach="attributes-color" args={[particles.colors, 3]} />

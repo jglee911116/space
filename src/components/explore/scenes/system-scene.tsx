@@ -3,13 +3,16 @@
 import { useLanguage } from '@/i18n/language';
 import { Line, OrbitControls, Stars } from '@react-three/drei';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { useEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react';
 import { Color, DoubleSide, Points, Vector3, MathUtils, Mesh, type Group, type PointsMaterial, type MeshBasicMaterial, type ShaderMaterial } from 'three';
 import { KM_PER_AU } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import type { Body, StarSystem } from '@/constants/space';
 import { createMotions, isSatellite, rotationPhase, setWorldPosition, stellarTextureShear, UNITS_PER_AU } from '../utils/orbit';
 import { OortCloudModel } from '../three/oort-cloud';
+import styles from '../explore.module.scss';
+import { IcePlumes } from '../three/ice-plumes';
+import { ObservedBodyModel } from '../three/observed-body-model';
 import { PlanetMaterial, PlanetRings } from '../three/planet-surface';
 import { JUPITER_RED_SPOT_LATITUDE, surfaceFragment, surfaceVertex } from '../three/shaders';
 import { SolarProminences } from '../three/solar-prominences';
@@ -163,7 +166,8 @@ function Scene({
   onHoverBody,
   onLeaveBody,
   farOverview,
-}: SceneProps & { farOverview: number }) {
+  showTitanSurface,
+}: SceneProps & { farOverview: number; showTitanSurface: boolean }) {
   const motions = useMemo(() => createMotions(system), [system]);
   const illumination = useMemo(() => {
     const hosts: Record<string, string> = {};
@@ -379,7 +383,20 @@ function Scene({
                     spins.current[body.id] = spin ?? undefined;
                   }}
                 >
-                  {(body.lobes ?? [{ offset: [0, 0, 0] as const, shape: body.shape }]).map((part, index) => (
+                  {body.shapeModel && bodyVisible(body) && (target === body.id || satelliteParent === body.parent) ? (
+                    <group
+                      {...events(() => systemVisible.current ? body.id : undefined)}
+                      onClick={(event) => {
+                        if (!systemVisible.current) return;
+                        event.stopPropagation();
+                        if (event.delta <= 4) onSelect(body.id);
+                      }}
+                    >
+                      <Suspense fallback={<mesh><sphereGeometry args={[body.displayRadius, 32, 24]} /><PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={false} /></mesh>}>
+                        <ObservedBodyModel file={body.shapeModel} radius={body.displayRadius} />
+                      </Suspense>
+                    </group>
+                  ) : (body.lobes ?? [{ offset: [0, 0, 0] as const, shape: body.shape }]).map((part, index) => (
                     <mesh
                       key={index}
                       position={part.offset.map((value) => value * body.displayRadius) as [number, number, number]}
@@ -394,9 +411,11 @@ function Scene({
                       }}
                     >
                       <sphereGeometry args={[body.displayRadius, 56, 40]} />
-                      <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={body.kind === 'planet' || body.id === target || body.parent === satelliteParent} />
+                      <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={body.id === 'titan' ? showTitanSurface && target === 'titan' : body.kind === 'planet' || body.id === target || body.id === satelliteParent || body.parent === satelliteParent}
+                        showSurfaceMap={body.id !== 'titan' || (showTitanSurface && target === 'titan')} />
                     </mesh>
                   ))}
+                  {body.id === 'enceladus' && target === body.id && <IcePlumes radius={body.displayRadius} paused={paused} />}
                 </group>
                 <PlanetRings body={body} />
               </group>
@@ -461,6 +480,7 @@ function Scene({
 
 export default function SystemScene(props: SceneProps) {
   const { t, catalogText } = useLanguage();
+  const [showTitanSurface, setShowTitanSurface] = useState(false);
   const farOverview = useMemo(() => distantDistance(props.system), [props.system]);
   const [initialCamera] = useState(() => {
     const radius = props.entry
@@ -482,8 +502,13 @@ export default function SystemScene(props: SceneProps) {
         fallback={<span aria-hidden="true">{t('canvas.systemModel', [catalogText(props.system.name)])}</span>}
         aria-label={t('canvas.interactiveModel', [catalogText(props.system.name)])}
       >
-        <Scene {...props} farOverview={farOverview} />
+        <Scene {...props} farOverview={farOverview} showTitanSurface={showTitanSurface} />
       </Canvas>
+      {props.target === 'titan' && (
+        <button className={styles.surfaceViewButton} type="button" aria-pressed={showTitanSurface} onClick={() => setShowTitanSurface((show) => !show)}>
+          {t('navigation.titanSurface')}
+        </button>
+      )}
     </CanvasBoundary>
   );
 }

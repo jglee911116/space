@@ -1,5 +1,6 @@
 import { message } from '@/i18n/messages';
 import type { StarSystem } from '../../types';
+import { ceres } from './ceres';
 import { moons } from './moons';
 import { oortCloud } from './oort-cloud';
 import { planets } from './planets';
@@ -14,6 +15,6 @@ export const solarSystem: StarSystem = {
   overviewDistance: 875,
   outerRegion: { name: message('catalog.solar-system.outer-region.name'), beltName: message('catalog.solar-system.solar.beltName'), overviewDistance: 2950, beltAu: [30, 50], source: KUIPER_BELT },
   oortCloud,
-  bodies: [sun, ...planets, ...transNeptunianBodies, ...moons, ...transNeptunianMoons].map(withSolarSurfaceMap),
+  bodies: [sun, ...planets, ceres, ...transNeptunianBodies, ...moons, ...transNeptunianMoons].map(withSolarSurfaceMap),
   sources: [NASA_FACTSHEET, JPL_ELEMENTS],
 };
