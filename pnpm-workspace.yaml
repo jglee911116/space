@@ -1,0 +1,6 @@
+allowBuilds:
+  # 플랫폼 네이티브 바이너리 링크에 postinstall 필요
+  '@parcel/watcher': true
+  esbuild: true
+  unrs-resolver: true
+  sharp: true

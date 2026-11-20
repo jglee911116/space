@@ -1,0 +1,82 @@
+import { message } from '@/i18n/messages';
+import type { DistantObject, ObservableUniverse } from './types';
+
+export const observableUniverse: ObservableUniverse = {
+  name: message('catalog.observable-universe.observable-universe.name'),
+  radiusMillionLightYears: 46_000,
+  sources: [
+    {
+      label: message('catalog.observable-universe.observable-universe.source.nasa-size-of-the-observable-universe'),
+      href: 'https://www.nasa.gov/science-research/astrophysics/how-big-is-space-we-asked-a-nasa-expert-episode-61/',
+    },
+    { label: message('catalog.observable-universe.observable-universe.source.planck-2018-cosmological-parameters'), href: 'https://doi.org/10.1051/0004-6361/201833910' },
+  ],
+};
+
+export const distantObjects: readonly DistantObject[] = [
+  {
+    id: '3c-273',
+    kind: 'quasar',
+    observationStatus: 'observed',
+    name: '3C 273',
+    redshift: 0.158,
+    rightAscension: 187.27792,
+    declination: 2.05239,
+    color: '#8bbcff',
+    visibleJet: true,
+    summary: message('catalog.observable-universe.3c-273.summary'),
+    sources: [
+      { label: message('catalog.observable-universe.3c-273.source.nasa-hubble-3c-273'), href: 'https://science.nasa.gov/asset/hubble/quasar-3c-273-2/' },
+      { label: message('catalog.observable-universe.3c-273.source.lofar-3c-273-jet-observations'), href: 'https://doi.org/10.1051/0004-6361/202141579' },
+      { label: message('catalog.observable-universe.3c-273.source.redshift-and-coordinate-study'), href: 'https://doi.org/10.1088/0004-6256/138/5/1428' },
+    ],
+  },
+  {
+    id: 'ton-618',
+    kind: 'quasar',
+    observationStatus: 'observed',
+    name: 'TON 618',
+    redshift: 2.219,
+    rightAscension: 187.10402,
+    declination: 31.47712,
+    color: '#ffd4a2',
+    visibleJet: false,
+    blackHoleMassSolar: 4.07e10,
+    summary: message('catalog.observable-universe.ton-618.summary'),
+    sources: [
+      { label: message('catalog.observable-universe.ton-618.source.simbad-ton-618-coordinates'), href: 'https://simbad.cds.unistra.fr/simbad/sim-basic?Ident=TON+618' },
+      { label: message('catalog.observable-universe.ton-618.source.redshift-and-black-hole-study'), href: 'https://academic.oup.com/mnras/article/536/4/3177/7923506' },
+    ],
+  },
+  {
+    id: 'j0313-1806',
+    kind: 'quasar',
+    observationStatus: 'observed',
+    name: 'J0313−1806',
+    redshift: 7.6423,
+    rightAscension: 48.4326625,
+    declination: -18.1101111,
+    color: '#eaaef9',
+    visibleJet: false,
+    blackHoleMassSolar: 1.6e9,
+    summary: message('catalog.observable-universe.j0313-1806.summary'),
+    sources: [{ label: message('catalog.observable-universe.j0313-1806.source.wang-et-al-j0313-1806-discovery-and'), href: 'https://doi.org/10.3847/2041-8213/abd8c6' }],
+  },
+  {
+    id: 'jades-gs-z14-0',
+    kind: 'early-galaxy',
+    observationStatus: 'observed',
+    name: 'JADES-GS-z14-0',
+    redshift: 14.1793,
+    rightAscension: 53.08294,
+    declination: -27.85563,
+    color: '#ffa378',
+    ultravioletHalfLightRadiusParsecs: 260,
+    summary: message('catalog.observable-universe.jades-gs-z14-0.summary'),
+    sources: [
+      { label: message('catalog.observable-universe.jades-gs-z14-0.source.nasa-webb-nircam-image'), href: 'https://science.nasa.gov/asset/webb/jades-gs-z14-0-pullout-nircam/' },
+      { label: message('catalog.observable-universe.jades-gs-z14-0.source.carniani-et-al-discovery-paper-and-coordinates'), href: 'https://doi.org/10.1038/s41586-024-07860-9' },
+      { label: message('catalog.observable-universe.jades-gs-z14-0.source.schouws-et-al-alma-redshift-measurement'), href: 'https://doi.org/10.3847/1538-4357/adbf1b' },
+    ],
+  },
+];

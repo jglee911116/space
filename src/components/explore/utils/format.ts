@@ -1,0 +1,28 @@
+import type { Body } from '@/constants/space';
+import type { CatalogText, FormatNumber, Translator } from '@/i18n/messages';
+import { DAYS_PER_YEAR, KM_PER_AU } from '@/constants/space/units';
+
+export const kindLabel = { star: 'body.star', planet: 'body.planet', 'dwarf-planet': 'body.dwarfPlanet', 'small-body': 'body.smallBody', moon: 'body.moon' } as const;
+
+export function bodySize(body: Body, t: Translator, number: FormatNumber) {
+  const value = body.lengthKm ?? body.radiusKm;
+  if (value === undefined) return null;
+  return { label: t(body.lengthKm ? 'details.maximumLength' : 'details.radius'), value: `${number(value, value < 20 ? 1 : 0)} km` };
+}
+
+export function formatSpin(body: Body, t: Translator, number: FormatNumber, catalogText: (value: CatalogText) => string) {
+  if (body.spinNote) return catalogText(body.spinNote);
+  const days = body.spinDays;
+  if (days === undefined) return t('details.unknown');
+  return (days < 2 ? t('units.hours', [number(days * 24)]) : t('units.days', [number(days)])) + (body.tilt > 90 ? ` · ${t('details.retrograde')}` : '');
+}
+
+export function formatPeriod(body: Body, t: Translator, number: FormatNumber) {
+  const days = body.orbit!.periodDays;
+  return body.kind === 'star' && days >= DAYS_PER_YEAR ? t('units.years', [number(days / DAYS_PER_YEAR)]) : t('units.days', [number(days, 2)]);
+}
+
+export function formatAxis(body: Body, parent: Body | undefined, number: FormatNumber) {
+  const axisAu = body.orbit!.axisAu;
+  return !parent || parent.kind === 'star' ? `${number(axisAu, 5)} AU` : `${number(axisAu * KM_PER_AU, 0)} km`;
+}
