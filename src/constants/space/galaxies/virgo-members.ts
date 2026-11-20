@@ -1,6 +1,6 @@
 import { message } from '@/i18n/messages';
 import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '../units';
-import type { ClusterMarker, Galaxy } from '../types';
+import type { Galaxy } from '../types';
 import { m87 } from './m87';
 
 const kpcPerMillionLightYears = (1e6 * KM_PER_LIGHT_YEAR) / (AU_PER_KPC * KM_PER_AU);
@@ -47,7 +47,3 @@ export const virgoGalaxies = [
     sources: [{ label: 'NASA Hubble · M49', href: 'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/messier-49/' }],
   },
 ] satisfies readonly Galaxy[];
-
-export const virgoMemberMarkers: readonly ClusterMarker[] = virgoGalaxies.flatMap(({ id, distanceKpc, color, skyPosition }) =>
-  skyPosition ? [{ name: id.toUpperCase(), galaxyId: id, distanceMly: distanceKpc / kpcPerMillionLightYears, color, ...skyPosition }] : [],
-);

@@ -1,14 +1,22 @@
+import { nearbyShowcase } from './galaxies/nearby-showcase';
 import { message } from '@/i18n/messages';
+import { galaxyAssociations } from './galaxy-associations';
+import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from './units';
 import type { ClusterMarker, Supercluster } from './types';
 
-export const virgoCluster: ClusterMarker = {
-  name: message('catalog.superclusters.virgo-cluster.name'),
-  clusterId: 'virgo',
-  distanceMly: 54,
-  rightAscension: 187.70592,
-  declination: 12.39112,
-  color: '#a4c6ff',
-};
+const groupMarkers: readonly ClusterMarker[] = galaxyAssociations.flatMap((group) => {
+  const anchor = group.members[0];
+  return anchor?.skyPosition
+    ? [{ name: group.name, clusterId: group.id, distanceMly: (anchor.distanceKpc * AU_PER_KPC * KM_PER_AU) / (1e6 * KM_PER_LIGHT_YEAR), color: anchor.color, ...anchor.skyPosition }]
+    : [];
+});
+const nearbyMarkers: readonly ClusterMarker[] = nearbyShowcase.map(({ id, name, skyPosition, distanceKpc, color }) => ({
+  name,
+  galaxyId: id,
+  distanceMly: (distanceKpc * AU_PER_KPC * KM_PER_AU) / (1e6 * KM_PER_LIGHT_YEAR),
+  color,
+  ...skyPosition,
+}));
 const normaCluster = {
   name: message('catalog.superclusters.norma-cluster.name'),
   distanceMly: 220,
@@ -31,7 +39,7 @@ export const superclusters: readonly [Supercluster, Supercluster] = [
     zoomOutMly: 205,
     zoomInMly: 150,
     summary: message('catalog.superclusters.virgo.summary'),
-    markers: [virgoCluster],
+    markers: [...groupMarkers.filter(({ clusterId }) => galaxyAssociations.some((group) => group.id === clusterId && group.mapRegionId === 'virgo')), ...nearbyMarkers],
     sources: [
       {
         label: message('catalog.superclusters.virgo.source.american-museum-of-natural-history-virgo-supercluster'),
@@ -48,7 +56,7 @@ export const superclusters: readonly [Supercluster, Supercluster] = [
     zoomOutMly: 980,
     zoomInMly: 750,
     summary: message('catalog.superclusters.laniakea.summary'),
-    markers: [virgoCluster, normaCluster],
+    markers: [...groupMarkers, normaCluster],
     sources: [
       { label: message('catalog.superclusters.laniakea.source.tully-et-al-galaxy-flows-in-laniakea'), href: 'https://doi.org/10.1038/nature13674' },
       { label: message('catalog.superclusters.laniakea.source.esa-hubble-norma-cluster'), href: 'https://esahubble.org/images/heic1404a/' },

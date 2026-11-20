@@ -60,7 +60,49 @@ function nebulaParticles(object: FeaturedObject) {
     sizes.push(size);
     expansionMask.push(Number(expanding));
   };
-  if (object.kind === 'pillars') {
+  if (object.kind === 'open-cluster' || object.kind === 'globular-cluster') {
+    const globular = object.kind === 'globular-cluster';
+    const blue = new Color('#8dbaff');
+    const white = new Color('#fff6df');
+    const warm = new Color('#e99e64');
+    for (let i = 0; i < (globular ? 16_000 : 520); i++) {
+      const angle = random() * TAU;
+      const vertical = random() * 2 - 1;
+      const r = 3 * random() ** (globular ? 2.8 : 0.65);
+      const horizontal = r * Math.sqrt(1 - vertical * vertical);
+      tint
+        .copy(white)
+        .lerp(globular ? warm : blue, random() * 0.72)
+        .multiplyScalar(0.45 + random() * 0.55);
+      push(horizontal * Math.cos(angle), r * vertical, horizontal * Math.sin(angle), tint, globular ? 1 + random() : 2 + 4 * random());
+    }
+    if (!globular) {
+      for (let i = 0; i < 5000; i++) {
+        const x = 6 * (random() - 0.5);
+        const y = 3.8 * (random() - 0.5);
+        const z = 2.1 * (random() - 0.5);
+        const ribbon = Math.exp(-14 * (y - 0.45 * Math.sin(2 * x)) ** 2);
+        tint.copy(blue).multiplyScalar(ribbon * 0.26);
+        push(x, y, z, tint, 3.2);
+      }
+    }
+  } else if (object.kind === 'planetary-nebula') {
+    const inner = new Color('#68e1ca');
+    const outer = new Color('#e96c43');
+    for (let i = 0; i < 21_000; i++) {
+      const angle = random() * TAU;
+      const halo = i < 5000;
+      const r = 1.85 + (random() - 0.5) * 0.53 + 0.1 * Math.sin(9 * angle) + (halo ? 0.48 + random() * 0.53 : 0);
+      const x = r * Math.cos(angle);
+      const y = r * Math.sin(angle) * 0.79;
+      const z = (random() - 0.5) * (halo ? 1 : 0.58);
+      tint
+        .copy(inner)
+        .lerp(outer, halo ? 0.87 : Math.min(0.85, Math.max(0, (r - 1.6) * 1.4)))
+        .multiplyScalar(halo ? 0.22 : 0.82);
+      push(x, y * 0.87 - z * 0.49, y * 0.49 + z * 0.87, tint, 1.5 + random());
+    }
+  } else if (object.kind === 'pillars') {
     const columns = [
       { x: -1.42, z: -0.32, height: 4.9, width: 0.54, bend: 0.36 },
       { x: -0.36, z: 0.66, height: 3.62, width: 0.31, bend: 0.75 },
@@ -182,7 +224,7 @@ function childObject(object: FeaturedObject) {
 
 function Scene({ object, reportDistance, simulationDaysRef, onLeave, placeChildButton }: Props & { placeChildButton: PlaceChildButton }) {
   const center = useMemo(() => new Vector3(), []);
-  const scale = object.kind === 'star-forming-region' || object.kind === 'ring-remnant' ? object.extentLightYears / 6 : 1;
+  const scale = object.kind === 'pillars' || object.kind === 'supernova-remnant' ? 1 : object.extentLightYears / 6;
   const uniforms = useMemo(() => ({ particleScale: { value: scale }, expansion: { value: 0 } }), [scale]);
   const particles = useMemo(() => nebulaParticles(object), [object]);
   const material = useRef<ShaderMaterial>(null);
@@ -220,13 +262,13 @@ function Scene({ object, reportDistance, simulationDaysRef, onLeave, placeChildB
           <StellarGlow radius={scale * 0.024} color="#c1ddff" />
         </group>
       ))}
-      {object.kind === 'supernova-remnant' && (
+      {(object.kind === 'supernova-remnant' || object.kind === 'planetary-nebula') && (
         <>
           <mesh>
-            <sphereGeometry args={[0.036, 16, 12]} />
+            <sphereGeometry args={[object.kind === 'planetary-nebula' ? scale * 0.047 : 0.036, 16, 12]} />
             <meshBasicMaterial color="#f7fcff" />
           </mesh>
-          <StellarGlow radius={0.036} color="#a4d8ff" strength={0.65} />
+          <StellarGlow radius={object.kind === 'planetary-nebula' ? scale * 0.047 : 0.036} color="#a4d8ff" strength={0.65} />
         </>
       )}
       <OrbitControls

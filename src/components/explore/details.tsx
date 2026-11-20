@@ -1,5 +1,4 @@
-import { virgoGalaxies } from '@/constants/space/galaxies/virgo-members';
-import { virgoCluster } from '@/constants/space/superclusters';
+import { galaxyAssociations, type GalaxyAssociation } from '@/constants/space/galaxy-associations';
 import type { CatalogText } from '@/i18n/messages';
 import { useLanguage } from '@/i18n/language';
 import {
@@ -402,7 +401,11 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
             {object.radiusUncertaintySolar === undefined ? number(object.radiusSolar) : `${number(object.radiusSolar)} ± ${number(object.radiusUncertaintySolar)}`} R☉
           </DataRow>
         )}
-        {object.radiusKm !== undefined && <DataRow label={t(object.radiusBasis === 'model-assumption' ? 'details.assumedRadius' : 'details.radius')}>{number(object.radiusKm)} km</DataRow>}
+        {object.radiusKm !== undefined && (
+          <DataRow label={t(object.radiusBasis === 'model-assumption' ? 'details.assumedRadius' : object.radiusBasis === 'estimate' ? 'details.estimatedRadius' : 'details.radius')}>
+            {number(object.radiusKm, 2)} km
+          </DataRow>
+        )}
         {object.blackHoleMassSolar !== undefined && (
           <DataRow label={t('details.estimatedBlackHoleMass')}>{t('details.solarMassHundredMillions', [measurement(object.blackHoleMassSolar, 1e8)])}</DataRow>
         )}
@@ -411,7 +414,13 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
       {radiusRatio !== undefined && (
         <div className={styles.radiusComparison}>
           <h3>{t('details.compareSolarRadius')}</h3>
-          <p>{object.radiusKm === undefined ? t('details.solarRadiusRatio', [number(radiusRatio)]) : t('details.pulsarRadius', [number(object.radiusKm, 0), number(1 / radiusRatio, 0)])}</p>
+          <p>
+            {object.radiusKm === undefined
+              ? t('details.solarRadiusRatio', [number(radiusRatio)])
+              : object.radiusBasis === 'estimate'
+                ? t('details.compactRadiusRatio', [number(1 / radiusRatio, 0)])
+                : t('details.pulsarRadius', [number(object.radiusKm, 0), number(1 / radiusRatio, 0)])}
+          </p>
           <div className={styles.radiusAxis} aria-hidden="true">
             <span style={{ left: '60%' }}>{t('details.sun')}</span>
             <i style={{ left: `${((Math.log10(radiusRatio) + 6) / 10) * 100}%`, backgroundColor: object.color }} />
@@ -420,11 +429,23 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
         </div>
       )}
       {object.spinSeconds !== undefined && (
-        <p>{object.spinSeconds < 1 ? t('details.rotationMilliseconds', [number(object.spinSeconds * 1000, 0)]) : t('details.rotationSeconds', [number(object.spinSeconds, 3)])}</p>
+        <p>
+          {object.spinSeconds < 1
+            ? t('details.rotationMilliseconds', [number(object.spinSeconds * 1000, object.spinSeconds < 0.01 ? 3 : 0)])
+            : t('details.rotationSeconds', [number(object.spinSeconds, 3)])}
+        </p>
       )}
       {object.variabilityDays !== undefined && <p>{t('details.variabilityPeriod', [number(object.variabilityDays, 0)])}</p>}
       {object.expansionPerYear !== undefined && <p>{t('details.expansionModel', [t(object.kind === 'ring-remnant' ? 'details.centralEjecta' : 'details.nebula')])}</p>}
-      <ModelNotes>{t(object.extentLightYears > 0 && object.kind !== 'black-hole' ? 'details.nebulaModelScale' : 'details.unscaledModel')}</ModelNotes>
+      <ModelNotes>
+        {t(
+          object.kind === 'open-cluster' || object.kind === 'globular-cluster'
+            ? 'details.clusterModelScale'
+            : object.extentLightYears > 0 && object.kind !== 'black-hole'
+              ? 'details.nebulaModelScale'
+              : 'details.unscaledModel',
+        )}
+      </ModelNotes>
       <DetailSources sources={object.sources} />
     </section>
   );
@@ -494,30 +515,31 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange }: 
 
 export function SuperclusterDetails({
   region,
-  clusterView,
+  association,
   onSelectCluster,
   onSelectGalaxy,
 }: {
   region: Supercluster;
-  clusterView: boolean;
-  onSelectCluster: () => void;
+  association?: GalaxyAssociation;
+  onSelectCluster: (id: string) => void;
   onSelectGalaxy: (id: string) => void;
 }) {
   const { t, catalogText, measurement } = useLanguage();
-  if (clusterView) {
+  if (association) {
     return (
       <section className={styles.details} aria-labelledby="body-name">
-        <h2 id="body-name">{catalogText(virgoCluster.name)}</h2>
+        <h2 id="body-name">{catalogText(association.name)}</h2>
+        {association.summary && <p>{catalogText(association.summary)}</p>}
         <p>{t('details.virgoClusterMembers')}</p>
         <p>
-          {virgoGalaxies.map(({ id, name, title }) => (
+          {association.members.map(({ id, name, title }) => (
             <button type="button" key={id} onClick={() => onSelectGalaxy(id)}>
               {catalogText(title ?? name)}
             </button>
           ))}
         </p>
         <ModelNotes>{t('details.virgoClusterScale')}</ModelNotes>
-        <DetailSources sources={virgoGalaxies.flatMap(({ sources }) => sources)} />
+        <DetailSources sources={[...association.sources, ...association.members.flatMap(({ sources }) => sources)]} />
       </section>
     );
   }
@@ -526,13 +548,15 @@ export function SuperclusterDetails({
       <h2 id="body-name">{catalogText(region.name)}</h2>
       <p>{t('details.superclusterSpan', [measurement(region.spanMly * 1e6, 1e8)])}</p>
       <p>{catalogText(region.summary)}</p>
-      {region.id === 'virgo' && (
-        <p>
-          <button type="button" onClick={onSelectCluster}>
-            {t('navigation.openVirgoCluster')}
-          </button>
-        </p>
-      )}
+      <p>
+        {galaxyAssociations
+          .filter((item) => item.mapRegionId === region.id)
+          .map((item) => (
+            <button type="button" key={item.id} onClick={() => onSelectCluster(item.id)}>
+              {catalogText(item.name)}
+            </button>
+          ))}
+      </p>
       <ModelNotes>{t('details.superclusterBoundaries')}</ModelNotes>
       <DetailSources sources={region.sources} />
     </section>

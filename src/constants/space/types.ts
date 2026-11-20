@@ -49,7 +49,8 @@ export type Body = {
   appearance?: Appearance;
   orbit?: OrbitElements;
   rings?: readonly Ring[];
-  redSpot?: boolean;
+  surfaceMap?: { file: string; longitudeOffset?: number; fillMissing?: boolean };
+  surfaceFeatures?: 'jupiter' | 'saturn' | 'mars' | 'neptune' | 'io' | 'europa';
   polarCaps?: boolean;
   /** 카메라 초점 거리 = displayRadius × focusScale (기본 6.75). */
   focusScale?: number;
@@ -101,6 +102,7 @@ export type StarSystem = {
 /** 국부은하군 지도와 원반 모형에 쓰는 은하 공통 정보. */
 export type Galaxy = {
   id: string;
+  aliases?: readonly string[];
   name: CatalogText;
   /** 상세 패널 제목. 기본 name. */
   title?: CatalogText;
@@ -110,7 +112,7 @@ export type Galaxy = {
   skyPosition?: { rightAscension: number; declination: number };
   parentGalaxyId?: string;
   superclusterId?: string;
-  morphology?: 'open-spiral' | 'barred-irregular' | 'irregular' | 'compact-elliptical' | 'dwarf-elliptical' | 'giant-elliptical';
+  morphology?: 'barred-spiral' | 'open-spiral' | 'barred-irregular' | 'irregular' | 'compact-elliptical' | 'dwarf-elliptical' | 'giant-elliptical' | 'dust-lane-elliptical';
   modelRadiusKpc: number;
   /** 원반 바깥쪽 색. */
   color: string;
@@ -145,10 +147,23 @@ export type ObservationStatus = 'observed' | 'candidate';
 
 export type FeaturedObject = {
   id: string;
+  aliases?: readonly string[];
   name: CatalogText;
   designation: CatalogText;
   description: CatalogText;
-  kind: 'pillars' | 'supernova-remnant' | 'ring-remnant' | 'star-forming-region' | 'black-hole' | 'pulsar' | 'neutron-star' | 'magnetar' | 'supergiant';
+  kind:
+    | 'pillars'
+    | 'supernova-remnant'
+    | 'ring-remnant'
+    | 'star-forming-region'
+    | 'open-cluster'
+    | 'globular-cluster'
+    | 'planetary-nebula'
+    | 'black-hole'
+    | 'pulsar'
+    | 'neutron-star'
+    | 'magnetar'
+    | 'supergiant';
   galaxyId?: string;
   parentObjectId?: string;
   observationStatus?: ObservationStatus;
@@ -173,7 +188,7 @@ export type FeaturedObject = {
 };
 
 export type ClusterMarker = {
-  clusterId?: 'virgo';
+  clusterId?: string;
   galaxyId?: string;
   name: CatalogText;
   distanceMly: number;
@@ -198,6 +213,7 @@ export type ObservableUniverse = { name: CatalogText; radiusMillionLightYears: n
 
 type DistantObjectFields = {
   id: string;
+  aliases?: readonly string[];
   name: CatalogText;
   observationStatus?: ObservationStatus;
   redshift: number;

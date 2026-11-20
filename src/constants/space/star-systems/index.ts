@@ -5,6 +5,7 @@ import { barnardStar } from './barnard-star';
 import { epsilonEridani } from './epsilon-eridani';
 import { kepler16 } from './kepler-16';
 import { m31EclipsingBinary } from './m31-eclipsing-binary';
+import { gliese12, lhs1140 } from './nearby-exoplanets';
 import { procyon } from './procyon';
 import { ross128 } from './ross-128';
 import { sirius } from './sirius';
@@ -33,6 +34,8 @@ export const systems = {
   'ross-128': validate(ross128),
   procyon: validate(procyon),
   'trappist-1': validate(trappist1),
+  'gliese-12': validate(gliese12),
+  'lhs-1140': validate(lhs1140),
   '51-pegasi': validate(pegasi51),
   'kepler-16': validate(kepler16),
   'm31v-j00443610-4129194': validate(m31EclipsingBinary),

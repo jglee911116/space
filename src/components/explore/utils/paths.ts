@@ -30,4 +30,6 @@ export function distantObjectPath(id: string) {
   return `${UNIVERSE_PATH}?target=${encodeURIComponent(id)}`;
 }
 
-export const VIRGO_CLUSTER_PATH = `${superclusterPath('virgo')}?view=cluster`;
+export function associationPath(regionId: string, associationId: string) {
+  return `${superclusterPath(regionId)}?view=cluster&cluster=${encodeURIComponent(associationId)}`;
+}

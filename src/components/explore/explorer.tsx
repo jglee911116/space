@@ -3,7 +3,7 @@
 import { Message, useLanguage } from '@/i18n/language';
 import dynamic from 'next/dynamic';
 import { withLocale, withoutLocale } from '@/i18n/routing';
-import { virgoCluster } from '@/constants/space/superclusters';
+import { galaxyAssociations } from '@/constants/space/galaxy-associations';
 import type { Locale } from '@/i18n/messages';
 import { CatalogSearch } from './catalog-search';
 import { LanguageSelect } from './language-select';
@@ -30,7 +30,7 @@ import {
 } from './details';
 import { isNearbySystem } from './utils/nearby-positions';
 import { distanceScale } from './utils/distance-scale';
-import { distantObjectPath, featuredObjectPath, galaxyPath, HOME_PATH, LOCAL_GROUP_PATH, localGroupPath, superclusterPath, systemPath, UNIVERSE_PATH, VIRGO_CLUSTER_PATH } from './utils/paths';
+import { associationPath, distantObjectPath, featuredObjectPath, galaxyPath, HOME_PATH, LOCAL_GROUP_PATH, localGroupPath, superclusterPath, systemPath, UNIVERSE_PATH } from './utils/paths';
 import { elapsedSimulationDays, REALTIME_DAYS_PER_SECOND } from './utils/orbit';
 import type { Overview, Target } from './scenes/system-scene';
 import type { ZoomHandoff, ZoomScale } from './utils/zoom';
@@ -126,7 +126,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const universeView = pathname === UNIVERSE_PATH;
   const region = superclusters.find(({ id }) => pathname === superclusterPath(id));
   const cosmicView = universeView || !!region;
-  const clusterView = region?.id === 'virgo' && searchParams.get('view') === 'cluster';
+  const association = searchParams.get('view') === 'cluster' ? galaxyAssociations.find((item) => item.mapRegionId === region?.id && item.id === (searchParams.get('cluster') ?? 'virgo')) : undefined;
   const distantObject = universeView ? distantObjects.find(({ id }) => id === searchParams.get('target')) : undefined;
   const [showCounterjet, setShowCounterjet] = useState(false);
   const groupView = pathname === LOCAL_GROUP_PATH;
@@ -165,8 +165,8 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const focusGalacticCenter = galaxyView && targetParam === milkyWay.center.id;
   const focusBlackHole = focusGalacticCenter && (centerZoom?.close ?? true);
   const heading = region
-    ? clusterView
-      ? virgoCluster.name
+    ? association
+      ? association.name
       : region.name
     : universeView
       ? (distantObject?.name ?? observableUniverse.name)
@@ -284,9 +284,16 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const selectDistantObject = useCallback((id: string) => navigateSpace(distantObjectPath(id)), [navigateSpace]);
   const exitDistantObject = useCallback((id: string) => navigateSpace(`${UNIVERSE_PATH}?focus=${encodeURIComponent(id)}`), [navigateSpace]);
 
-  const groupFocusId = activeGalaxy.superclusterId ? milkyWay.id : activeGalaxy.id;
+  const containingAssociation = galaxyAssociations.find(({ members }) => members.some(({ id }) => id === activeGalaxy.id));
+  const groupFocusId = containingAssociation || activeGalaxy.superclusterId ? milkyWay.id : activeGalaxy.id;
   const enterLocalGroup = useCallback((entry?: ZoomHandoff) => navigateSpace(localGroupPath(groupFocusId), entry), [groupFocusId, navigateSpace]);
-  const enterVirgoCluster = useCallback(() => navigateSpace(VIRGO_CLUSTER_PATH), [navigateSpace]);
+  const enterAssociation = useCallback(
+    (id: string) => {
+      const item = galaxyAssociations.find((group) => group.id === id);
+      if (item) navigateSpace(associationPath(item.mapRegionId, id));
+    },
+    [navigateSpace],
+  );
   const enterRegion = useCallback((id: string, entry?: ZoomHandoff) => navigateSpace(superclusterPath(id), entry), [navigateSpace]);
   const zoomInCosmic = useCallback(
     (entry?: ZoomHandoff) => {
@@ -297,11 +304,11 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   );
   const zoomOutCosmic = useCallback(
     (entry: ZoomHandoff) => {
-      if (clusterView) enterRegion(superclusters[0].id);
+      if (association) enterRegion(association.mapRegionId);
       else if (region === superclusters[0]) enterRegion(superclusters[1].id, entry);
       else enterUniverse(entry);
     },
-    [clusterView, enterRegion, enterUniverse, region],
+    [association, enterRegion, enterUniverse, region],
   );
   const leaveLocalGroup = useCallback((entry: ZoomHandoff) => enterRegion(superclusters[0].id, entry), [enterRegion]);
 
@@ -310,11 +317,11 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const selectCatalogGalaxy = useCallback((id: string) => navigateSpace(galaxyPath(id)), [navigateSpace]);
   const leaveGalaxy = useCallback(
     (entry: ZoomHandoff) => {
-      if (activeGalaxy.superclusterId === 'virgo') enterVirgoCluster();
+      if (containingAssociation) enterAssociation(containingAssociation.id);
       else if (activeGalaxy.superclusterId) enterRegion(activeGalaxy.superclusterId);
       else enterLocalGroup(entry);
     },
-    [activeGalaxy.superclusterId, enterLocalGroup, enterRegion, enterVirgoCluster],
+    [activeGalaxy.superclusterId, containingAssociation, enterAssociation, enterLocalGroup, enterRegion],
   );
 
   const enterMarkedSystem = useCallback((id: string, entry?: ZoomHandoff) => navigateSpace(systemPath(activeGalaxy.id, id), entry), [activeGalaxy.id, navigateSpace]);
@@ -336,7 +343,8 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
     setCenterZoom({ close, entry });
   }, []);
 
-  const selectGalacticBody = useCallback((next: string) => navigateTo(next, 'galaxy'), [navigateTo]);
+  const selectGalacticCenter = useCallback(() => navigateSpace(`${galaxyPath(milkyWay.id)}?target=${milkyWay.center.id}`), [navigateSpace]);
+  const openStarSystem = useCallback((item: StarSystem) => navigateSpace(systemPath(item.galaxyId ?? milkyWay.id, item.id, item.bodies[0].id)), [navigateSpace]);
   const focusNearbySystem = useCallback((item: StarSystem) => navigateTo(item.bodies[0].id, 'galaxy', item.id), [navigateTo]);
 
   const hoverBody = useCallback((id: string, x: number, y: number) => {
@@ -352,11 +360,11 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
       <div className={styles.viewport} onPointerLeave={() => setHovered(null)} onPointerCancel={() => setHovered(null)} onWheelCapture={() => setHovered(null)}>
         {cosmicView ? (
           <UniverseScene
-            key={`${distantObject ? `object:${distantObject.id}` : `map:${pathname}:${clusterView}:${searchParams.get('focus') ?? ''}`}:${recenter}`}
+            key={`${distantObject ? `object:${distantObject.id}` : `map:${pathname}:${association?.id ?? ''}:${searchParams.get('focus') ?? ''}`}:${recenter}`}
             object={distantObject}
             region={region}
-            clusterView={clusterView}
-            onSelectCluster={enterVirgoCluster}
+            association={association}
+            onSelectCluster={enterAssociation}
             onStepIn={zoomInCosmic}
             onStepOut={zoomOutCosmic}
             showCounterjet={showCounterjet}
@@ -402,7 +410,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             reportDistance={reportDistance}
             system={system}
             systems={galaxySystems}
-            onFocusSystem={focusNearbySystem}
+            onSelectSystem={openStarSystem}
             onSelectObject={selectFeaturedObject}
             entry={wheelView?.entry}
             onZoomIn={enterSolarSystem}
@@ -415,7 +423,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             simulationDaysRef={simulationDaysRef}
             paused={paused}
             demo={galacticDemo}
-            onSelect={selectGalacticBody}
+            onSelectCenter={selectGalacticCenter}
             recenter={recenter}
           />
         ) : (
@@ -470,13 +478,15 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
               {catalogText(observableUniverse.name)}
             </button>
             {superclusters.map((item) => (
-              <button key={item.id} type="button" aria-pressed={item === region && !clusterView} onClick={() => enterRegion(item.id)}>
+              <button key={item.id} type="button" aria-pressed={item === region && !association} onClick={() => enterRegion(item.id)}>
                 {catalogText(item.name)}
               </button>
             ))}
-            <button type="button" aria-pressed={clusterView} onClick={enterVirgoCluster}>
-              {catalogText(virgoCluster.name)}
-            </button>
+            {galaxyAssociations.map((item) => (
+              <button key={item.id} type="button" aria-pressed={association === item} onClick={() => enterAssociation(item.id)}>
+                {catalogText(item.name)}
+              </button>
+            ))}
             <button type="button" aria-pressed={groupView} onClick={() => enterLocalGroup()}>
               {catalogText(localGroup.name)}
             </button>
@@ -576,7 +586,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
                       {t('navigation.around', [catalogText(item.name)])}
                     </button>
                   ))}
-                  <button type="button" aria-pressed={focusBlackHole} onClick={() => selectGalacticBody(milkyWay.center.id)}>
+                  <button type="button" aria-pressed={focusBlackHole} onClick={selectGalacticCenter}>
                     {catalogText(milkyWay.center.name)}
                   </button>
                 </>
@@ -632,7 +642,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
           <p className={styles.hint}>{t('navigation.cameraInstructions')}</p>
         </div>
         {region ? (
-          <SuperclusterDetails region={region} clusterView={clusterView} onSelectCluster={enterVirgoCluster} onSelectGalaxy={selectCatalogGalaxy} />
+          <SuperclusterDetails region={region} association={association} onSelectCluster={enterAssociation} onSelectGalaxy={selectCatalogGalaxy} />
         ) : universeView ? (
           <UniverseDetails object={distantObject} showCounterjet={showCounterjet} onCounterjetChange={setShowCounterjet} />
         ) : featuredObject ? (

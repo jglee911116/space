@@ -5,12 +5,13 @@ import { useLanguage } from '@/i18n/language';
 import { Line, OrbitControls, Stars } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, type ComponentRef } from 'react';
-import { Box3, Color, MathUtils, Quaternion, Vector3, type Group } from 'three';
+import { Box3, Color, MathUtils, Quaternion, Vector3, type Group, type Points } from 'three';
 import { localGroup, type Galaxy } from '@/constants/space';
 import { AU_PER_KPC, KM_PER_AU } from '@/constants/space/units';
 import { useCursorZoom } from '../three/use-cursor-zoom';
 import { CanvasBoundary } from '../three/canvas-boundary';
-import { GalacticMarker } from '../three/galactic-marker';
+import { updatePointDetail } from '../three/map-detail';
+import { GalacticLabelLayer, GalacticMarker } from '../three/galactic-marker';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { EXTERNAL_SYSTEM_ENTRY_KPC, EXTERNAL_SYSTEM_RETURN_KPC, GALAXY_ENTRY_KPC, GALAXY_EXIT_KPC, LOCAL_GROUP_EXIT_KPC, type ZoomHandoff } from '../utils/zoom';
 
@@ -57,8 +58,10 @@ function model(galaxy: Galaxy, count: number) {
   const morphology = galaxy.morphology;
   const irregular = morphology === 'irregular' || morphology === 'barred-irregular';
   const openSpiral = morphology === 'open-spiral';
+  const barredSpiral = morphology === 'barred-spiral';
   const compactElliptical = morphology === 'compact-elliptical';
-  const giantElliptical = morphology === 'giant-elliptical';
+  const hasDustLane = morphology === 'dust-lane-elliptical';
+  const giantElliptical = morphology === 'giant-elliptical' || hasDustLane;
   const elliptical = compactElliptical || giantElliptical || morphology === 'dwarf-elliptical';
   const ellipsoidY = giantElliptical ? 0.82 : compactElliptical ? 0.75 : 0.5;
   const ellipsoidZ = giantElliptical ? 0.87 : compactElliptical ? 0.85 : 0.59;
@@ -74,11 +77,16 @@ function model(galaxy: Galaxy, count: number) {
       const polar = random() * 2 - 1;
       const plane = Math.sqrt(1 - polar * polar);
       const index = i * 3;
-      positions.set([r * plane * Math.cos(angle), r * polar * ellipsoidY, r * plane * Math.sin(angle) * ellipsoidZ], index);
+      const x = r * plane * Math.cos(angle);
+      const y = r * polar * ellipsoidY;
+      const z = r * plane * Math.sin(angle) * ellipsoidZ;
+      positions.set([x, y, z], index);
+      const inDustLane = hasDustLane && Math.abs(y - 0.18 * x) < galaxy.modelRadiusKpc * 0.055;
+      const shading = inDustLane ? 0.12 : 1;
       tint
         .copy(diskColor)
         .lerp(bulgeColor, 0.28 * (1 - r / galaxy.modelRadiusKpc))
-        .multiplyScalar(0.14 + random() * 0.7);
+        .multiplyScalar((0.14 + random() * 0.7) * shading);
       tint.toArray(colors, index);
       continue;
     }
@@ -90,9 +98,9 @@ function model(galaxy: Galaxy, count: number) {
     const angle = arm ? (i % 2) * Math.PI + (openSpiral ? 1.65 : 2.5) * Math.log(r / 4) + (random() - 0.5) * 0.75 : random() * Math.PI * 2;
     const brightness = 0.16 + 0.75 * random();
     const dustLane = arm && Math.sin(12 * radial + 2 * angle) > 0.62;
-    const bar = morphology === 'barred-irregular' && compactCore;
+    const bar = (morphology === 'barred-irregular' || barredSpiral) && compactCore;
     const asymmetry = irregular ? 0.78 + 0.2 * Math.sin(2 * angle) + 0.15 * Math.cos(3 * angle) : 1;
-    const x = r * Math.cos(angle) * asymmetry * (bar ? 1.35 : 1);
+    const x = r * Math.cos(angle) * asymmetry * (bar ? (barredSpiral ? 2.4 : 1.35) : 1);
     const z = r * Math.sin(angle) * asymmetry * (bar ? 0.24 : irregular ? 0.67 : 1);
     const thickness = irregular ? size * (morphology === 'irregular' ? 0.45 : 0.18) : compactCore ? size * 0.18 : size * 0.027;
     positions.set([x, (random() - 0.5) * thickness * (1 - radial), z], i * 3);
@@ -104,8 +112,13 @@ function model(galaxy: Galaxy, count: number) {
 
 function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
   const points = useMemo(() => model(galaxy, compact ? 3000 : 28_000), [compact, galaxy]);
+  const disk = useRef<Points>(null);
+  const position = useMemo(() => new Vector3(), []);
+  useFrame(({ camera, size }) => {
+    if (disk.current) updatePointDetail(disk.current, position, camera, size.height, galaxy.modelRadiusKpc);
+  });
   return (
-    <points rotation-x={galaxy.diskTilt ?? 0} raycast={() => {}}>
+    <points ref={disk} rotation-x={galaxy.diskTilt ?? 0} raycast={() => {}}>
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[points.positions, 3]} />
         <bufferAttribute attach="attributes-color" args={[points.colors, 3]} />
@@ -186,6 +199,7 @@ function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitG
                 <GalaxyDisk galaxy={item} compact />
                 <GalacticMarker
                   name={item.name}
+                  priority={item.id === galaxy.id ? 3 : 0}
                   color={item.color}
                   labelOffset={
                     item.parentGalaxyId
@@ -225,7 +239,7 @@ function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitG
           ))}
           {systemMarkers.map((item) => (
             <group key={item.id} position={[...item.position]}>
-              <GalacticMarker name={item.name} labelOffset={0.8} onSelect={() => onSelectSystem(item.id)} />
+              <GalacticMarker name={item.name} priority={item.id === focusedSystem?.id ? 3 : 0} labelOffset={0.8} onSelect={() => onSelectSystem(item.id)} />
             </group>
           ))}
         </>
@@ -262,7 +276,9 @@ export default function LocalGroupScene(props: Props) {
   return (
     <CanvasBoundary>
       <Canvas camera={CAMERA} dpr={[1, 1.5]} aria-label={t('canvas.namedModel', [catalogText(label)])}>
-        <Scene {...props} />
+        <GalacticLabelLayer>
+          <Scene {...props} />
+        </GalacticLabelLayer>
       </Canvas>
     </CanvasBoundary>
   );

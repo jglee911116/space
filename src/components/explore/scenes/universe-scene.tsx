@@ -1,26 +1,26 @@
 'use client';
 
 import { useLanguage } from '@/i18n/language';
+import type { CatalogText } from '@/i18n/messages';
 import { Line, OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, type ComponentRef } from 'react';
 import { AdditiveBlending, Box3, MathUtils, Vector3 } from 'three';
 import { observableUniverse, distantObjects, type DistantObject, superclusters, type Supercluster } from '@/constants/space';
 import { cosmologicalDistances } from '../utils/cosmology';
-import { virgoCluster } from '@/constants/space/superclusters';
-import { virgoMemberMarkers } from '@/constants/space/galaxies/virgo-members';
-import { KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
+import type { GalaxyAssociation } from '@/constants/space/galaxy-associations';
+import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
 import { AccretionModel } from '../three/accretion-model';
 import { CanvasBoundary } from '../three/canvas-boundary';
-import { GalacticMarker } from '../three/galactic-marker';
+import { GalacticLabelLayer, GalacticMarker } from '../three/galactic-marker';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { LOCAL_GROUP_ENTRY_MILLION_LIGHT_YEARS, type ZoomHandoff } from '../utils/zoom';
 
 type Props = {
   object?: DistantObject;
   region?: Supercluster;
-  clusterView: boolean;
-  onSelectCluster: () => void;
+  association?: GalaxyAssociation;
+  onSelectCluster: (id: string) => void;
   onStepIn: (entry?: ZoomHandoff) => void;
   onStepOut: (entry: ZoomHandoff) => void;
   focus?: string;
@@ -48,39 +48,85 @@ const landmarks = distantObjects.map((object) => ({
   position: positionAt(object.rightAscension, object.declination, cosmologicalDistances(object.redshift).comovingLightYears / 1e6),
 }));
 
-function UniverseMap({ focus, entry, region, clusterView, reportDistance, onStepIn, onStepOut, onSelectDistantObject, onSelectGalaxy, onSelectCluster }: Props) {
+function MapMarker({
+  name,
+  position,
+  origin,
+  color,
+  opacity,
+  offset,
+  priority,
+  onSelect,
+}: {
+  name: CatalogText;
+  position: Vector3;
+  origin: Vector3;
+  color: string;
+  opacity: number;
+  offset: number;
+  priority: number;
+  onSelect?: () => void;
+}) {
+  const guide = useRef<ComponentRef<typeof Line>>(null);
+
+  return (
+    <>
+      <Line ref={guide} visible={false} points={[origin, position]} color={color} transparent opacity={opacity} depthWrite={false} raycast={() => {}} />
+      <group position={position}>
+        <GalacticMarker name={name} priority={priority} color={color} labelOffset={offset} onSelect={onSelect} guide={guide} />
+      </group>
+    </>
+  );
+}
+
+function UniverseMap({ focus, entry, region, association, reportDistance, onStepIn, onStepOut, onSelectDistantObject, onSelectGalaxy, onSelectCluster }: Props) {
   const { t } = useLanguage();
   const previousRegion = region === superclusters[0] ? undefined : region ? superclusters[0] : superclusters[1];
   const innerName = previousRegion?.name ?? t('navigation.localGroup');
   const entryLimit = previousRegion?.zoomInMly ?? LOCAL_GROUP_ENTRY_MILLION_LIGHT_YEARS;
-  const gridRadius = clusterView ? 6 : (region?.gridRadiusMly ?? RADIUS);
-  const markers = useMemo(
-    () =>
-      (clusterView ? virgoMemberMarkers : region?.markers)?.map((item) => ({
+  const gridRadius = association?.gridRadiusMly ?? region?.gridRadiusMly ?? RADIUS;
+  const markers = useMemo(() => {
+    if (association) {
+      return association.members.flatMap(({ id, name, skyPosition, distanceKpc, color }) =>
+        skyPosition
+          ? [
+              {
+                name,
+                color,
+                galaxyId: id,
+                clusterId: undefined,
+                position: positionAt(skyPosition.rightAscension, skyPosition.declination, (distanceKpc * AU_PER_KPC * KM_PER_AU) / KM_PER_MAP_UNIT),
+              },
+            ]
+          : [],
+      );
+    }
+    return (
+      region?.markers.map((item) => ({
         ...item,
         position: positionAt(item.rightAscension, item.declination, item.distanceMly),
-      })) ?? [],
-    [clusterView, region],
-  );
-  const mapCenter = useMemo(() => (clusterView ? new Box3().setFromPoints(markers.map(({ position }) => position)).getCenter(new Vector3()) : ORIGIN), [clusterView, markers]);
+      })) ?? []
+    );
+  }, [association, region]);
+  const mapCenter = useMemo(() => (association ? new Box3().setFromPoints(markers.map(({ position }) => position)).getCenter(new Vector3()) : ORIGIN), [association, markers]);
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const initialDistance = useRef(0);
   const direction = useMemo(() => new Vector3(), []);
   const camera = useThree((state) => state.camera);
   const { width, height } = useThree((state) => state.size);
   const preset = gridRadius * 2.65 * Math.max(1, height / Math.max(width, 1));
-  const outerLimit = clusterView ? Math.max(24, preset * 1.3) : region ? Math.max(region.zoomOutMly, preset * 1.15) : undefined;
+  const outerLimit = association ? Math.max(gridRadius * 4, preset * 1.3) : region ? Math.max(region.zoomOutMly, preset * 1.15) : undefined;
   useLayoutEffect(() => {
     const orbit = controls.current;
     if (!orbit) return;
     const distance = entry
       ? Math.min(outerLimit ? outerLimit * 0.94 : RADIUS * 4, Math.max(entryLimit * 1.12, (entry.distanceAu * KM_PER_AU) / KM_PER_MAP_UNIT))
       : Math.min(preset, outerLimit ? outerLimit * 0.94 : Infinity);
-    const cameraDirection = clusterView ? new Vector3(-0.72, 0.48, 0.5).normalize() : entry ? new Vector3(...entry.direction) : VIEW;
+    const cameraDirection = association ? new Vector3(-0.72, 0.48, 0.5).normalize() : entry ? new Vector3(...entry.direction) : VIEW;
     orbit.target.copy(mapCenter);
     camera.position.copy(mapCenter).addScaledVector(cameraDirection, distance);
     orbit.update();
-  }, [camera, clusterView, entry, entryLimit, mapCenter, outerLimit, preset]);
+  }, [camera, association, entry, entryLimit, mapCenter, outerLimit, preset]);
   const grid = useMemo(
     () =>
       Array.from({ length: 129 }, (_, index) => {
@@ -115,30 +161,40 @@ function UniverseMap({ focus, entry, region, clusterView, reportDistance, onStep
           )}
         </group>
       ))}
-      {!clusterView && <GalacticMarker name={innerName} color="#ffd195" labelOffset={-0.35} onSelect={() => onStepIn()} />}
+      {!association && <GalacticMarker name={innerName} priority={2} color="#ffd195" labelOffset={-0.35} onSelect={() => onStepIn()} />}
       {markers.map(({ name, position, color, galaxyId, clusterId }, index) => (
-        <group key={typeof name === 'string' ? name : name.key}>
-          <Line points={[mapCenter, position]} color={color} transparent opacity={0.35} depthWrite={false} raycast={() => {}} />
-          <group position={position}>
-            <GalacticMarker name={name} color={color} labelOffset={index % 2 ? -0.85 : 0.95} onSelect={clusterId ? onSelectCluster : galaxyId ? () => onSelectGalaxy(galaxyId) : undefined} />
-          </group>
-        </group>
+        <MapMarker
+          key={typeof name === 'string' ? name : name.key}
+          name={name}
+          position={position}
+          origin={mapCenter}
+          color={color}
+          opacity={0.35}
+          offset={index % 2 ? -0.85 : 0.95}
+          priority={clusterId ? 2 : 0}
+          onSelect={clusterId ? () => onSelectCluster(clusterId) : galaxyId ? () => onSelectGalaxy(galaxyId) : undefined}
+        />
       ))}
       {!region &&
         landmarks.map(({ id, name, color, position }, index) => (
-          <group key={id}>
-            <Line points={[ORIGIN, position]} color={color} transparent opacity={id === focus ? 0.75 : 0.22} depthWrite={false} raycast={() => {}} />
-            <group position={position}>
-              <GalacticMarker name={name} color={color} labelOffset={0.9 + index * 0.3} onSelect={() => onSelectDistantObject(id)} />
-            </group>
-          </group>
+          <MapMarker
+            key={id}
+            name={name}
+            position={position}
+            origin={ORIGIN}
+            color={color}
+            opacity={id === focus ? 0.75 : 0.22}
+            offset={index % 2 ? -0.85 : 0.95}
+            priority={id === focus ? 3 : 0}
+            onSelect={() => onSelectDistantObject(id)}
+          />
         ))}
       <OrbitControls
         ref={controls}
         target={mapCenter}
         enablePan={false}
         zoomToCursor
-        minDistance={clusterView ? 0.35 : entryLimit * 0.55}
+        minDistance={association ? gridRadius * 0.06 : entryLimit * 0.55}
         maxDistance={outerLimit ? outerLimit * 1.16 : RADIUS * Math.max(7, (3 * height) / Math.max(width, 1))}
         onStart={() => {
           initialDistance.current = controls.current?.getDistance() ?? 0;
@@ -152,7 +208,7 @@ function UniverseMap({ focus, entry, region, clusterView, reportDistance, onStep
             direction: direction.subVectors(orbit.object.position, orbit.target).normalize().toArray(),
           };
           if (outerLimit && radius > initialDistance.current && radius >= outerLimit) onStepOut(handoff);
-          else if (!clusterView && radius < initialDistance.current && radius <= entryLimit && orbit.target.length() < entryLimit * 2) onStepIn(handoff);
+          else if (!association && radius < initialDistance.current && radius <= entryLimit && orbit.target.length() < entryLimit * 2) onStepIn(handoff);
         }}
       />
     </>
@@ -214,18 +270,16 @@ export default function UniverseScene(props: Props) {
       <Canvas
         camera={{ position, fov: 45, near: object ? 0.04 : 0.006, far: object ? 160 : RADIUS * 10 }}
         dpr={[1, 1.5]}
-        aria-label={
-          object
-            ? t('canvas.namedObjectModel', [catalogText(object.name)])
-            : t('canvas.namedMap', [catalogText(props.clusterView ? virgoCluster.name : (props.region?.name ?? observableUniverse.name))])
-        }
+        aria-label={object ? t('canvas.namedObjectModel', [catalogText(object.name)]) : t('canvas.namedMap', [catalogText(props.association?.name ?? props.region?.name ?? observableUniverse.name)])}
       >
         {object?.kind === 'quasar' ? (
           <AccretionModel object={object} showCounterjet={props.showCounterjet} onExit={exit} />
         ) : object?.kind === 'early-galaxy' ? (
           <EarlyGalaxyModel color={object.color} onExit={exit} />
         ) : (
-          <UniverseMap {...props} />
+          <GalacticLabelLayer>
+            <UniverseMap {...props} />
+          </GalacticLabelLayer>
         )}
       </Canvas>
     </CanvasBoundary>

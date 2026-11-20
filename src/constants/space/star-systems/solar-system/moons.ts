@@ -10,7 +10,7 @@ const satelliteNote = message('catalog.moons.satellite-note.text');
 type MeanElements = [axisKm: number, eccentricity: number, periapsis: number, meanAnomaly: number, inclination: number, node: number, periodDays: number];
 
 function satellite(
-  body: Pick<Body, 'id' | 'name' | 'parent' | 'radiusKm' | 'displayRadius' | 'colors' | 'appearance' | 'shape'>,
+  body: Pick<Body, 'id' | 'name' | 'parent' | 'radiusKm' | 'displayRadius' | 'colors' | 'appearance' | 'shape' | 'surfaceFeatures' | 'note'> & Partial<Pick<Body, 'sources'>>,
   [axisKm, eccentricity, periapsis, meanAnomaly, inclination, node, periodDays]: MeanElements,
   referencePlane: OrbitReferencePlane,
 ): Body {
@@ -30,8 +30,8 @@ function satellite(
       periodDays,
       referencePlane,
     },
-    note: satelliteNote,
-    sources,
+    note: body.note ?? satelliteNote,
+    sources: body.sources ? [...sources, ...body.sources] : sources,
   };
 }
 
@@ -84,12 +84,12 @@ export const moons: Body[] = [
     { rightAscension: 316.6, declination: 53.5 },
   ),
   satellite(
-    { id: 'io', name: message('catalog.moons.io.name'), parent: 'jupiter', radiusKm: 1821.49, displayRadius: 0.085, appearance: 'rock', colors: ['#994c24', '#e2a43e', '#fff2aa'] },
+    { id: 'io', name: message('catalog.moons.io.name'), parent: 'jupiter', radiusKm: 1821.49, displayRadius: 0.085, appearance: 'rock', colors: ['#994c24', '#e2a43e', '#fff2aa'], surfaceFeatures: 'io', note: message('catalog.moons.io.surface'), sources: [{ label: 'NASA / Io', href: 'https://science.nasa.gov/jupiter/jupiter-moons/io/facts/' }] },
     [421800, 0.004, 49.1, 330.9, 0, 0, 1.762732],
     jupiterPole,
   ),
   satellite(
-    { id: 'europa', name: message('catalog.moons.europa.name'), parent: 'jupiter', radiusKm: 1560.8, displayRadius: 0.075, appearance: 'rock', colors: ['#855a4d', '#d7be9f', '#fff3d6'] },
+    { id: 'europa', name: message('catalog.moons.europa.name'), parent: 'jupiter', radiusKm: 1560.8, displayRadius: 0.075, appearance: 'rock', colors: ['#855a4d', '#d7be9f', '#fff3d6'], surfaceFeatures: 'europa', note: message('catalog.moons.europa.surface'), sources: [{ label: 'NASA / Europa', href: 'https://science.nasa.gov/jupiter/jupiter-moons/europa/europa-facts/' }] },
     [671100, 0.009, 45, 345.4, 0.5, 184, 3.525463],
     jupiterPole,
   ),

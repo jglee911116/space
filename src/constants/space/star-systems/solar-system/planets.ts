@@ -61,7 +61,9 @@ export const planets: Body[] = [
     appearance: 'rock',
     polarCaps: true,
     orbit: { axisAu: 1.52371034, eccentricity: 0.0933941, inclination: 1.84969142, meanLongitude: -4.55343205, perihelionLongitude: -23.94362959, ascendingNode: 49.55953891, periodDays: 686.98 },
-    sources,
+    surfaceFeatures: 'mars',
+    note: message('catalog.planets.mars.surface'),
+    sources: [...sources, { label: 'NASA Mars', href: 'https://science.nasa.gov/mars/facts/' }],
   },
   {
     id: 'jupiter',
@@ -76,8 +78,12 @@ export const planets: Body[] = [
     appearance: 'bands',
     orbit: { axisAu: 5.202887, eccentricity: 0.04838624, inclination: 1.30439695, meanLongitude: 34.39644051, perihelionLongitude: 14.72847983, ascendingNode: 100.47390909, periodDays: 4331 },
     rings: [{ inner: 1.68, outer: 1.7, color: '#b29b88', opacity: 0.22 }],
-    redSpot: true,
-    sources,
+    surfaceFeatures: 'jupiter',
+    note: message('catalog.planets.jupiter.atmosphere'),
+    sources: [
+      ...sources,
+      { label: 'NASA/JPL/Space Science Institute · PIA07782', href: 'https://science.nasa.gov/photojournal/cassinis-best-maps-of-jupiter-cylindrical-map/' },
+    ],
   },
   {
     id: 'saturn',
@@ -98,7 +104,9 @@ export const planets: Body[] = [
       { inner: 2.13, outer: 2.29, color: '#d6bd9e', opacity: 0.72 },
     ],
     focusScale: 9,
-    sources,
+    surfaceFeatures: 'saturn',
+    note: message('catalog.planets.saturn.atmosphere'),
+    sources: [...sources, { label: 'NASA / Cassini', href: 'https://science.nasa.gov/resource/vortex-and-rings/' }],
   },
   {
     id: 'uranus',
@@ -128,6 +136,8 @@ export const planets: Body[] = [
     appearance: 'ice',
     orbit: { axisAu: 30.06992276, eccentricity: 0.00859048, inclination: 1.77004347, meanLongitude: -55.12002969, perihelionLongitude: 44.96476227, ascendingNode: 131.78422574, periodDays: 59800 },
     rings: [{ inner: 1.7, outer: 1.74, color: '#8a97b8', opacity: 0.24 }],
-    sources,
+    surfaceFeatures: 'neptune',
+    note: message('catalog.planets.neptune.surface'),
+    sources: [...sources, { label: 'NASA / Voyager 2', href: 'https://science.nasa.gov/neptune/neptune-facts/' }],
   },
 ];

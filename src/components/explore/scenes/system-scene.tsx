@@ -11,8 +11,10 @@ import type { Body, StarSystem } from '@/constants/space';
 import { createMotions, isSatellite, rotationPhase, setWorldPosition, stellarTextureShear, UNITS_PER_AU } from '../utils/orbit';
 import { OortCloudModel } from '../three/oort-cloud';
 import { PlanetMaterial, PlanetRings } from '../three/planet-surface';
-import { surfaceFragment, surfaceVertex } from '../three/shaders';
+import { JUPITER_RED_SPOT_LATITUDE, surfaceFragment, surfaceVertex } from '../three/shaders';
+import { SolarProminences } from '../three/solar-prominences';
 import { StellarGlow } from '../three/stellar-glow';
+import { useSurfaceMap } from '../three/use-surface-map';
 import { useCursorZoom } from '../three/use-cursor-zoom';
 import { CanvasBoundary } from '../three/canvas-boundary';
 import { systemHandoffDistanceAu, oortRadius, zoomLayers, type ZoomHandoff, type ZoomScale } from '../utils/zoom';
@@ -40,6 +42,9 @@ export type SceneProps = {
 
 const ORIGIN = new Vector3();
 const INITIAL_VIEW = new Vector3(0, 0.82, 1).normalize();
+const SPIN_AXIS = new Vector3(0, 1, 0);
+const RED_SPOT_LATITUDE = MathUtils.degToRad(JUPITER_RED_SPOT_LATITUDE);
+
 const DEFAULT_FOCUS_SCALE = 6.75;
 const ORBIT_OPACITY = 0.19;
 const SELECTED_ORBIT_OPACITY = 0.6;
@@ -93,16 +98,30 @@ function Star({
   visible: RefObject<boolean>;
 }) {
   const surface = useRef<ShaderMaterial>(null);
+  const activityDays = useRef(0.043);
+  const previousDays = useRef(days.current);
+  const texture = useSurfaceMap(body.surfaceMap?.file);
+  const isSun = body.id === 'sun';
   const [uniforms] = useState(() => ({
     surfacePhase: { value: 0 },
+    surfaceMap: { value: null },
+    hasSurfaceMap: { value: false },
     surfaceShear: { value: 0 },
     surfaceDark: { value: new Color(body.colors[0]).convertLinearToSRGB() },
     surfaceHot: { value: new Color(body.colors[1]).convertLinearToSRGB() },
   }));
-  useFrame(() => {
+  useFrame((_, delta) => {
+    const time = days.current;
+    if (isSun && !paused && delta > 0) {
+      // Keep the activity preview legible across the orbital playback speeds.
+      const rate = MathUtils.clamp((time - previousDays.current) / delta, 1 / 1440, 1 / 120);
+      activityDays.current += rate * Math.min(delta, 0.1);
+    }
+    previousDays.current = time;
     if (!surface.current) return;
     const material = surface.current.uniforms;
-    const time = days.current;
+    material.surfaceMap.value = texture ?? null;
+    material.hasSurfaceMap.value = texture !== undefined;
     material.surfacePhase.value = rotationPhase(time, body.spinDays);
     material.surfaceShear.value = stellarTextureShear(time, body.spinDays, body.stellar?.poleSpinDays);
   });
@@ -122,7 +141,8 @@ function Star({
         <sphereGeometry args={[body.displayRadius, 96, 64]} />
         <shaderMaterial ref={surface} uniforms={uniforms} vertexShader={surfaceVertex} fragmentShader={surfaceFragment} />
       </mesh>
-      <StellarGlow radius={body.displayRadius} color={body.stellar?.emissionColor ?? body.colors[2]} paused={paused} />
+      <StellarGlow radius={body.displayRadius} color={body.stellar?.emissionColor ?? body.colors[2]} paused={paused} activityDays={isSun ? activityDays : undefined} />
+      {isSun && <SolarProminences radius={body.displayRadius} days={days} activityDays={activityDays} spinDays={body.spinDays} poleSpinDays={body.stellar?.poleSpinDays} />}
     </>
   );
 }
@@ -179,6 +199,7 @@ function Scene({
   const backdrop = useRef<Group>(null);
   const days = simulationDaysRef;
   const destination = useRef<number | null>(null);
+  const revealRedSpot = useRef(false);
   const distanceAtStart = useRef(0);
   const [initialRequest] = useState(() => ({ target, overview, recenter }));
   const [initialTarget] = useState(() => (!entry && target ? setWorldPosition(system, motions, target, new Vector3(), 0) : new Vector3()));
@@ -191,6 +212,7 @@ function Scene({
     if (entry && target === initialRequest.target && overview === initialRequest.overview && recenter === initialRequest.recenter) return;
     cursorZoomRef.current = false;
     destination.current = distance;
+    revealRedSpot.current = target === 'jupiter';
   }, [target, overview, distance, recenter, entry, initialRequest, cursorZoomRef]);
 
   useFrame(({ camera }, delta) => {
@@ -215,6 +237,13 @@ function Scene({
     }
     scratch.offset.subVectors(camera.position, orbitControls.target);
     const currentRadius = scratch.offset.length();
+    if (revealRedSpot.current && targetBody?.id === 'jupiter') {
+      // Start on the storm-facing side at the current spin phase, then hand control back to the user.
+      scratch.offset.set(0, Math.sin(RED_SPOT_LATITUDE), Math.cos(RED_SPOT_LATITUDE))
+        .applyAxisAngle(SPIN_AXIS, rotationPhase(days.current, targetBody.spinDays))
+        .applyQuaternion(motions.jupiter.orientation);
+      revealRedSpot.current = false;
+    }
     const goal = destination.current;
     const weight = 1 - Math.exp(-5 * delta);
     // Interpolate the logarithm so presets travel at a comparable speed across every scale.
@@ -365,7 +394,7 @@ function Scene({
                       }}
                     >
                       <sphereGeometry args={[body.displayRadius, 56, 40]} />
-                      <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} />
+                      <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={body.kind === 'planet' || body.id === target || body.parent === satelliteParent} />
                     </mesh>
                   ))}
                 </group>
@@ -414,6 +443,7 @@ function Scene({
         zoomSpeed={2.25}
         onStart={() => {
           destination.current = null;
+          revealRedSpot.current = false;
           distanceAtStart.current = controls.current?.getDistance() ?? 0;
         }}
         onEnd={() => {

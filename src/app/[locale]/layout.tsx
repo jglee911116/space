@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import '@/styles/globals.scss';
 import { ExplorePage } from '@/components/explore/explore-page';
+import { validateCatalog } from '@/constants/space/validate-catalog';
 import { SITE_NAME_KEY } from '@/constants/site';
 import { systems } from '@/constants/space';
 import { LanguageProvider } from '@/i18n/language';
@@ -14,6 +15,7 @@ type Props = { params: Promise<{ locale: string }>; children: ReactNode };
 export const dynamicParams = false;
 
 export function generateStaticParams() {
+  validateCatalog();
   return localeCodes.map((locale) => ({ locale }));
 }
 

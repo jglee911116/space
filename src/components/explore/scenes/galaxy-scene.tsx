@@ -4,10 +4,11 @@ import { useLanguage } from '@/i18n/language';
 import { Line, OrbitControls, Stars } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from 'react';
-import { Color, MathUtils, Vector3, type Group, type ShaderMaterial } from 'three';
+import { Color, MathUtils, Vector3, type Group, type Points, type ShaderMaterial } from 'three';
 import { featuredObjects, type FeaturedObject, milkyWay, type Body, type StarSystem } from '@/constants/space';
 import { UNITS_PER_AU } from '../utils/orbit';
-import { GalacticMarker } from '../three/galactic-marker';
+import { updatePointDetail } from '../three/map-detail';
+import { GalacticLabelLayer, GalacticMarker } from '../three/galactic-marker';
 import { useCursorZoom } from '../three/use-cursor-zoom';
 import { CanvasBoundary } from '../three/canvas-boundary';
 import { OortCloudModel } from '../three/oort-cloud';
@@ -21,12 +22,12 @@ type GalaxySceneProps = {
   reportDistance: ReportDistanceScale;
   system: StarSystem;
   systems: readonly StarSystem[];
-  onFocusSystem: (system: StarSystem) => void;
+  onSelectSystem: (system: StarSystem) => void;
   target: string | null;
   simulationDaysRef: RefObject<number>;
   paused: boolean;
   demo: boolean;
-  onSelect: (target: string) => void;
+  onSelectCenter: () => void;
   onSelectObject: (id: string) => void;
   recenter: number;
   entry?: ZoomHandoff;
@@ -230,6 +231,7 @@ function GalacticNeighbor({
     if (line.current) {
       const hovered = hoveredOrbitRef.current === system.id;
       line.current.material.opacity = orbitOpacity(localOpacity.current, hovered, selected);
+      line.current.visible = line.current.material.opacity > 0.005;
       line.current.material.linewidth = hovered ? 2.8 : 1.5;
       line.current.renderOrder = hovered ? 1 : 0;
     }
@@ -255,7 +257,7 @@ function GalacticNeighbor({
         onPointerOut={() => hover(false)}
       />
       <group ref={group} position={points[0]}>
-        <GalacticMarker name={system.name} color={color} onHover={hover} onSelect={onSelect} labelOffset={labelOffset} wideLabelSpacing={wideLabelSpacing} />
+        <GalacticMarker name={system.name} priority={selected ? 3 : 0} color={color} onHover={hover} onSelect={onSelect} labelOffset={labelOffset} wideLabelSpacing={wideLabelSpacing} />
       </group>
     </>
   );
@@ -283,16 +285,18 @@ function GalacticMap({
   star,
   anchor,
   activeSystemId,
-  onSelect,
-  onFocusSystem,
+  centerFocused,
+  onSelectCenter,
+  onSelectSystem,
   onSelectObject,
   neighbors,
   years,
   wideLabelSpacing,
   sun,
   cloudOpacity,
-}: Pick<GalaxySceneProps, 'anchor' | 'onSelect' | 'onFocusSystem' | 'onSelectObject'> & {
+}: Pick<GalaxySceneProps, 'anchor' | 'onSelectCenter' | 'onSelectSystem' | 'onSelectObject'> & {
   activeSystemId: string;
+  centerFocused: boolean;
   star: Body;
   neighbors: ReturnType<typeof nearbyPositions>;
   years: RefObject<number>;
@@ -303,6 +307,8 @@ function GalacticMap({
   const model = useMemo(() => buildGalaxy(), []);
   const dpr = useThree((state) => state.viewport.dpr);
   const pointsMaterial = useRef<ShaderMaterial>(null);
+  const galaxyPoints = useRef<Points>(null);
+  const lodPosition = useMemo(() => new Vector3(), []);
   const orbitLine = useRef<ComponentRef<typeof Line>>(null);
   const hoveredOrbitRef = useRef<string | null>(null);
   const anchorColor = galacticOrbitColor(anchor);
@@ -312,12 +318,14 @@ function GalacticMap({
   };
   const approximate = neighbors.filter(({ system }) => !system.galacticPath);
   const uniforms = useMemo(() => ({ pixelRatio: { value: dpr }, layerOpacity: { value: 0 } }), [dpr]);
-  useFrame(() => {
+  useFrame(({ camera, size }) => {
     const opacity = 1 - cloudOpacity.current;
+    if (galaxyPoints.current) updatePointDetail(galaxyPoints.current, lodPosition, camera, size.height, milkyWay.modelRadiusKpc, opacity);
     if (pointsMaterial.current) pointsMaterial.current.uniforms.layerOpacity.value = opacity;
     if (orbitLine.current) {
       const hovered = hoveredOrbitRef.current === anchor.id;
       orbitLine.current.material.opacity = orbitOpacity(cloudOpacity.current, hovered, activeSystemId === anchor.id);
+      orbitLine.current.visible = orbitLine.current.material.opacity > 0.005;
       orbitLine.current.material.linewidth = hovered ? 2.8 : 1.5;
       orbitLine.current.renderOrder = hovered ? 1 : 0;
     }
@@ -334,7 +342,7 @@ function GalacticMap({
 
   return (
     <>
-      <points raycast={() => {}}>
+      <points ref={galaxyPoints} raycast={() => {}}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[model.positions, 3]} />
           <bufferAttribute attach="attributes-tint" args={[model.colors, 3]} />
@@ -363,7 +371,7 @@ function GalacticMap({
             <OortCloudModel cloud={anchor.oortCloud} opacity={cloudOpacity} />
           </group>
         )}
-        <GalacticMarker name={star.name} color={anchorColor} onHover={hoverAnchor} onSelect={() => onFocusSystem(anchor)} />
+        <GalacticMarker name={star.name} priority={!centerFocused && activeSystemId === anchor.id ? 3 : 1} color={anchorColor} onHover={hoverAnchor} onSelect={() => onSelectSystem(anchor)} />
       </group>
       {neighbors.map((neighbor, index) => (
         <GalacticNeighbor
@@ -378,8 +386,8 @@ function GalacticMap({
           hoveredOrbitRef={hoveredOrbitRef}
           dashPhase={approximate.indexOf(neighbor)}
           dashCount={Math.max(1, approximate.length)}
-          selected={activeSystemId === neighbor.system.id}
-          onSelect={() => onFocusSystem(neighbor.system)}
+          selected={!centerFocused && activeSystemId === neighbor.system.id}
+          onSelect={() => onSelectSystem(neighbor.system)}
         />
       ))}
       {featuredObjects
@@ -389,7 +397,7 @@ function GalacticMap({
             <GalacticMarker name={object.name} color={object.color} labelOffset={index ? -0.95 : 0.95} localOpacity={cloudOpacity} onSelect={() => onSelectObject(object.id)} />
           </group>
         ))}
-      <GalacticMarker name={milkyWay.center.name} onSelect={() => onSelect(milkyWay.center.id)} localOpacity={cloudOpacity} labelOffset={0.95} />
+      <GalacticMarker name={milkyWay.center.name} priority={centerFocused ? 3 : 2} onSelect={onSelectCenter} localOpacity={cloudOpacity} labelOffset={0.95} />
     </>
   );
 }
@@ -399,13 +407,13 @@ function Scene({
   reportDistance,
   system,
   systems,
-  onFocusSystem,
+  onSelectSystem,
   onSelectObject,
   target,
   simulationDaysRef,
   paused,
   demo,
-  onSelect,
+  onSelectCenter,
   recenter,
   entry,
   onZoomIn,
@@ -541,8 +549,9 @@ function Scene({
           star={star}
           anchor={anchor}
           activeSystemId={system.id}
-          onSelect={onSelect}
-          onFocusSystem={onFocusSystem}
+          centerFocused={centerFocused}
+          onSelectCenter={onSelectCenter}
+          onSelectSystem={onSelectSystem}
           onSelectObject={onSelectObject}
           neighbors={neighbors}
           years={galacticYears}
@@ -591,7 +600,9 @@ export default function GalaxyScene(props: GalaxySceneProps) {
   return (
     <CanvasBoundary>
       <Canvas camera={CAMERA_OPTIONS} dpr={[1, 1.5]} fallback={<span aria-hidden="true">{t('canvas.milkyWayModel')}</span>} aria-label={t('canvas.milkyWayBlackHole')}>
-        <Scene {...props} />
+        <GalacticLabelLayer>
+          <Scene {...props} />
+        </GalacticLabelLayer>
       </Canvas>
     </CanvasBoundary>
   );

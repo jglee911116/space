@@ -1,8 +1,8 @@
-import { virgoCluster } from '@/constants/space/superclusters';
+import { galaxyAssociations } from '@/constants/space/galaxy-associations';
 import { distantObjects, featuredObjects, galaxies, localGroup, milkyWay, observableUniverse, superclusters, type StarSystem } from '@/constants/space';
 import { translate, type CatalogText, type MessageKey } from '@/i18n/messages';
 import { localeCodes } from '@/i18n/routing';
-import { distantObjectPath, featuredObjectPath, galaxyPath, LOCAL_GROUP_PATH, superclusterPath, systemPath, UNIVERSE_PATH, VIRGO_CLUSTER_PATH } from './paths';
+import { associationPath, distantObjectPath, featuredObjectPath, galaxyPath, LOCAL_GROUP_PATH, superclusterPath, systemPath, UNIVERSE_PATH } from './paths';
 
 type Entry = {
   name: CatalogText;
@@ -37,18 +37,18 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
   const entries: Entry[] = [
     { name: observableUniverse.name, path: UNIVERSE_PATH, kind: 'search.region', aliases: [] },
     { name: localGroup.name, path: LOCAL_GROUP_PATH, kind: 'search.region', aliases: [] },
-    { name: virgoCluster.name, path: VIRGO_CLUSTER_PATH, kind: 'search.region', aliases: [] },
+    ...galaxyAssociations.map(({ id, name, mapRegionId, aliases = [] }): Entry => ({ name, path: associationPath(mapRegionId, id), kind: 'search.region', aliases })),
     ...superclusters.map(({ name, id }): Entry => ({ name, path: superclusterPath(id), kind: 'search.region', aliases: [id] })),
-    ...galaxies.map(({ name, title, id }): Entry => ({ name, designation: title, path: galaxyPath(id), kind: 'search.galaxy', aliases: [id] })),
+    ...galaxies.map(({ name, title, id, aliases = [] }): Entry => ({ name, designation: title, path: galaxyPath(id), kind: 'search.galaxy', aliases: [id, ...aliases] })),
     {
       name: milkyWay.center.name,
       context: milkyWay.name,
-      path: `${galaxyPath(milkyWay.id)}?view=galaxy&target=${milkyWay.center.id}`,
+      path: `${galaxyPath(milkyWay.id)}?target=${milkyWay.center.id}`,
       kind: 'details.supermassiveBlackHole',
       aliases: ['Sgr A*', milkyWay.center.id],
     },
     ...featuredObjects.map(
-      ({ id, name, designation, kind, galaxyId = milkyWay.id }): Entry => ({
+      ({ id, name, designation, kind, galaxyId = milkyWay.id, aliases = [] }): Entry => ({
         name,
         designation,
         context: galaxies.find((galaxy) => galaxy.id === galaxyId)?.name,
@@ -64,16 +64,20 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
                   ? 'body.star'
                   : kind === 'black-hole'
                     ? 'details.supermassiveBlackHole'
-                    : 'navigation.featuredObjects',
-        aliases: [id, ...(id === 'uy-scuti' ? ['UY Sct'] : [])],
+                    : kind === 'open-cluster' || kind === 'globular-cluster'
+                      ? 'search.starCluster'
+                      : kind === 'planetary-nebula'
+                        ? 'search.planetaryNebula'
+                        : 'navigation.featuredObjects',
+        aliases: [id, ...aliases],
       }),
     ),
     ...distantObjects.map(
-      ({ id, name, kind }): Entry => ({
+      ({ id, name, kind, aliases = [] }): Entry => ({
         name,
         path: distantObjectPath(id),
         kind: kind === 'quasar' ? 'details.quasar' : 'details.earlyGalaxy',
-        aliases: [id],
+        aliases: [id, ...aliases],
       }),
     ),
   ];
