@@ -1,6 +1,47 @@
 import { message } from '@/i18n/messages';
 import type { FeaturedObject } from '../types';
 
+export const velaPulsar: FeaturedObject = {
+  id: 'vela-pulsar',
+  name: message('catalog.featured-objects.vela-pulsar.name'),
+  designation: 'PSR B0833−45 · PSR J0835−4510',
+  aliases: ['Vela Pulsar', 'PSR B0833-45', 'PSR J0835-4510', '돛자리 펄서'],
+  description: message('catalog.featured-objects.vela-pulsar.description'),
+  kind: 'pulsar-wind-nebula',
+  observationStatus: 'observed',
+  distanceLightYears: 1000,
+  rightAscension: 128.835833,
+  declination: -45.176389,
+  extentLightYears: 1.8,
+  spinSeconds: 0.089,
+  color: '#72bdff',
+  observationImage: { file: '/textures/nebulae/pulsar-wind/vela-pulsar/chandra.jpg', shape: 'vela-wind', telescope: 'chandra' },
+  sources: [
+    { label: 'NASA/CXC/Univ. of Toronto/M. Durant et al. · X-ray time series', href: 'https://chandra.si.edu/photo/2013/vela/' },
+    { label: 'Chandra · Vela Pulsar in 3D', href: 'https://chandra.si.edu/deadstar/vela.html' },
+  ],
+};
+
+export const cygnusX1: FeaturedObject = {
+  id: 'cygnus-x-1',
+  name: message('catalog.featured-objects.cygnus-x-1.name'),
+  designation: 'Cygnus X-1 · HDE 226868',
+  aliases: ['Cyg X-1', 'Cygnus X-1', '백조자리 X1'],
+  description: message('catalog.featured-objects.cygnus-x-1.description'),
+  kind: 'x-ray-binary',
+  observationStatus: 'observed',
+  distanceLightYears: 7240,
+  rightAscension: 299.590316,
+  declination: 35.201607,
+  extentLightYears: 0.000011,
+  blackHoleMassSolar: 21.2,
+  color: '#a6caff',
+  sources: [
+    { label: 'Miller-Jones et al. · Cygnus X-1 radio astrometry', href: 'https://doi.org/10.1126/science.abb3363' },
+    { label: 'Chandra · Cygnus X-1', href: 'https://chandra.si.edu/photo/2011/cygx1/' },
+  ],
+};
+
 export const j0740Pulsar: FeaturedObject = {
   id: 'psr-j0740-6620',
   name: message('catalog.featured-objects.psr-j0740-6620.name'),

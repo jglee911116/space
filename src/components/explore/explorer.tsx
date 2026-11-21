@@ -158,7 +158,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const focusGalacticCenter = galaxyView && targetParam === milkyWay.center.id;
   const focusBlackHole = focusGalacticCenter && (centerZoom?.close ?? true);
   const animatedAccretion = distantObject?.kind === 'quasar' || featuredObject?.kind === 'black-hole'
-    || (extraView && activeGalaxy.id === 'm87' && focus === 'm87-star');
+    || featuredObject?.kind === 'x-ray-binary' || (extraView && activeGalaxy.id === 'm87' && focus === 'm87-star');
   const featuredShape = featuredObject?.observationImage?.shape;
   const animatedFeaturedVolume = featuredShape === 'bipolar-jet' || featuredShape === 'shocked-shell' || featuredShape === 'dust-spiral' || featuredShape === 'edge-on-disk' || featuredShape === 'light-echo';
   const heading = region
@@ -229,6 +229,9 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const [recenter, setRecenter] = useState(0);
   const [hovered, setHovered] = useState<HoveredBody | null>(null);
   const hoveredBody = hovered && system.bodies.find((other) => other.id === hovered.id);
+  const [hoverDistance, setHoverDistance] = useState<{ origin: string; body: string; au: number } | null>(null);
+  const distanceOrigin = hoverDistance && hoverDistance.origin === target && hoverDistance.body === hovered?.id && system.id === 'solar'
+    ? system.bodies.find((body) => body.id === hoverDistance.origin) : undefined;
 
   useEffect(() => {
     const resetWheelView = () => {
@@ -356,6 +359,11 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
     setHovered((current) => (current?.id === id ? null : current));
   }, []);
 
+  const reportHoverDistance = useCallback((origin: string, body: string, au: number) => {
+    setHoverDistance((previous) => previous?.origin === origin && previous.body === body && previous.au === au
+      ? previous : { origin, body, au });
+  }, []);
+
   return (
     <>
       <div className={styles.viewport} onPointerLeave={() => setHovered(null)} onPointerCancel={() => setHovered(null)} onWheelCapture={() => setHovered(null)}>
@@ -449,10 +457,12 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             onScaleChange={setScale}
             onHoverBody={hoverBody}
             onLeaveBody={leaveBody}
+            onHoverDistance={reportHoverDistance}
           />
         )}
       </div>
-      {hovered && hoveredBody && <BodyTooltip body={hoveredBody} x={hovered.x} y={hovered.y} />}
+      {hovered && hoveredBody && <BodyTooltip body={hoveredBody} x={hovered.x} y={hovered.y}
+        distance={distanceOrigin && hoverDistance ? { origin: distanceOrigin, au: hoverDistance.au } : undefined} />}
 
       <header className={styles.header}>
         <div className={styles.brand}>

@@ -33,6 +33,7 @@ export type Motion = {
   points: Float64Array;
   /** 부모 기준 위치. */
   setLocalPosition(position: Vector3, days: number): Vector3;
+  unitsPerAu: number;
 };
 
 function referenceRotation(plane: NonNullable<Body['orbit']>['referencePlane'], parentOrientation: Quaternion | undefined) {
@@ -50,6 +51,7 @@ function createMotion(body: Body, scale: number, parentOrientation?: Quaternion)
     return {
       orientation: new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), radians(body.tilt)),
       points: new Float64Array(),
+      unitsPerAu: scale,
       setLocalPosition: (position) => position.set(0, 0, 0),
     };
   }
@@ -81,6 +83,7 @@ function createMotion(body: Body, scale: number, parentOrientation?: Quaternion)
   return {
     orientation: new Quaternion().setFromUnitVectors(NORTH, NORTH.clone().applyMatrix4(axialRotation)),
     points,
+    unitsPerAu: scale,
     setLocalPosition(position, days) {
       const cycle = Math.PI * 2;
       const mean = MathUtils.euclideanModulo(meanAtEpoch + ((days % periodDays) * cycle) / periodDays + Math.PI, cycle) - Math.PI;
@@ -140,4 +143,14 @@ export function setWorldPosition(system: StarSystem, motions: Record<string, Mot
   motions[id].setLocalPosition(position, days);
   if (!body?.parent) return position;
   return position.add(setWorldPosition(system, motions, body.parent, new Vector3(), days));
+}
+
+/** Physical center positions in AU, with the display-only satellite scale removed at every parent step. */
+export function setOrbitalPositionAu(system: StarSystem, motions: Record<string, Motion>, id: string, position: Vector3, local: Vector3, days: number): Vector3 {
+  position.set(0, 0, 0);
+  for (let body = system.bodies.find((item) => item.id === id); body; body = system.bodies.find((item) => item.id === body?.parent)) {
+    const motion = motions[body.id];
+    position.addScaledVector(motion.setLocalPosition(local, days), 1 / motion.unitsPerAu);
+  }
+  return position;
 }

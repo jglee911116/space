@@ -13,12 +13,14 @@ import { useSurfaceMap } from '../shared/use-surface-map';
 
 const M87_RING_MAP = '/textures/black-holes/m87-star/eht-ring.jpg';
 const QUASAR_JET_MAP = '/textures/quasars/3c-273/hubble-jet-profile.png';
+export const CYGNUS_DISK_RATE = 1.24;
 // Relative visual rates and radial profiles for the illustrative disks.
 const diskProfiles: Record<string, readonly [rate: number, width: number, contrast: number]> = {
   'm87-star': [0.46, 0.092, 0.88],
   '3c-273': [0.67, 0.12, 0.72],
   'ton-618': [0.30, 0.15, 0.64],
   'j0313-1806': [0.91, 0.105, 0.78],
+  'cygnus-x-1': [CYGNUS_DISK_RATE, 0.10, 0.82],
 };
 
 const diskVertex = /* glsl */ `

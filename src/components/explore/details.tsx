@@ -74,11 +74,11 @@ function DetailSources({ sources }: { sources: readonly Source[] }) {
   );
 }
 
-export function BodyTooltip({ body, x, y }: { body: Body; x: number; y: number }) {
+export function BodyTooltip({ body, x, y, distance }: { body: Body; x: number; y: number; distance?: { origin: Body; au: number } }) {
   const { t, catalogText, number } = useLanguage();
   const size = bodySize(body, t, number);
   return (
-    <aside className={styles.bodyTooltip} style={{ '--pointer-x': `${x}px`, '--pointer-y': `${y}px` } as CSSProperties} aria-hidden="true">
+    <aside className={styles.bodyTooltip} data-distance={Boolean(distance)} style={{ '--pointer-x': `${x}px`, '--pointer-y': `${y}px` } as CSSProperties} aria-hidden="true">
       <strong>{catalogText(body.name)}</strong>
       {body.stellar && (
         <span>
@@ -92,6 +92,13 @@ export function BodyTooltip({ body, x, y }: { body: Body; x: number; y: number }
       )}
       {body.orbit && <span>{t('details.orbitValue', [formatPeriod(body, t, number)])}</span>}
       <span>{t('details.rotationValue', [formatSpin(body, t, number, catalogText)])}</span>
+      {distance && (
+        <span className={styles.hoverDistance}>
+          <span>{t('details.hoverDistanceFrom', [catalogText(distance.origin.name)])}</span>
+          <strong>{t('details.hoverDistanceKm', [number(distance.au * KM_PER_AU, 0)])}</strong>
+          {distance.au >= 0.01 && <span>{number(distance.au, 3)} AU</span>}
+        </span>
+      )}
     </aside>
   );
 }
@@ -400,11 +407,15 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
           </DataRow>
         )}
         {object.blackHoleMassSolar !== undefined && (
-          <DataRow label={t('details.estimatedBlackHoleMass')}>{t('details.solarMassHundredMillions', [measurement(object.blackHoleMassSolar, 1e8)])}</DataRow>
+          <DataRow label={t('details.estimatedBlackHoleMass')}>
+            {object.kind === 'x-ray-binary'
+              ? `${number(object.blackHoleMassSolar, 1)} M☉`
+              : t('details.solarMassHundredMillions', [measurement(object.blackHoleMassSolar, 1e8)])}
+          </DataRow>
         )}
       </dl>
       <p>{catalogText(object.description)}</p>
-      {object.observationImage && <p>{t(object.observationImage.telescope === 'hubble' ? 'details.hubbleObservationVolume' : 'details.nebulaObservationVolume')}</p>}
+      {object.observationImage && <p>{t(object.observationImage.telescope === 'hubble' ? 'details.hubbleObservationVolume' : object.observationImage.telescope === 'chandra' ? 'details.chandraObservationVolume' : 'details.nebulaObservationVolume')}</p>}
       {radiusRatio !== undefined && (
         <div className={styles.radiusComparison}>
           <h3>{t('details.compareSolarRadius')}</h3>
@@ -431,7 +442,7 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
       )}
       {object.variabilityDays !== undefined && <p>{t('details.variabilityPeriod', [number(object.variabilityDays, 0)])}</p>}
       {object.expansionPerYear !== undefined && <p>{t('details.expansionModel', [t(object.kind === 'ring-remnant' ? 'details.centralEjecta' : 'details.nebula')])}</p>}
-      <ModelNotes>
+      {object.kind !== 'x-ray-binary' && <ModelNotes>
         {object.kind === 'black-hole' && <>{t('details.blackHoleLensing')} </>}
         {t(
           object.kind === 'open-cluster' || object.kind === 'globular-cluster'
@@ -440,7 +451,7 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
               ? 'details.nebulaModelScale'
               : 'details.unscaledModel',
         )}
-      </ModelNotes>
+      </ModelNotes>}
       <DetailSources sources={object.sources} />
     </section>
   );
@@ -466,7 +477,7 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange }: 
         <ObservationRow status={object.observationStatus} />
         <div>
           <dt>{t('details.type')}</dt>
-          <dd>{t(object.kind === 'quasar' ? 'details.quasar' : object.kind === 'ring-galaxy' ? 'details.ringGalaxy' : 'details.earlyGalaxy')}</dd>
+          <dd>{t(object.kind === 'quasar' ? 'details.quasar' : object.kind === 'ring-galaxy' ? 'details.ringGalaxy' : object.kind === 'galaxy-group' ? 'details.galaxyGroup' : 'details.earlyGalaxy')}</dd>
         </div>
         <div>
           <dt>{t('details.redshift')}</dt>
@@ -501,6 +512,7 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange }: 
         </label>
       )}
       {object.kind === 'ring-galaxy' && <p>{t('details.webbRingGalaxyModel')}</p>}
+      {object.kind === 'galaxy-group' && <p>{t('details.quintetModel')}</p>}
       <ModelNotes>
         {object.kind === 'quasar' ? t('details.accretionModel') : t('details.galaxyModel')} {object.kind === 'quasar' && <>{t('details.blackHoleLensing')} </>}{t('details.cosmicModelScale')}
       </ModelNotes>

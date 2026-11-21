@@ -5,6 +5,8 @@ import { previewVisibility } from '../maps/map-detail';
 import { REALTIME_DAYS_PER_SECOND } from '../../utils/orbit';
 import { apepDustDensity, bipolarJetDensity, cartwheelDensity, edgeOnDiskDensity, hourglassDensity, shockedShellDensity, southernRingDensity } from './webb-nebula-density';
 import { catsEyeDensity, homunculusDensity, lightEchoDensity } from './hubble-nebula-density';
+import { butterflyDensity, debrisDiskDensity, velaWindDensity } from './observed-structure-density';
+import { quintetDensity } from '../galaxies/quintet-density';
 import { spatialNoise } from '../shared/shaders';
 
 const vertex = /* glsl */ `
@@ -153,6 +155,10 @@ const densityByShape = {
   homunculus: homunculusDensity,
   'light-echo': lightEchoDensity,
   'cats-eye': catsEyeDensity,
+  'debris-disk': debrisDiskDensity,
+  'vela-wind': velaWindDensity,
+  butterfly: butterflyDensity,
+  quintet: quintetDensity,
   cartwheel: cartwheelDensity,
 };
 export type NebulaVolumeShape = keyof typeof densityByShape;
@@ -181,7 +187,7 @@ function fragment(shape: NebulaVolumeShape, preview: boolean) {
     float rayLength = length(boxPoint - eye);
     vec3 direction = (boxPoint - eye) / rayLength;
     vec3 inverseDirection = 1.0 / (direction + vec3(0.000001));
-    vec3 bounds = ${shape === 'cartwheel' ? 'vec3(1.0, 1.0, 0.30)' : shape === 'cats-eye' ? 'vec3(1.0, 1.0, 0.80)' : 'vec3(1.0)'};
+    vec3 bounds = ${shape === 'cartwheel' ? 'vec3(1.0, 1.0, 0.30)' : shape === 'cats-eye' || shape === 'quintet' ? 'vec3(1.0, 1.0, 0.80)' : 'vec3(1.0)'};
     vec3 a = (-bounds - eye) * inverseDirection;
     vec3 b = ( bounds - eye) * inverseDirection;
     vec3 entry = min(a, b);
@@ -190,7 +196,7 @@ function fragment(shape: NebulaVolumeShape, preview: boolean) {
     float end = min(exit.x, min(exit.y, exit.z));
     if (end <= start) discard;
 
-    const int steps = ${preview ? 28 : shape === 'cats-eye' ? 54 : 44};
+    const int steps = ${preview ? 28 : shape === 'cats-eye' || shape === 'quintet' || shape === 'butterfly' ? 54 : 44};
     float stepSize = (end - start) / float(steps);
     vec3 accumulated = vec3(0.0);
     float transmission = 1.0;
@@ -238,7 +244,7 @@ export function NebulaVolume({ texture, radius, shape, preview = false, paused =
 
   useFrame(({ camera, size }, delta) => {
     if (!mesh.current || !material.current) return;
-    if (!preview && (shape === 'bipolar-jet' || shape === 'shocked-shell' || shape === 'dust-spiral' || shape === 'edge-on-disk' || shape === 'light-echo')) {
+    if (!preview && (shape === 'bipolar-jet' || shape === 'shocked-shell' || shape === 'dust-spiral' || shape === 'edge-on-disk' || shape === 'light-echo' || shape === 'vela-wind')) {
       if (!paused) {
         const elapsed = motion.current + Math.min(delta, 0.1) * rate;
         if (shape === 'shocked-shell') motion.current = Math.min(elapsed, 18);

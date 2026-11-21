@@ -170,6 +170,9 @@ export type FeaturedObject = {
     | 'star-forming-region'
     | 'wind-binary'
     | 'light-echo'
+    | 'debris-disk'
+    | 'pulsar-wind-nebula'
+    | 'x-ray-binary'
     | 'open-cluster'
     | 'globular-cluster'
     | 'planetary-nebula'
@@ -190,8 +193,8 @@ export type FeaturedObject = {
   variabilityDays?: number;
   observationImage?: {
     file: string;
-    telescope?: 'hubble';
-    shape: 'crab' | 'ring' | 'pillars' | 'ejecta' | 'nursery' | 'hourglass' | 'bipolar-jet' | 'shocked-shell' | 'southern-ring' | 'dust-spiral' | 'edge-on-disk' | 'homunculus' | 'light-echo' | 'cats-eye';
+    telescope?: 'hubble' | 'chandra';
+    shape: 'crab' | 'ring' | 'pillars' | 'ejecta' | 'nursery' | 'hourglass' | 'bipolar-jet' | 'shocked-shell' | 'southern-ring' | 'dust-spiral' | 'edge-on-disk' | 'homunculus' | 'light-echo' | 'cats-eye' | 'debris-disk' | 'vela-wind' | 'butterfly';
   };
   photosphere?: { dark: string; bright: string; cellScale: number };
   expansionPerYear?: number;
@@ -247,4 +250,5 @@ export type DistantObject = DistantObjectFields & (
   | { kind: 'quasar'; visibleJet: boolean; blackHoleMassSolar?: number }
   | { kind: 'early-galaxy'; ultravioletHalfLightRadiusParsecs: number }
   | { kind: 'ring-galaxy'; observationImage: string }
+  | { kind: 'galaxy-group'; observationImage: string }
 );

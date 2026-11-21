@@ -8,6 +8,7 @@ import { AdditiveBlending, Color, type Group, type ShaderMaterial } from 'three'
 import type { FeaturedObject } from '@/constants/space';
 import { DAYS_PER_YEAR, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
 import { AccretionModel } from '../three/black-holes/accretion-model';
+import { CygnusBinary } from '../three/black-holes/cygnus-binary';
 import { CrabPulsarWind } from '../three/nebulae/crab-pulsar-wind';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { surfaceVertex, supergiantFragment } from '../three/shared/shaders';
@@ -220,18 +221,18 @@ function nebulaParticles(object: FeaturedObject) {
   return { positions: new Float32Array(positions), colors: new Float32Array(colors), sizes: new Float32Array(sizes), expansionMask: new Float32Array(expansionMask) };
 }
 
-function Scene({ object, reportDistance, simulationDaysRef, paused, daysPerSecond, onLeave }: Props) {
+function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTime, paused, daysPerSecond, onLeave }: Props) {
   const pleiades = object.id === 'm45';
   const scale = object.kind === 'pillars' || object.kind === 'supernova-remnant' ? 1 : object.extentLightYears / 6;
   const backgroundScale = Math.max(1, scale);
   const image = object.observationImage;
   const southernRing = image?.shape === 'southern-ring';
-  const centralRadius = object.kind === 'planetary-nebula' && !southernRing ? scale * 0.047
+  const centralRadius = object.kind === 'planetary-nebula' && !southernRing && image?.shape !== 'butterfly' ? scale * 0.047
     : image?.shape === 'ejecta' ? 0.036
-      : image?.shape === 'light-echo' || image?.shape === 'homunculus' ? scale * 0.13 : 0;
+      : image?.shape === 'light-echo' || image?.shape === 'homunculus' || image?.shape === 'debris-disk' || image?.shape === 'vela-wind' ? scale * 0.13 : 0;
   const texture = useSurfaceMap(image?.file);
   const uniforms = useMemo(() => ({ particleScale: { value: scale }, expansion: { value: 0 }, particleOpacity: { value: texture ? 0.29 : 1 } }), [scale, texture]);
-  const particles = useMemo(() => pleiades ? undefined : nebulaParticles(object), [object, pleiades]);
+  const particles = useMemo(() => pleiades || object.kind === 'x-ray-binary' || (image && image.shape !== 'crab' && image.shape !== 'ejecta') ? undefined : nebulaParticles(object), [object, pleiades, image]);
   const material = useRef<ShaderMaterial>(null);
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const start = useRef(0);
@@ -248,6 +249,7 @@ function Scene({ object, reportDistance, simulationDaysRef, paused, daysPerSecon
     <>
       <Stars radius={46 * backgroundScale} depth={23 * backgroundScale} count={1800} factor={3} saturation={0} fade speed={0} />
       {pleiades && <PleiadesCluster radius={object.extentLightYears * 0.61} />}
+      {object.kind === 'x-ray-binary' && <CygnusBinary size={object.extentLightYears} days={simulationDaysRef} time={accretionPlaybackTime} />}
       {image && <NebulaVolume texture={texture} radius={object.extentLightYears * (image.shape === 'crab' ? 0.71 : 0.61)} shape={image.shape} paused={paused} daysPerSecond={daysPerSecond} />}
       {particles && <points scale={scale} visible={!image || image.shape === 'crab' || image.shape === 'ejecta'}>
         <bufferGeometry>
@@ -420,7 +422,7 @@ export default function FeaturedObjectScene(props: Props) {
     <CanvasBoundary>
       <Canvas
         camera={{
-          position: blackHole ? [5, 5.6, 13] : stellar ? [0, 1.5, object.photosphere ? 5.7 : 8] : [distance * 0.023, distance * 0.063, distance],
+          position: blackHole ? [5, 5.6, 13] : stellar ? [0, 1.5, object.photosphere ? 5.7 : 8] : [distance * 0.023, distance * (object.kind === 'x-ray-binary' ? 0.38 : 0.063), distance],
           fov: 45,
           near: stellar || blackHole ? 0.05 : Math.min(0.05, object.extentLightYears * 0.015),
           far: Math.max(170, object.extentLightYears * 32),

@@ -126,7 +126,7 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
     if (!association) result.push({ position: ORIGIN, color: '#ffd195', style: 'cluster' });
     if (!region) {
       for (const object of landmarks) {
-        const style = object.kind === 'ring-galaxy' ? 'ring' : object.kind === 'early-galaxy' ? 'irregular' : object.visibleJet ? 'jet' : 'quasar';
+        const style = object.kind === 'quasar' ? (object.visibleJet ? 'jet' : 'quasar') : object.kind === 'ring-galaxy' ? 'ring' : 'irregular';
         result.push({ position: object.position, color: object.color, style });
       }
     }
@@ -246,10 +246,10 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
 function DistantGalaxyModel({ object, onExit }: { object: Exclude<DistantObject, { kind: 'quasar' }>; onExit: () => void }) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const initialDistance = useRef(0);
-  const ringGalaxy = object.kind === 'ring-galaxy';
-  const texture = useSurfaceMap(ringGalaxy ? object.observationImage : undefined);
+  const volumeShape = object.kind === 'ring-galaxy' ? 'cartwheel' : object.kind === 'galaxy-group' ? 'quintet' : undefined;
+  const texture = useSurfaceMap('observationImage' in object ? object.observationImage : undefined);
   const stars = useMemo(() => {
-    if (ringGalaxy) return undefined;
+    if (volumeShape) return undefined;
     const count = 4000;
     const positions = new Float32Array(count * 3);
     const goldenAngle = Math.PI * (3 - Math.sqrt(5));
@@ -261,7 +261,7 @@ function DistantGalaxyModel({ object, onExit }: { object: Exclude<DistantObject,
       positions.set([horizontal * Math.cos(angle), radius * height * 0.58, horizontal * Math.sin(angle) * 0.76], i * 3);
     }
     return positions;
-  }, [ringGalaxy]);
+  }, [volumeShape]);
 
   return (
     <>
@@ -272,7 +272,7 @@ function DistantGalaxyModel({ object, onExit }: { object: Exclude<DistantObject,
           </bufferGeometry>
           <pointsMaterial color={object.color} size={0.043} transparent opacity={0.38} depthWrite={false} blending={AdditiveBlending} />
         </points>
-      ) : <NebulaVolume texture={texture} radius={5.6} shape="cartwheel" />}
+      ) : volumeShape && <NebulaVolume texture={texture} radius={5.6} shape={volumeShape} />}
       <OrbitControls
         ref={controls}
         enablePan={false}
@@ -298,7 +298,7 @@ export default function UniverseScene(props: Props) {
   };
   const position: [number, number, number] = object?.kind === 'ring-galaxy'
     ? [1.7, 1.0, 14.6]
-    : object ? [5, 5.6, 13] : [0, 0, RADIUS * 2.65];
+    : object?.kind === 'galaxy-group' ? [0.36, 0.46, 15.8] : object ? [5, 5.6, 13] : [0, 0, RADIUS * 2.65];
   return (
     <CanvasBoundary>
       <Canvas

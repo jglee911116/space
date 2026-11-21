@@ -223,6 +223,52 @@ test('아펩, HH 30, 수레바퀴 은하를 검색해 각자의 Webb 3D 장면�
   expect(shaderErrors).toEqual([]);
 });
 
+test('새 천체 다섯 개를 검색해 관측 자료와 3D 장면을 연다', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
+  });
+  await page.goto(milkyWay);
+  const objects = [
+    { id: 'beta-pictoris', name: '베타 픽토리스', file: 'webb.jpg' },
+    { id: 'vela-pulsar', name: '벨라 펄서', file: 'chandra.jpg' },
+    { id: 'ngc-6302', name: '나비 성운', file: 'hubble.jpg' },
+    { id: 'cygnus-x-1', name: '백조자리 X-1' },
+    { id: 'stephans-quintet', name: '스테판의 오중주', file: 'webb.jpg', distant: true },
+  ];
+  for (const { id, name, file, distant } of objects) {
+    const image = file && page.waitForResponse((response) => response.url().endsWith(`/${id}/${file}`) && response.ok());
+    await search(page, id, new RegExp(name));
+    if (image) await image;
+    const destination = distant ? '/ko/universe?target=' : `${milkyWay}?view=object&target=`;
+    await expect(page).toHaveURL((url) => url.pathname + url.search === destination + id);
+    await expect(details(page).getByRole('heading', { name, exact: true })).toBeVisible();
+    await expect(page.locator('main canvas')).toBeVisible();
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  }
+  expect(errors).toEqual([]);
+});
+
+test('선택한 태양계 천체에서 다른 천체의 라벨과 실제 중심 간 거리를 표시한다', async ({ page }) => {
+  await page.goto(`${milkyWay}?system=solar&target=earth`);
+  const scene = page.getByLabel('회전하고 확대할 수 있는 태양계 3D 모델');
+  const earth = scene.getByRole('button', { name: '지구', exact: true });
+  const moon = scene.getByRole('button', { name: '달', exact: true });
+  await expect(earth).toHaveAttribute('aria-current', 'true');
+  await expect(earth).toHaveCSS('opacity', '1');
+  await expect(moon).toHaveCSS('opacity', '0.66');
+  await moon.hover();
+  const distance = page.locator('aside[data-distance="true"]');
+  await expect(distance).toContainText('지구 기준 중심 간 거리');
+  const value = await distance.locator('strong').last().innerText();
+  const km = Number(value.match(/[\d,]+/)?.[0].replaceAll(',', ''));
+  expect(km).toBeGreaterThan(350_000);
+  expect(km).toBeLessThan(410_000);
+  await moon.click();
+  await expect(page).toHaveURL(/target=moon$/);
+});
+
 test('타이탄의 대기와 관측 지표를 전환한다', async ({ page }) => {
   await page.goto(`${milkyWay}?system=solar&target=titan`);
   await waitForRenderedMap(page);

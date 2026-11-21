@@ -1,6 +1,26 @@
 import { message } from '@/i18n/messages';
 import type { FeaturedObject } from '../types';
 
+export const betaPictoris: FeaturedObject = {
+  id: 'beta-pictoris',
+  name: message('catalog.featured-objects.beta-pictoris.name'),
+  designation: 'β Pictoris · HD 39060',
+  aliases: ['Beta Pic', 'Beta Pictoris', '화가자리 베타', '고양이 꼬리'],
+  description: message('catalog.featured-objects.beta-pictoris.description'),
+  kind: 'debris-disk',
+  observationStatus: 'observed',
+  distanceLightYears: 63,
+  rightAscension: 86.8212,
+  declination: -51.0665,
+  extentLightYears: 0.028,
+  color: '#e3ad82',
+  observationImage: { file: '/textures/nebulae/circumstellar/beta-pictoris/webb.jpg', shape: 'debris-disk' },
+  sources: [
+    { label: 'NASA, ESA, CSA, STScI & the Webb MIRI team', href: 'https://esawebb.org/images/weic2401a/' },
+    { label: 'Rebollido et al. · Debris disks and the Cat’s Tail', href: 'https://ntrs.nasa.gov/citations/20240006933' },
+  ],
+};
+
 export const betelgeuse: FeaturedObject = {
   id: 'betelgeuse',
   name: message('catalog.featured-objects.betelgeuse.name'),

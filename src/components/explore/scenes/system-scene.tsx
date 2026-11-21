@@ -1,14 +1,14 @@
 'use client';
 
 import { useLanguage } from '@/i18n/language';
-import { OrbitControls, Stars } from '@react-three/drei';
+import { Html, OrbitControls, Stars } from '@react-three/drei';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react';
-import { Color, DoubleSide, Points, Vector3, MathUtils, Mesh, type Group, type LineLoop, type PointsMaterial, type MeshBasicMaterial, type ShaderMaterial } from 'three';
+import { Color, DoubleSide, Points, Vector3, MathUtils, Mesh, type Camera, type Group, type LineLoop, type Object3D, type PointsMaterial, type MeshBasicMaterial, type ShaderMaterial } from 'three';
 import { KM_PER_AU } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import type { Body, StarSystem } from '@/constants/space';
-import { createMotions, isSatellite, rotationPhase, setWorldPosition, stellarTextureShear, writeOrbitVertices, UNITS_PER_AU } from '../utils/orbit';
+import { createMotions, isSatellite, rotationPhase, setOrbitalPositionAu, setWorldPosition, stellarTextureShear, writeOrbitVertices, UNITS_PER_AU } from '../utils/orbit';
 import { OortCloudModel } from '../three/planetary-systems/oort-cloud';
 import styles from '../explore.module.scss';
 import { IcePlumes } from '../three/planetary-systems/ice-plumes';
@@ -42,6 +42,7 @@ export type SceneProps = {
   onZoomOut?: (handoff: ZoomHandoff) => void;
   onHoverBody: (target: string, x: number, y: number) => void;
   onLeaveBody: (target: string) => void;
+  onHoverDistance: (origin: string, body: string, au: number) => void;
 };
 
 const ORIGIN = new Vector3();
@@ -173,9 +174,11 @@ function Scene({
   onZoomOut,
   onHoverBody,
   onLeaveBody,
+  onHoverDistance,
   farOverview,
   showTitanSurface,
 }: SceneProps & { farOverview: number; showTitanSurface: boolean }) {
+  const { catalogText } = useLanguage();
   const motions = useMemo(() => createMotions(system), [system]);
   const orbitPaths = useMemo(() => Object.fromEntries(system.bodies.map((body) => [
     body.id,
@@ -198,11 +201,14 @@ function Scene({
   const markerPositions = useMemo(() => new Float32Array(markerBodies.length * 3), [markerBodies]);
   const root = system.bodies[0];
   const targetBody = findBody(system, target);
+  const showBodyLabels = system.id === 'solar' && targetBody !== undefined;
   const satelliteParent = targetBody && satellites.has(targetBody.id) ? targetBody.parent : target;
 
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const cursorZoomRef = useCursorZoom();
   const bodies = useRef<Record<string, Group | undefined>>({});
+  const labels = useRef<Record<string, HTMLButtonElement | null>>({});
+  const distanceSample = useRef<{ origin: string; body: string; next: number } | null>(null);
   const spins = useRef<Record<string, Group | undefined>>({});
   const orbitAnchors = useRef<Record<string, Group | undefined>>({});
   const markers = useRef<Points>(null);
@@ -220,6 +226,8 @@ function Scene({
   const [initialRequest] = useState(() => ({ target, overview, recenter }));
   const [initialTarget] = useState(() => (!entry && target ? setWorldPosition(system, motions, target, new Vector3(), 0) : new Vector3()));
   const [scratch] = useState(() => ({ offset: new Vector3(), focus: new Vector3(), previousBodyPosition: new Vector3(), translation: new Vector3() }));
+  const [distanceScratch] = useState(() => ({ origin: new Vector3(), body: new Vector3(), local: new Vector3() }));
+  const [labelPoint] = useState(() => new Vector3());
   const { width, height } = useThree((state) => state.size);
   const aspect = width / Math.max(height, 1);
   const distance = focusDistance(system, target, overview, farOverview) * Math.max(1, (target === null ? 0.92 : 0.62) / Math.max(aspect, 0.35));
@@ -311,12 +319,27 @@ function Scene({
 
     cloudOpacity.current = layers.cloudOpacity;
     systemVisible.current = layers.systemOpacity > 0.01;
+    if (showBodyLabels && target && hoveredTarget && target !== hoveredTarget) {
+      const now = performance.now();
+      const sample = distanceSample.current;
+      if (!sample || sample.origin !== target || sample.body !== hoveredTarget || now >= sample.next) {
+        const { origin, body, local } = distanceScratch;
+        setOrbitalPositionAu(system, motions, target, origin, local, days.current);
+        setOrbitalPositionAu(system, motions, hoveredTarget, body, local, days.current);
+        onHoverDistance(target, hoveredTarget, origin.distanceTo(body));
+        distanceSample.current = { origin: target, body: hoveredTarget, next: now + 125 };
+      }
+    } else {
+      distanceSample.current = null;
+    }
     if (belt.current) belt.current.visible = layers.beltOpacity > 0.002;
     if (beltMaterial.current) beltMaterial.current.opacity = 0.11 * layers.beltOpacity;
     for (const body of system.bodies) {
       const show = systemVisible.current && bodyVisible(body);
       const mesh = bodies.current[body.id];
       if (mesh) mesh.visible = show;
+      const label = labels.current[body.id];
+      if (label && label.hidden === show) label.hidden = !show;
 
       const anchor = orbitAnchors.current[body.id];
       if (anchor) {
@@ -364,6 +387,15 @@ function Scene({
 
   function bodyVisible(body: Body) {
     return !satellites.has(body.id) || body.parent === satelliteParent;
+  }
+
+  function labelPosition(object: Object3D, camera: Camera, size: { width: number; height: number }, radius: number) {
+    labelPoint.setFromMatrixPosition(object.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
+    const rim = Math.min(150, radius * camera.projectionMatrix.elements[5] * size.height / (2 * Math.max(0.001, -labelPoint.z)));
+    labelPoint.applyMatrix4(camera.projectionMatrix);
+    const x = (1 + labelPoint.x) * size.width / 2;
+    const y = (1 - labelPoint.y) * size.height / 2;
+    return [x + rim * 0.52 + 9, y + rim * 0.9 + 9];
   }
 
   return (
@@ -450,6 +482,28 @@ function Scene({
                 </group>
                 <PlanetRings body={body} />
               </group>
+            )}
+            {showBodyLabels && bodyVisible(body) && (
+              <Html
+                zIndexRange={[1, 0]}
+                calculatePosition={(object, camera, size) => labelPosition(object, camera, size, body.displayRadius)}
+              >
+                <button
+                  type="button"
+                  ref={(element) => { labels.current[body.id] = element; }}
+                  className={styles.solarBodyLabel}
+                  aria-current={body.id === target ? 'true' : undefined}
+                  data-hovered={body.id === hoveredTarget}
+                  onPointerMove={(event) => {
+                    if (event.pointerType !== 'touch' && event.buttons === 0) onHoverBody(body.id, event.clientX, event.clientY);
+                  }}
+                  onPointerLeave={() => onLeaveBody(body.id)}
+                  onPointerDown={() => onLeaveBody(body.id)}
+                  onClick={() => { if (body.id !== target) onSelect(body.id); }}
+                >
+                  {catalogText(body.name)}
+                </button>
+              </Html>
             )}
           </group>
         </group>

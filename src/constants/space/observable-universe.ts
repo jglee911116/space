@@ -15,6 +15,23 @@ export const observableUniverse: ObservableUniverse = {
 
 export const distantObjects: readonly DistantObject[] = [
   {
+    id: 'stephans-quintet',
+    kind: 'galaxy-group',
+    name: message('catalog.observable-universe.stephans-quintet.name'),
+    aliases: ['Stephan Quintet', 'Hickson 92', 'HCG 92', 'NGC 7318', '스테판 오중주'],
+    observationStatus: 'observed',
+    redshift: 0.0215,
+    rightAscension: 339.014,
+    declination: 33.964,
+    color: '#e8b5ad',
+    observationImage: '/textures/galaxies/stephans-quintet/webb.jpg',
+    summary: message('catalog.observable-universe.stephans-quintet.summary'),
+    sources: [
+      { label: 'NASA, ESA, CSA & STScI · Webb NIRCam and MIRI mosaic', href: 'https://esawebb.org/images/weic2208a/' },
+      { label: 'WEAVE First Light · Stephan’s Quintet shock front', href: 'https://doi.org/10.1093/mnras/stae2235' },
+    ],
+  },
+  {
     id: 'cartwheel-galaxy',
     kind: 'ring-galaxy',
     observationStatus: 'observed',

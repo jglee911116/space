@@ -54,7 +54,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
         context: galaxies.find((galaxy) => galaxy.id === galaxyId)?.name,
         path: featuredObjectPath(galaxyId, id),
         kind:
-          kind === 'pulsar'
+          kind === 'pulsar' || kind === 'pulsar-wind-nebula'
             ? 'search.pulsar'
             : kind === 'neutron-star'
               ? 'search.neutronStar'
@@ -68,7 +68,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
                       ? 'search.starCluster'
                       : kind === 'planetary-nebula'
                         ? 'search.planetaryNebula'
-                        : 'navigation.featuredObjects',
+                        : kind === 'x-ray-binary' ? 'details.xRayBinary' : 'navigation.featuredObjects',
         aliases: [id, ...aliases],
       }),
     ),
@@ -76,7 +76,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
       ({ id, name, kind, aliases = [] }): Entry => ({
         name,
         path: distantObjectPath(id),
-        kind: kind === 'quasar' ? 'details.quasar' : kind === 'ring-galaxy' ? 'details.ringGalaxy' : 'details.earlyGalaxy',
+        kind: kind === 'quasar' ? 'details.quasar' : kind === 'ring-galaxy' ? 'details.ringGalaxy' : kind === 'galaxy-group' ? 'details.galaxyGroup' : 'details.earlyGalaxy',
         aliases: [id, ...aliases],
       }),
     ),

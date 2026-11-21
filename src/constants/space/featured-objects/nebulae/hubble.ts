@@ -3,6 +3,25 @@ import type { FeaturedObject } from '../../types';
 
 export const hubbleNebulae: readonly FeaturedObject[] = [
   {
+    id: 'ngc-6302',
+    name: message('catalog.featured-objects.ngc-6302.name'),
+    designation: 'NGC 6302 · Caldwell 69',
+    aliases: ['Butterfly Nebula', 'Bug Nebula', 'Caldwell 69', '나비성운'],
+    description: message('catalog.featured-objects.ngc-6302.description'),
+    kind: 'planetary-nebula',
+    observationStatus: 'observed',
+    distanceLightYears: 4000,
+    rightAscension: 258.45,
+    declination: -37.103,
+    extentLightYears: 2.8,
+    color: '#de987c',
+    observationImage: { file: '/textures/nebulae/planetary/ngc-6302/hubble.jpg', shape: 'butterfly', telescope: 'hubble' },
+    sources: [
+      { label: 'NASA, ESA & the Hubble SM4 ERO Team', href: 'https://esahubble.org/images/heic0910h/' },
+      { label: 'NASA Hubble · Caldwell 69', href: 'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-caldwell-catalog/caldwell-69/' },
+    ],
+  },
+  {
     id: 'eta-carinae',
     name: message('catalog.featured-objects.eta-carinae.name'),
     designation: 'η Carinae · Homunculus Nebula',
