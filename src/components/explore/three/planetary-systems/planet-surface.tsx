@@ -4,7 +4,6 @@ import type { Appearance, Body } from '@/constants/space';
 import { CraterSurface } from './crater-surface';
 import { planetFragment, planetVertex } from '../shared/shaders';
 import { useSurfaceMap } from '../shared/use-surface-map';
-import { outerSolarSurface } from './outer-solar-surface';
 
 const shaderStyle: Record<Exclude<Appearance, 'craters'>, number> = { clouds: 0, earth: 1, rock: 2, bands: 3, ice: 4, pluto: 5 };
 
@@ -15,7 +14,7 @@ export function PlanetMaterial({ body, lightOffset, loadSurfaceMap, showSurfaceM
   const map = useSurfaceMap(surfaceMap?.file, loadSurfaceMap);
   const texture = showSurfaceMap ? map : undefined;
   const longitudeOffset = surfaceMap?.longitudeOffset ?? 0;
-  const terrain = body.rockySurface ?? outerSolarSurface(body.id);
+  const terrain = body.rockySurface;
 
   const fillMissing = surfaceMap?.fillMissing ?? false;
   const uniforms = useMemo(

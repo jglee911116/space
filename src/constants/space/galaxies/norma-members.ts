@@ -18,14 +18,14 @@ export const normaMembers: readonly Galaxy[] = [
     id: 'eso-137-001', name: 'ESO 137-001', aliases: ['WKK 6176', 'WKK98 6176'],
     summary: message('catalog.norma.eso-137-001'), distanceKpc,
     skyPosition: { rightAscension: 243.36377, declination: -60.76405 },
-    modelRadiusKpc: 12, morphology: 'open-spiral', color: '#9bbdff', diskTilt: 0.74,
+    modelRadiusKpc: 12, morphology: 'open-spiral', color: '#9bbdff', diskTilt: 0.74, ramPressureTail: { twin: true },
     sources: [{ label: 'ESA/Hubble · ESO 137-001', href: 'https://esahubble.org/images/heic1404a/' }, normaStudy],
   },
   {
     id: 'eso-137-002', name: 'ESO 137-002', aliases: ['WKK 6186', 'WKK98 6186'],
     summary: message('catalog.norma.eso-137-002'), distanceKpc,
     skyPosition: { rightAscension: 243.39855, declination: -60.86517 },
-    modelRadiusKpc: 21, morphology: 'open-spiral', color: '#e6beaa', diskTilt: 0.18,
+    modelRadiusKpc: 21, morphology: 'open-spiral', color: '#e6beaa', diskTilt: 0.18, ramPressureTail: {},
     sources: [{ label: 'ESA/Hubble · ESO 137-002', href: 'https://esahubble.org/images/potw1302a/' }, { label: 'CDS SIMBAD · ESO 137-002', href: 'https://simbad.cds.unistra.fr/simbad/sim-id?Ident=ESO+137-002' }],
   },
   {

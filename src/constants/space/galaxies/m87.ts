@@ -3,6 +3,7 @@ import type { Galaxy } from '../types';
 
 export const m87: Galaxy = {
   id: 'm87',
+  structure: { axis: 0.95, thickness: 0.81, core: 0.19 },
   name: message('catalog.m87.m87.name'),
   title: message('catalog.m87.m87.title'),
   superclusterId: 'virgo',

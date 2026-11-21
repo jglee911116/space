@@ -116,7 +116,7 @@ function Star({
   const activityDays = useRef(0.043);
   const previousDays = useRef(days.current);
   const texture = useSurfaceMap(body.surfaceMap?.file);
-  const isSun = body.id === 'sun';
+  const isSun = body.stellar?.prominences === true;
   const photosphere = body.stellar?.photosphere;
   const showDwarfFlares = focused && photosphere?.flarePreview === true;
   const [uniforms] = useState(() => ({
@@ -189,9 +189,9 @@ function Scene({
   onLeaveBody,
   onHoverDistance,
   farOverview,
-  showTitanSurface,
+  showHiddenSurface,
   labels,
-}: SceneProps & { farOverview: number; showTitanSurface: boolean; labels: RefObject<Record<string, HTMLButtonElement | null>> }) {
+}: SceneProps & { farOverview: number; showHiddenSurface: boolean; labels: RefObject<Record<string, HTMLButtonElement | null>> }) {
   const motions = useMemo(() => createMotions(system), [system]);
   const orbitPaths = useMemo(() => Object.fromEntries(system.bodies.map((body) => [
     body.id,
@@ -214,7 +214,7 @@ function Scene({
   const markerPositions = useMemo(() => new Float32Array(markerBodies.length * 3), [markerBodies]);
   const root = system.bodies[0];
   const targetBody = findBody(system, target);
-  const showBodyLabels = system.id === 'solar' && targetBody !== undefined;
+  const showBodyLabels = system.home === true && targetBody !== undefined;
   const satelliteParent = targetBody && satellites.has(targetBody.id) ? targetBody.parent : target;
 
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
@@ -248,8 +248,8 @@ function Scene({
     if (entry && target === initialRequest.target && overview === initialRequest.overview && recenter === initialRequest.recenter) return;
     cursorZoomRef.current = false;
     destination.current = distance;
-    revealRedSpot.current = target === 'jupiter';
-  }, [target, overview, distance, recenter, entry, initialRequest, cursorZoomRef]);
+    revealRedSpot.current = targetBody?.surfaceEffect === 'red-spot';
+  }, [target, targetBody, overview, distance, recenter, entry, initialRequest, cursorZoomRef]);
 
   useFrame(({ camera }, delta) => {
     if (!controls.current) return;
@@ -287,11 +287,11 @@ function Scene({
     }
     scratch.offset.subVectors(camera.position, orbitControls.target);
     const currentRadius = scratch.offset.length();
-    if (revealRedSpot.current && targetBody?.id === 'jupiter') {
+    if (revealRedSpot.current && targetBody?.surfaceEffect === 'red-spot') {
       // Start on the storm-facing side at the current spin phase, then hand control back to the user.
       scratch.offset.set(0, Math.sin(RED_SPOT_LATITUDE), Math.cos(RED_SPOT_LATITUDE))
         .applyAxisAngle(SPIN_AXIS, rotationPhase(days.current, targetBody.spinDays))
-        .applyQuaternion(motions.jupiter.orientation);
+        .applyQuaternion(motions[targetBody.id].orientation);
       revealRedSpot.current = false;
     }
     const goal = destination.current;
@@ -549,12 +549,12 @@ function Scene({
                         if (event.delta <= 4) onSelect(body.id);
                       }}
                     >
-                      <PlanetGeometry radius={body.displayRadius} id={body.id} />
-                      <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={body.id === 'titan' ? showTitanSurface && target === 'titan' : body.kind === 'planet' || body.id === target || body.id === satelliteParent || body.parent === satelliteParent}
-                        showSurfaceMap={body.id !== 'titan' || (showTitanSurface && target === 'titan')} />
+                      <PlanetGeometry radius={body.displayRadius} body={body} />
+                      <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={body.surfaceMap?.hidden ? showHiddenSurface && target === body.id : body.kind === 'planet' || body.id === target || body.id === satelliteParent || body.parent === satelliteParent}
+                        showSurfaceMap={!body.surfaceMap?.hidden || (showHiddenSurface && target === body.id)} />
                     </mesh>
                   ))}
-                  {body.id === 'enceladus' && target === body.id && <IcePlumes radius={body.displayRadius} paused={paused} />}
+                  {body.surfaceEffect === 'ice-plumes' && target === body.id && <IcePlumes radius={body.displayRadius} paused={paused} />}
                 </group>
                 <PlanetRings body={body} />
               </group>
@@ -619,7 +619,7 @@ function Scene({
 export default function SystemScene(props: SceneProps) {
   const { t, catalogText } = useLanguage();
   const labels = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [showTitanSurface, setShowTitanSurface] = useState(false);
+  const [showHiddenSurface, setShowHiddenSurface] = useState(false);
   const farOverview = useMemo(() => distantDistance(props.system), [props.system]);
   const [initialCamera] = useState(() => {
     const radius = props.entry
@@ -641,9 +641,9 @@ export default function SystemScene(props: SceneProps) {
           dpr={[1, 1.5]}
           fallback={<span aria-hidden="true">{t('canvas.systemModel', [catalogText(props.system.name)])}</span>}
         >
-          <Scene {...props} farOverview={farOverview} showTitanSurface={showTitanSurface} labels={labels} />
+          <Scene {...props} farOverview={farOverview} showHiddenSurface={showHiddenSurface} labels={labels} />
         </Canvas>
-        {props.system.id === 'solar' && props.target && (
+        {props.system.home && props.target && (
           <div className={styles.solarBodyLabels}>
             {props.system.bodies.map((body) => (
               <button
@@ -667,8 +667,8 @@ export default function SystemScene(props: SceneProps) {
           </div>
         )}
       </div>
-      {props.target === 'titan' && (
-        <button className={styles.surfaceViewButton} type="button" aria-pressed={showTitanSurface} onClick={() => setShowTitanSurface((show) => !show)}>
+      {findBody(props.system, props.target)?.surfaceMap?.hidden && (
+        <button className={styles.surfaceViewButton} type="button" aria-pressed={showHiddenSurface} onClick={() => setShowHiddenSurface((show) => !show)}>
           {t('navigation.titanSurface')}
         </button>
       )}

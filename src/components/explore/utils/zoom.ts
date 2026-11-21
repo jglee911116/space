@@ -1,5 +1,5 @@
 import type { FeaturedObject, StarSystem } from '@/constants/space';
-import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
+import { AU_PER_KPC, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 import { UNITS_PER_AU } from './orbit';
 
 export type ZoomScale = 'system' | 'outer' | 'distant' | 'oort';
@@ -55,7 +55,7 @@ export const ACCRETION_MODEL_EINSTEIN_RADIUS = 1.57;
 export const ACCRETION_MODEL_EXIT_DISTANCE = 25;
 
 export function featuredOverviewDistanceKpc(object: FeaturedObject) {
-  return Math.max(0.018, (object.extentLightYears * 5 * KM_PER_LIGHT_YEAR) / (AU_PER_KPC * KM_PER_AU));
+  return Math.max(0.018, (object.extentLightYears * 5) / LIGHT_YEARS_PER_KPC);
 }
 
 export const EXTERNAL_SYSTEM_ENTRY_KPC = 0.14;

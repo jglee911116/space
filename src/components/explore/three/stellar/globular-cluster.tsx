@@ -1,7 +1,9 @@
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { AdditiveBlending, Color, Vector3, type Points, type ShaderMaterial } from 'three';
+import type { FeaturedObject } from '@/constants/space';
 import { pointBudget, previewOpacity, projectedPreviewDiameter } from '../maps/map-detail';
+import { seededRandom } from '../../utils/random';
 
 const vertex = /* glsl */ `
   attribute float grain;
@@ -32,7 +34,7 @@ const fragment = /* glsl */ `
   }
 `;
 
-type ClusterProfile = 'standard' | 'omega-centauri' | '47-tucanae';
+type ClusterProfile = 'standard' | NonNullable<FeaturedObject['clusterModel']>;
 
 function sampleStars(count: number, profile: ClusterProfile) {
   const positions = new Float32Array(count * 3);
@@ -41,11 +43,7 @@ function sampleStars(count: number, profile: ClusterProfile) {
   const tucanae = profile === '47-tucanae';
   const omega = profile === 'omega-centauri';
   const palette = (tucanae ? ['#d9e5ff', '#fff1db', '#ffe6bd', '#f1a877'] : ['#d6e6ff', '#ffebd8', '#ffc483', '#e7b0aa']).map((color) => new Color(color));
-  let seed = tucanae ? 104 : omega ? 5139 : 136205;
-  const random = () => {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 2 ** 32;
-  };
+  const random = seededRandom(tucanae ? 104 : omega ? 5139 : 136205);
   for (let index = 0; index < count; index++) {
     const radius = random() ** (tucanae ? 2.7 : omega ? 2.55 : 2.15);
     const y = random() * 2 - 1;
@@ -58,12 +56,11 @@ function sampleStars(count: number, profile: ClusterProfile) {
   return { positions, colors, grains };
 }
 
-export function GlobularCluster({ radius, preview = false, objectId }: { radius: number; preview?: boolean; objectId?: string }) {
+export function GlobularCluster({ radius, preview = false, profile = 'standard' }: { radius: number; preview?: boolean; profile?: ClusterProfile }) {
   const points = useRef<Points>(null);
   const material = useRef<ShaderMaterial>(null);
   const center = useMemo(() => new Vector3(), []);
-  const profile = objectId === 'ngc-104' ? '47-tucanae' : objectId === 'ngc-5139' ? 'omega-centauri' : 'standard';
-  const count = preview ? 3600 : profile === 'standard' ? 16000 : 26000;
+  const count = preview ? 3600 : profile === '47-tucanae' || profile === 'omega-centauri' ? 26000 : 16000;
   const model = useMemo(() => sampleStars(count, profile), [count, profile]);
   const uniforms = useMemo(() => ({ viewport: { value: 1 }, visibility: { value: preview ? 0 : 1 } }), [preview]);
   useFrame(({ camera, size, gl }) => {

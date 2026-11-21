@@ -23,6 +23,7 @@ export const sun: Body = {
     luminosityWatts: SOLAR_LUMINOSITY_W,
     emissionColor: '#ff9547',
     poleSpinDays: 36,
+    prominences: true,
   },
   galacticOrbit: { radiusKpc: 8, periodYears: 230_000_000, color: '#ffc875' },
   note: message('catalog.sun.sun.note'),

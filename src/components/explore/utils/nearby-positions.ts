@@ -1,6 +1,6 @@
 import { MathUtils, Vector3 } from 'three';
 import { milkyWay, type FeaturedObject, type Galaxy, type StarSystem } from '@/constants/space';
-import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
+import { LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 
 export function isNearbySystem(system: StarSystem) {
   return system.id === milkyWay.systemId || system.neighborhood !== undefined;
@@ -24,6 +24,6 @@ export function featuredGalaxyPosition(object: FeaturedObject, galaxy: Galaxy): 
   if (!galaxy.skyPosition || object.kind === 'black-hole') return [0, 0, 0];
   const angle = Math.PI / 180;
   const { rightAscension, declination } = galaxy.skyPosition;
-  const distance = galaxy.distanceKpc || (object.distanceLightYears * KM_PER_LIGHT_YEAR) / (AU_PER_KPC * KM_PER_AU);
+  const distance = galaxy.distanceKpc || object.distanceLightYears / LIGHT_YEARS_PER_KPC;
   return [(object.rightAscension - rightAscension) * angle * Math.cos(declination * angle) * distance, 0, -(object.declination - declination) * angle * distance];
 }

@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { AdditiveBlending, Color, Vector3, type Points, type ShaderMaterial } from 'three';
 import { previewVisibility } from '../maps/map-detail';
+import { seededRandom } from '../../utils/random';
 
 // Approximate sky projection around Alcyone. The depth is illustrative.
 const brightStars = [
@@ -54,11 +55,7 @@ function clusterGeometry(preview: boolean) {
   const sizes: number[] = [];
   const intensities: number[] = [];
   const stars: number[] = [];
-  let seed = 45143;
-  function random() {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 2 ** 32;
-  }
+  const random = seededRandom(45143);
   const blue = new Color('#628fd9');
   const pale = new Color('#c5dcff');
   const warm = new Color('#e2c6a0');

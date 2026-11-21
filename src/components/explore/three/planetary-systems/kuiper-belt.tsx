@@ -2,6 +2,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useMemo, useRef, type RefObject } from 'react';
 import type { Points, ShaderMaterial } from 'three';
 import { UNITS_PER_AU } from '../../utils/orbit';
+import { seededRandom } from '../../utils/random';
 
 const BODY_COUNT = 4200;
 
@@ -37,11 +38,7 @@ const fragmentShader = /* glsl */ `
 function sampleBelt(innerAu: number, outerAu: number) {
   const positions = new Float32Array(BODY_COUNT * 3);
   const grains = new Float32Array(BODY_COUNT);
-  let seed = 31991;
-  function random() {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 2 ** 32;
-  }
+  const random = seededRandom(31991);
 
   for (let index = 0; index < BODY_COUNT; index++) {
     const broadOrbit = random() < 0.23;

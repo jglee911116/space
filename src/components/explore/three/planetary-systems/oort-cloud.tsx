@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import type { Points, PointsMaterial, ShaderMaterial } from 'three';
 import type { OortCloud } from '@/constants/space';
 import { UNITS_PER_AU } from '../../utils/orbit';
+import { seededRandom } from '../../utils/random';
 
 const POINT_COUNT = 5600;
 const ORIGIN = new Float32Array([0, 0, 0]);
@@ -32,12 +33,7 @@ const fragmentShader = /* glsl */ `
 function sampleShell(innerEdgeAu: number, outerEdgeAu: number) {
   const positions = new Float32Array(POINT_COUNT * 3);
   const grains = new Float32Array(POINT_COUNT);
-  let seed = 29417;
-
-  function random() {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 2 ** 32;
-  }
+  const random = seededRandom(29417);
 
   const innerVolume = innerEdgeAu ** 3;
   const volumeRange = outerEdgeAu ** 3 - innerVolume;

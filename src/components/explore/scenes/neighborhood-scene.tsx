@@ -123,7 +123,7 @@ export default function NeighborhoodScene({ systems, onSelect, reportDistance }:
   return (
     <>
       <CanvasBoundary>
-        <Canvas aria-label={t('canvas.solarNeighborhood')}>
+        <Canvas dpr={[1, 1.5]} aria-label={t('canvas.solarNeighborhood')}>
           <Map markers={markers} projectLabels={projectLabels} reportDistance={reportDistance} />
         </Canvas>
       </CanvasBoundary>

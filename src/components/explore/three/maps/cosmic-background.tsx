@@ -1,5 +1,6 @@
 import { useThree } from '@react-three/fiber';
 import { useMemo } from 'react';
+import { seededRandom } from '../../utils/random';
 
 const STAR_COUNT = 1900;
 
@@ -30,11 +31,7 @@ const fragmentShader = /* glsl */ `
 function sampleSky() {
   const positions = new Float32Array(STAR_COUNT * 3);
   const grains = new Float32Array(STAR_COUNT);
-  let seed = 51483;
-  function random() {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 2 ** 32;
-  }
+  const random = seededRandom(51483);
   for (let index = 0; index < STAR_COUNT; index++) {
     const y = random() * 2 - 1;
     const radius = Math.sqrt(1 - y * y);

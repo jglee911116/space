@@ -1,9 +1,9 @@
-import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
+import { LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 
 const HUBBLE_KM_PER_SECOND_PER_MPC = 67.4;
 const MATTER_DENSITY = 0.315;
 const SPEED_OF_LIGHT_KM_PER_SECOND = 299_792.458;
-const LIGHT_YEARS_PER_MPC = (AU_PER_KPC * KM_PER_AU * 1000) / KM_PER_LIGHT_YEAR;
+const LIGHT_YEARS_PER_MPC = LIGHT_YEARS_PER_KPC * 1000;
 
 /** Flat matter + Λ approximation, sufficient for the redshifts in this catalog. */
 export function cosmologicalDistances(redshift: number) {

@@ -8,6 +8,7 @@ const COORDINATES = {
 
 export const messier32: Galaxy = {
   id: 'm32',
+  structure: { core: 0.11, axis: 0.82 },
   name: message('catalog.andromeda-satellites.m32.name'),
   title: message('catalog.andromeda-satellites.m32.title'),
   parentGalaxyId: 'andromeda',
@@ -28,6 +29,7 @@ export const messier32: Galaxy = {
 
 export const messier110: Galaxy = {
   id: 'm110',
+  structure: { axis: 0.62, core: 0.34, dust: 0.12 },
   name: message('catalog.andromeda-satellites.m110.name'),
   title: message('catalog.andromeda-satellites.m110.title'),
   parentGalaxyId: 'andromeda',

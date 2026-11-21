@@ -2,9 +2,8 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import '@/styles/globals.scss';
 import { ExplorePage } from '@/components/explore/explore-page';
-import { validateCatalog } from '@/constants/space/validate-catalog';
+import { validateCatalog } from '@/components/explore/utils/validate-catalog';
 import { SITE_NAME_KEY } from '@/constants/site';
-import { systems } from '@/constants/space';
 import { LanguageProvider } from '@/i18n/language';
 import { translate } from '@/i18n/messages';
 import { localeCodes } from '@/i18n/routing';
@@ -35,7 +34,7 @@ export default async function RootLayout({ params, children }: Props) {
       <body>
         <LanguageProvider locale={locale}>
           {/* 모든 페이지가 같은 탐색기를 쓴다 — 레이아웃에 두어 경로가 바뀌어도 3D 장면이 다시 마운트되지 않는다. page 는 메타데이터만. */}
-          <ExplorePage systems={Object.values(systems)} />
+          <ExplorePage />
           {children}
         </LanguageProvider>
       </body>

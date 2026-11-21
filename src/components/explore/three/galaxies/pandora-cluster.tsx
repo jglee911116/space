@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AdditiveBlending, BackSide, DoubleSide, MathUtils } from 'three';
 import type { Galaxy } from '@/constants/space';
-import { pandoraArcs, pandoraMembers } from '@/constants/space/galaxies/pandora-survey';
+import { pandoraArcs, pandoraMembers } from '@/constants/space';
 import { GalacticLabelLayer, GalacticMarker } from '../maps/galactic-marker';
 import { GalaxyPreview } from './galaxy-preview';
 

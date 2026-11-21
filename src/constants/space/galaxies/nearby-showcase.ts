@@ -1,8 +1,7 @@
 import { message } from '@/i18n/messages';
 import type { Galaxy } from '../types';
-import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '../units';
+import { KPC_PER_MLY } from '../units';
 
-const kpcPerMly = (1e6 * KM_PER_LIGHT_YEAR) / (AU_PER_KPC * KM_PER_AU);
 
 export const whirlpoolSource = {
   label: 'NASA Hubble · M51 and NGC 5195',
@@ -16,7 +15,7 @@ export const whirlpoolMembers = [
     title: 'M51 · NGC 5194',
     aliases: ['Messier 51'],
     summary: message('catalog.nearby-showcase.m51.summary'),
-    distanceKpc: 31 * kpcPerMly,
+    distanceKpc: 31 * KPC_PER_MLY,
     skyPosition: { rightAscension: 202.4696, declination: 47.1952 },
     modelRadiusKpc: 17,
     morphology: 'open-spiral',
@@ -29,10 +28,11 @@ export const whirlpoolMembers = [
   },
   {
     id: 'ngc-5195',
+    structure: { axis: 0.74, core: 0.24, asymmetry: 0.63, dust: 0.66 },
     name: 'NGC 5195',
     aliases: ['M51b', 'M51 B'],
     summary: message('catalog.nearby-showcase.ngc5195.summary'),
-    distanceKpc: 31 * kpcPerMly,
+    distanceKpc: 31 * KPC_PER_MLY,
     skyPosition: { rightAscension: 202.4983, declination: 47.2661 },
     modelRadiusKpc: 6,
     morphology: 'irregular',
@@ -44,10 +44,11 @@ export const whirlpoolMembers = [
 export const nearbyShowcase = [
   {
     id: 'ngc-1566', name: 'NGC 1566', aliases: ['Spanish Dancer Galaxy', '스페인 무희 은하'],
-    summary: message('catalog.new.ngc-1566.summary'), superclusterId: 'virgo',
+    structure: { winding: -1.65, phase: -1.95, axis: 0.96, core: 0.16 },
+    summary: message('catalog.nearby-showcase.ngc-1566.summary'), superclusterId: 'virgo',
     distanceKpc: 17700, skyPosition: { rightAscension: 65.00159, declination: -54.93801 },
     modelRadiusKpc: 18.5, diskTilt: 0.76, morphology: 'open-spiral', color: '#ecad7c',
-    diskObservation: { file: '/textures/galaxies/ngc-1566/webb.jpg', previewFile: '/textures/galaxies/ngc-1566/webb.jpg', center: [0.486, 0.48], span: [1.57, 0.96] },
+    diskObservation: { file: '/textures/galaxies/ngc-1566/webb.jpg', previewFile: '/textures/galaxies/ngc-1566/webb.jpg', center: [0.486, 0.48], span: [1.57, 0.96], blendProcedural: true },
     sources: [
       { label: 'NASA, ESA, CSA, STScI & PHANGS · Webb · CC BY 4.0', href: 'https://esawebb.org/images/weic2403j/' },
       { label: 'PHANGS–MUSE · Distance and disc parameters', href: 'https://academic.oup.com/mnras/article/520/4/4902/6987280' },
@@ -55,12 +56,13 @@ export const nearbyShowcase = [
   },
   {
     id: 'ngc-253',
+    structure: { axis: 0.72, thickness: 0.047, core: 0.16, dust: 1.2, winding: 3.15 },
     name: message('catalog.nearby-showcase.ngc253.name'),
     title: 'NGC 253 · Caldwell 65',
     aliases: ['Silver Dollar Galaxy'],
     summary: message('catalog.nearby-showcase.ngc253.summary'),
     superclusterId: 'virgo',
-    distanceKpc: 11 * kpcPerMly,
+    distanceKpc: 11 * KPC_PER_MLY,
     skyPosition: { rightAscension: 11.888, declination: -25.2883 },
     modelRadiusKpc: 16,
     diskTilt: -0.3,
@@ -70,12 +72,13 @@ export const nearbyShowcase = [
   },
   {
     id: 'centaurus-a',
+    structure: { axis: 0.84, thickness: 0.69, dust: 2.25 },
     name: message('catalog.nearby-showcase.centaurus-a.name'),
     title: 'Centaurus A · NGC 5128',
     aliases: ['Cen A', 'Caldwell 77'],
     summary: message('catalog.nearby-showcase.centaurus-a.summary'),
     superclusterId: 'virgo',
-    distanceKpc: 11 * kpcPerMly,
+    distanceKpc: 11 * KPC_PER_MLY,
     skyPosition: { rightAscension: 201.3651, declination: -43.0191 },
     modelRadiusKpc: 27,
     morphology: 'dust-lane-elliptical',

@@ -10,19 +10,11 @@ import { HelicalJets } from './helical-jets';
 import { previewVisibility } from '../maps/map-detail';
 import { spatialNoise } from '../shared/shaders';
 import { useSurfaceMap } from '../shared/use-surface-map';
+import type { AccretionDisk } from '@/constants/space';
 import { ACCRETION_SHADOW_RADIUS, LENSED_FLOW_DIAMETER, lensedAccretionFragment, lensedAccretionVertex } from './lensed-accretion-flow';
 
-const M87_RING_MAP = '/textures/black-holes/m87-star/eht-ring.jpg';
-const QUASAR_JET_MAP = '/textures/quasars/3c-273/hubble-jet-profile.png';
-export const CYGNUS_DISK_RATE = 1.24;
-// Relative visual rates and radial profiles for the illustrative disks.
-const diskProfiles: Record<string, readonly [rate: number, width: number, contrast: number]> = {
-  'm87-star': [0.46, 0.092, 0.88],
-  '3c-273': [0.67, 0.12, 0.72],
-  'ton-618': [0.30, 0.15, 0.64],
-  'j0313-1806': [0.91, 0.105, 0.78],
-  'cygnus-x-1': [CYGNUS_DISK_RATE, 0.10, 0.82],
-};
+// 원반 데이터가 없는 대상의 기본 회전 속도·반경 폭·대비
+const DEFAULT_DISK: AccretionDisk = { rate: 0.67, width: 0.12, contrast: 0.72 };
 
 const diskVertex = /* glsl */ `
   varying vec2 diskPoint;
@@ -92,14 +84,14 @@ const diskFragment = /* glsl */ `
   }
 `;
 
-export function AccretionGeometry({ id, color, previewDiameter, time, lowDetail = false }: { id: string; color: string; previewDiameter?: number; time?: RefObject<number>; lowDetail?: boolean }) {
+export function AccretionGeometry({ disk: profile = DEFAULT_DISK, color, previewDiameter, time, lowDetail = false }: { disk?: AccretionDisk; color: string; previewDiameter?: number; time?: RefObject<number>; lowDetail?: boolean }) {
   const group = useRef<Group>(null);
   const disk = useRef<ShaderMaterial>(null);
   const shadow = useRef<MeshBasicMaterial>(null);
   const position = useMemo(() => new Vector3(), []);
   const animated = time !== undefined;
-  const [rate, width, contrast] = diskProfiles[id] ?? diskProfiles['3c-273'];
-  const observation = useSurfaceMap(id === 'm87-star' ? M87_RING_MAP : undefined);
+  const { rate, width, contrast } = profile;
+  const observation = useSurfaceMap(profile.observationMap);
   const preview = previewDiameter !== undefined;
   const uniforms = useMemo(() => ({
     tint: { value: new Color(color) },
@@ -151,20 +143,20 @@ export function AccretionGeometry({ id, color, previewDiameter, time, lowDetail 
   );
 }
 
-export function AccretionModel({ object, onExit, showCounterjet, time }: { object: { id: string; color: string; visibleJet: boolean }; onExit: (direction: [number, number, number]) => void; showCounterjet?: boolean; time: RefObject<number> }) {
+export function AccretionModel({ object, onExit, showCounterjet, time }: { object: { color: string; visibleJet: boolean; accretionDisk?: AccretionDisk }; onExit: (direction: [number, number, number]) => void; showCounterjet?: boolean; time: RefObject<number> }) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const initialDistance = useRef(0);
-  const quasarJet = object.id === '3c-273';
-  const jetObservation = useSurfaceMap(quasarJet ? QUASAR_JET_MAP : undefined);
+  const jet = object.accretionDisk?.jet;
+  const jetObservation = useSurfaceMap(jet?.map);
 
   return (
     <>
       <LensedStarfield einsteinRadius={ACCRETION_MODEL_EINSTEIN_RADIUS} />
       <group rotation-z={-0.23}>
-        <AccretionGeometry id={object.id} color={object.color} time={time} />
+        <AccretionGeometry disk={object.accretionDisk} color={object.color} time={time} />
         {object.visibleJet && (
           <HelicalJets color={object.color} time={time} observation={jetObservation}
-            counterjet={quasarJet ? (showCounterjet ? 0.12 : 0) : 0.30} collimation={quasarJet ? 0.69 : 1} />
+            counterjet={jet ? (showCounterjet ? jet.counterjet : 0) : 0.30} collimation={jet?.collimation ?? 1} />
         )}
       </group>
       <OrbitControls

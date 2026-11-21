@@ -75,6 +75,7 @@ export const transNeptunianBodies: Body[] = [
     displayRadius: 0.145,
     appearance: 'rock',
     colors: ['#5a6c77', '#99b4bc', '#edf4e9'],
+    rockySurface: [11, 0.70, 0.45, 0.06],
     orbit: orbit([43.0602902365, 0.1944430149, 28.2084739304, 121.7860561329, 240.6905472509, 223.2104118812, 103208.1173403618]),
     shape: [1161 / 797.5, 513 / 797.5, 852 / 797.5],
     rings: [{ inner: 2252 / 797.5, outer: 2322 / 797.5, color: '#bcc9cc', opacity: 0.75 }],
@@ -94,6 +95,7 @@ export const transNeptunianBodies: Body[] = [
     displayRadius: 0.13,
     appearance: 'rock',
     colors: ['#754133', '#a96c59', '#e9b293'],
+    rockySurface: [23, 0.53, 0.72, 0.10],
     orbit: orbit([45.570933173, 0.1588889954, 29.0278560374, 79.2948338209, 297.0922733397, 169.9379962048, 112364.8068762869]),
     note: note,
     sources: [DWARF_PHYSICAL, SBDB],
@@ -110,6 +112,7 @@ export const transNeptunianBodies: Body[] = [
     displayRadius: 0.185,
     appearance: 'rock',
     colors: ['#576978', '#becfd2', '#f3f7f2'],
+    rockySurface: [37, 0.92, 0.20, 0.03],
     orbit: orbit([67.9339468785, 0.4382385348, 43.9258279472, 36.0047704442, 150.794923584, 211.774434275, 204516.6629430732]),
     note: note,
     sources: [ERIS_SPIN, SBDB],
@@ -126,6 +129,7 @@ export const transNeptunianBodies: Body[] = [
     displayRadius: 0.105,
     appearance: 'rock',
     colors: ['#4e4c59', '#868591', '#c4c3cf'],
+    rockySurface: [41, 0.47, 0.62, 0.21],
     orbit: orbit([39.3768653791, 0.2205240628, 20.5568101961, 268.4053519456, 73.5684860671, 189.0972913554, 90252.6865068851]),
     note: smallBodyNote,
     sources: [ORCUS_SIZE, SBDB],
@@ -142,6 +146,7 @@ export const transNeptunianBodies: Body[] = [
     displayRadius: 0.116,
     appearance: 'rock',
     colors: ['#563b3a', '#976d66', '#dcb3a0'],
+    rockySurface: [47, 0.37, 0.67, 0.17],
     orbit: orbit([43.1561762267, 0.0352001926, 7.9915758007, 188.9191248092, 163.2090461065, 292.8487574843, 103553.0425468722]),
     rings: [
       { inner: 4.52, outer: 4.57, color: '#a89a99', opacity: 0.47 },
@@ -163,6 +168,7 @@ export const transNeptunianBodies: Body[] = [
     displayRadius: 0.122,
     appearance: 'rock',
     colors: ['#492822', '#8f4d43', '#cf7c6d'],
+    rockySurface: [59, 0.23, 0.76, 0.16],
     orbit: orbit([66.8666656777, 0.504251, 30.8990672117, 336.8383156186, 206.6232839774, 111.6645415685, 199716.0317096358]),
     note: smallBodyNote,
     sources: [GONGGONG_SIZE, SBDB],
@@ -179,6 +185,7 @@ export const transNeptunianBodies: Body[] = [
     displayRadius: 0.11,
     appearance: 'rock',
     colors: ['#4b2523', '#8d473c', '#d2856a'],
+    rockySurface: [61, 0.16, 0.58, 0.09],
     orbit: orbit([543.7195289105, 0.8598824585, 11.9252758285, 144.5061662674, 311.098772594, 358.5956944005, 4630851.1835909151]),
     note: smallBodyNote,
     sources: [SEDNA_SIZE, SBDB],
@@ -206,7 +213,7 @@ export const transNeptunianBodies: Body[] = [
   },
 ];
 
-type OuterMoon = Pick<Body, 'id' | 'name' | 'parent' | 'radiusKm' | 'spinDays' | 'displayRadius' | 'shape'>;
+type OuterMoon = Pick<Body, 'id' | 'name' | 'parent' | 'radiusKm' | 'spinDays' | 'displayRadius' | 'shape' | 'rockySurface' | 'silhouette'>;
 
 function outerMoon(
   body: OuterMoon,
@@ -237,43 +244,43 @@ export const transNeptunianMoons: Body[] = [
     [JPL_SATELLITE_PHYSICAL, JPL_SATELLITE_ELEMENTS, PLUTO_FACTS],
   ),
   outerMoon(
-    { id: 'styx', name: message('catalog.trans-neptunian.styx.name'), parent: 'pluto', radiusKm: 5.2, spinDays: 3.24, displayRadius: 0.025, shape: [1.43, 0.71, 0.8] },
+    { id: 'styx', name: message('catalog.trans-neptunian.styx.name'), parent: 'pluto', radiusKm: 5.2, spinDays: 3.24, displayRadius: 0.025, shape: [1.43, 0.71, 0.8], rockySurface: [83, 0.48, 0.76, 0.49], silhouette: 'irregular' },
     [43200, 0.025, 0, 0, 322.5, 358.1, 20.16],
     plutoMoonSources,
     'parent-equator',
     85,
   ),
   outerMoon(
-    { id: 'nix', name: message('catalog.trans-neptunian.nix.name'), parent: 'pluto', radiusKm: 18, spinDays: 1.829, displayRadius: 0.032, shape: [1.29, 0.85, 0.9] },
+    { id: 'nix', name: message('catalog.trans-neptunian.nix.name'), parent: 'pluto', radiusKm: 18, spinDays: 1.829, displayRadius: 0.032, shape: [1.29, 0.85, 0.9], rockySurface: [89, 0.70, 0.61, 0.83], silhouette: 'irregular' },
     [49300, 0.015, 0, 0, 31.4, 338.2, 24.85],
     plutoMoonSources,
     'parent-equator',
     85,
   ),
   outerMoon(
-    { id: 'kerberos', name: message('catalog.trans-neptunian.kerberos.name'), parent: 'pluto', radiusKm: 6, spinDays: 5.31, displayRadius: 0.026, shape: [1.56, 0.74, 0.82] },
+    { id: 'kerberos', name: message('catalog.trans-neptunian.kerberos.name'), parent: 'pluto', radiusKm: 6, spinDays: 5.31, displayRadius: 0.026, shape: [1.56, 0.74, 0.82], rockySurface: [97, 0.60, 0.63, 0.32], silhouette: 'lobed' },
     [58300, 0.01, 0.4, 314.3, 32.1, 276.1, 32.17],
     plutoMoonSources,
     'parent-equator',
     85,
   ),
   outerMoon(
-    { id: 'hydra', name: message('catalog.trans-neptunian.hydra.name'), parent: 'pluto', radiusKm: 18.5, spinDays: 0.4295, displayRadius: 0.033, shape: [1.55, 0.6, 1.07] },
+    { id: 'hydra', name: message('catalog.trans-neptunian.hydra.name'), parent: 'pluto', radiusKm: 18.5, spinDays: 0.4295, displayRadius: 0.033, shape: [1.55, 0.6, 1.07], rockySurface: [101, 0.73, 0.72, 0.72], silhouette: 'irregular' },
     [65200, 0.009, 0.3, 114.3, 139.3, 335, 38.2],
     plutoMoonSources,
     'parent-equator',
     85,
   ),
   // Haumea's satellites use inclinations relative to its equator and illustrative initial phases.
-  outerMoon({ id: 'namaka', name: message('catalog.trans-neptunian.namaka.name'), parent: 'haumea', radiusKm: 75, displayRadius: 0.035 }, [25657, 0.249, 13, 0, 0, 40, 18.2783], haumeaMoonSources),
+  outerMoon({ id: 'namaka', name: message('catalog.trans-neptunian.namaka.name'), parent: 'haumea', radiusKm: 75, displayRadius: 0.035, rockySurface: [103, 0.40, 0.52, 0.25] }, [25657, 0.249, 13, 0, 0, 40, 18.2783], haumeaMoonSources),
   outerMoon(
-    { id: 'hiiaka', name: message('catalog.trans-neptunian.hiiaka.name'), parent: 'haumea', radiusKm: 150, spinDays: 0.408, displayRadius: 0.045 },
+    { id: 'hiiaka', name: message('catalog.trans-neptunian.hiiaka.name'), parent: 'haumea', radiusKm: 150, spinDays: 0.408, displayRadius: 0.045, rockySurface: [107, 0.62, 0.50, 0.25] },
     [49880, 0.0513, 2, 0, 0, 145, 49.462],
     haumeaMoonSources,
   ),
   // Plane from the measured ecliptic pole (49.12°, 28.41°). Phase is illustrative.
   outerMoon(
-    { id: 'dysnomia', name: message('catalog.trans-neptunian.dysnomia.name'), parent: 'eris', radiusKm: 350, displayRadius: 0.06 },
+    { id: 'dysnomia', name: message('catalog.trans-neptunian.dysnomia.name'), parent: 'eris', radiusKm: 350, displayRadius: 0.06, rockySurface: [113, 0.12, 0.49, 0.28] },
     [37273, 0.0062, 61.59, 139.12, 0, 125.78, 15.785899],
     [DYSNOMIA_ORBIT, DYSNOMIA_SIZE],
     'ecliptic',

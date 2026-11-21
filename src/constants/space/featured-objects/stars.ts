@@ -37,6 +37,8 @@ export const betelgeuse: FeaturedObject = {
   radiusSolar: 764,
   radiusBasis: 'estimate',
   photosphere: { dark: '#662119', bright: '#ffcc8c', cellScale: 4 },
+  stellarWind: { shape: 'betelgeuse-plume', warm: true },
+  modelCameraDistance: 7.5,
   sources: [
     { label: 'Joyce et al. · Betelgeuse', href: 'https://arxiv.org/abs/2006.09837' },
     { label: 'ESO / VLT · NACO and VISIR infrared observations', href: 'https://www.eso.org/public/images/eso1121a/' },
@@ -51,6 +53,7 @@ export const rigelA: FeaturedObject = {
   kind: 'supergiant',
   observationStatus: 'observed',
   photosphere: { dark: '#426daf', bright: '#e0edff', cellScale: 23 },
+  stellarWind: { shape: 'rigel-wind', warm: false },
   distanceLightYears: 860,
   rightAscension: 78.63447,
   declination: -8.20164,

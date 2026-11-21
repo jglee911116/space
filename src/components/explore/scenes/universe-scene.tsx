@@ -6,11 +6,9 @@ import { Line, OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from 'react';
 import { AdditiveBlending, Box3, MathUtils, Vector3 } from 'three';
-import { LANIAKEA_REGION_ID, VIRGO_REGION_ID } from '@/constants/space/superclusters';
-import { observableUniverse, distantObjects, galaxies, type DistantObject, superclusters, type Supercluster } from '@/constants/space';
+import { observableUniverse, distantObjects, galaxies, type DistantObject, type GalaxyAssociation, superclusters, type Supercluster } from '@/constants/space';
 import { cosmologicalDistances } from '../utils/cosmology';
-import type { GalaxyAssociation } from '@/constants/space/galaxy-associations';
-import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
+import { KM_PER_AU, KM_PER_LIGHT_YEAR, KM_PER_KPC } from '@/constants/space/units';
 import { AccretionModel } from '../three/black-holes/accretion-model';
 import { NebulaVolume } from '../three/nebulae/nebula-volume';
 import { useSurfaceMap } from '../three/shared/use-surface-map';
@@ -88,10 +86,17 @@ function MapMarker({
   );
 }
 
+// 화면이 세로로 길수록 더 멀리서 시작해 지도가 잘리지 않게 한다.
+function cameraLimits(gridRadius: number, association: GalaxyAssociation | undefined, region: Supercluster | undefined, width: number, height: number) {
+  const preset = gridRadius * 2.65 * Math.max(1, height / Math.max(width, 1));
+  const outerLimit = association ? Math.max(gridRadius * 4, preset * 1.3) : region ? Math.max(region.zoomOutMly, preset * 1.15) : undefined;
+  return { preset, landmarkReturnDistance: preset * 0.38, outerLimit };
+}
+
 function UniverseMap({ focus, entry, region, association, reportDistance, onStepIn, onStepOut, onSelectDistantObject, onSelectGalaxy, onSelectCluster, accretionPlaybackTime }: Props) {
   const { t } = useLanguage();
-  const previousRegionId = region?.id === VIRGO_REGION_ID ? undefined : region ? VIRGO_REGION_ID : LANIAKEA_REGION_ID;
-  const previousRegion = superclusters.find(({ id }) => id === previousRegionId);
+  // superclusters 는 안쪽 → 바깥 순서, 우주 전체는 마지막 다음 칸.
+  const previousRegion = superclusters[(region ? superclusters.indexOf(region) : superclusters.length) - 1];
   const innerName = previousRegion?.name ?? t('navigation.localGroup');
   const entryLimit = previousRegion?.zoomInMly ?? LOCAL_GROUP_ENTRY_MILLION_LIGHT_YEARS;
   const gridRadius = association?.gridRadiusMly ?? region?.gridRadiusMly ?? RADIUS;
@@ -99,7 +104,7 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
     if (association) {
       return association.members.flatMap((galaxy, index) => {
         const { id, name, skyPosition, distanceKpc, color } = galaxy;
-        const distance = (distanceKpc * AU_PER_KPC * KM_PER_AU) / KM_PER_MAP_UNIT;
+        const distance = (distanceKpc * KM_PER_KPC) / KM_PER_MAP_UNIT;
         // Preserve the observed sightlines. Spread the unresolved depths only in the visualization.
         const depth = (MathUtils.euclideanModulo(index * 0.618034, 1) - 0.5) * (association.illustrativeDepthMly ?? 0);
         return skyPosition
@@ -151,12 +156,14 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
   const direction = useMemo(() => new Vector3(), []);
   const camera = useThree((state) => state.camera);
   const { width, height } = useThree((state) => state.size);
-  const preset = gridRadius * 2.65 * Math.max(1, height / Math.max(width, 1));
-  const landmarkReturnDistance = preset * 0.38;
-  const outerLimit = association ? Math.max(gridRadius * 4, preset * 1.3) : region ? Math.max(region.zoomOutMly, preset * 1.15) : undefined;
+  const getState = useThree((state) => state.get);
+  const { preset, landmarkReturnDistance, outerLimit } = cameraLimits(gridRadius, association, region, width, height);
   useLayoutEffect(() => {
     const orbit = controls.current;
     if (!orbit) return;
+    // 창 크기 변경으로는 다시 실행하지 않도록 크기는 실행 시점 값만 읽는다.
+    const { width, height } = getState().size;
+    const { preset, landmarkReturnDistance, outerLimit } = cameraLimits(gridRadius, association, region, width, height);
     const distance = entry
       ? Math.min(outerLimit ? outerLimit * 0.94 : RADIUS * 4, Math.max(entryLimit * 1.12, (entry.distanceAu * KM_PER_AU) / KM_PER_MAP_UNIT))
       : focusedLandmark ? landmarkReturnDistance : Math.min(preset, outerLimit ? outerLimit * 0.94 : Infinity);
@@ -164,7 +171,7 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
     orbit.target.copy(orbitTarget);
     camera.position.copy(orbitTarget).addScaledVector(cameraDirection, distance);
     orbit.update();
-  }, [camera, association, entry, entryLimit, focusedLandmark, landmarkReturnDistance, orbitTarget, outerLimit, preset]);
+  }, [camera, association, entry, entryLimit, focusedLandmark, getState, gridRadius, orbitTarget, region]);
   useFrame(({ camera, size }) => {
     const orbit = controls.current;
     if (!orbit) return;

@@ -44,7 +44,7 @@ export function withSolarSurfaceMap(body: Body): Body {
     return { ...body, shapeModel: `/models/${assetDirectory}/${id}-nasa.glb`, sources: [...sources, { label: 'NASA · Observed 3D model', href }] };
   }
   if (id === 'titan') {
-    return { ...body, note: message('catalog.titan.surfaceNote'), surfaceMap: { file: `${textures}/titan-cassini.jpg`, fillMissing: true }, sources: [...sources, {
+    return { ...body, note: message('catalog.titan.surfaceNote'), surfaceMap: { file: `${textures}/titan-cassini.jpg`, fillMissing: true, hidden: true }, sources: [...sources, {
       label: 'NASA/JPL-Caltech/Univ. Arizona · Cassini ISS',
       href: 'https://science.nasa.gov/resource/titan-mosaic-the-surface-under-the-haze/',
     }] };

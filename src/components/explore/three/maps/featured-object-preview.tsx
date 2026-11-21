@@ -52,20 +52,20 @@ export function FeaturedObjectPreview({ object, focused, playbackTime, simulatio
   const texture = useSurfaceMap(image?.file, focused);
   const distance = featuredOverviewDistanceKpc(object);
 
-  if (object.id === 'm45') return <PleiadesCluster radius={distance * 0.13} preview />;
-  if (object.kind === 'globular-cluster') return <GlobularCluster radius={distance * 0.10} objectId={object.id} preview />;
-  if (object.id === 'cygnus-x-1' && playbackTime && simulationDays) {
-    return <CygnusBinary size={distance / 5} days={simulationDays} time={playbackTime} preview />;
+  if (object.clusterModel === 'pleiades') return <PleiadesCluster radius={distance * 0.13} preview />;
+  if (object.kind === 'globular-cluster') return <GlobularCluster radius={distance * 0.10} profile={object.clusterModel} preview />;
+  if (object.kind === 'x-ray-binary' && playbackTime && simulationDays) {
+    return <CygnusBinary disk={object.accretionDisk} size={distance / 5} days={simulationDays} time={playbackTime} preview />;
   }
-  if (object.id === 'betelgeuse' || object.id === 'rigel-a') {
-    return <StellarWindHalo warm={object.id === 'betelgeuse'} overviewDistance={distance} />;
+  if (object.stellarWind) {
+    return <StellarWindHalo warm={object.stellarWind.warm} overviewDistance={distance} />;
   }
   if (image) return <NebulaVolume texture={texture} radius={distance * 0.13} shape={image.shape} preview />;
   if (object.kind === 'black-hole') {
     const diameter = distance * (playbackTime ? ACCRETION_MODEL_DIAMETER / ACCRETION_MODEL_EXIT_DISTANCE : 0.68);
     return (
       <group rotation-z={-0.23}>
-        <AccretionGeometry id={object.id} color={object.color} previewDiameter={diameter} time={playbackTime} />
+        <AccretionGeometry disk={object.accretionDisk} color={object.color} previewDiameter={diameter} time={playbackTime} />
         {playbackTime && <HelicalJets color={object.color} time={playbackTime} previewDiameter={diameter} />}
       </group>
     );

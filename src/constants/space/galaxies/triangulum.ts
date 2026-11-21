@@ -3,6 +3,7 @@ import type { Galaxy } from '../types';
 
 export const triangulum: Galaxy = {
   id: 'triangulum',
+  structure: { arms: 3, winding: 1.69, core: 0.085, dust: 0.44, asymmetry: 0.23 },
   name: message('catalog.triangulum.triangulum.name'),
   title: message('catalog.triangulum.triangulum.title'),
   summary: message('catalog.triangulum.triangulum.summary'),

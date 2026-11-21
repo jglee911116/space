@@ -1,19 +1,19 @@
 import { message } from '@/i18n/messages';
 import type { Galaxy } from '../types';
-import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '../units';
+import { KPC_PER_MLY } from '../units';
 
-const kpcPerMillionLightYears = (1e6 * KM_PER_LIGHT_YEAR) / (AU_PER_KPC * KM_PER_AU);
 const m81Study = { label: 'Oehm et al. · M81 group coordinates and distances', href: 'https://academic.oup.com/mnras/article/467/1/273/2804510' };
 const fornaxImage = { label: 'ESO · Fornax Cluster', href: 'https://www.eso.org/public/images/eso0949c/' };
 
 export const m81Members = [
   {
     id: 'm81',
+    structure: { core: 0.29, winding: 3.45, asymmetry: 0.08 },
     name: 'M81',
     title: 'M81 · NGC 3031',
     aliases: ["Bode's Galaxy"],
     summary: message('catalog.nearby-groups.m81.summary'),
-    distanceKpc: 11.6 * kpcPerMillionLightYears,
+    distanceKpc: 11.6 * KPC_PER_MLY,
     skyPosition: { rightAscension: 148.88822, declination: 69.0653 },
     modelRadiusKpc: 14,
     morphology: 'open-spiral',
@@ -22,11 +22,12 @@ export const m81Members = [
   },
   {
     id: 'm82',
+    structure: { shape: 'spiral', axis: 0.68, thickness: 0.039, arms: 0, bar: 0.30, dust: 1.5, wind: 1 },
     name: 'M82',
     title: 'M82 · NGC 3034',
     aliases: ['Cigar Galaxy'],
     summary: message('catalog.nearby-groups.m82.summary'),
-    distanceKpc: 12 * kpcPerMillionLightYears,
+    distanceKpc: 12 * KPC_PER_MLY,
     skyPosition: { rightAscension: 148.96846, declination: 69.6797 },
     modelRadiusKpc: 8,
     morphology: 'barred-irregular',
@@ -36,6 +37,7 @@ export const m81Members = [
   },
   {
     id: 'ngc-3077',
+    structure: { axis: 0.86, core: 0.28, asymmetry: 0.46, dust: 0.64 },
     name: 'NGC 3077',
     summary: message('catalog.nearby-groups.ngc3077.summary'),
     distanceKpc: 3830,
@@ -50,9 +52,10 @@ export const m81Members = [
 export const fornaxMembers = [
   {
     id: 'ngc-1399',
+    structure: { axis: 0.92, thickness: 0.85, core: 0.24 },
     name: 'NGC 1399',
     summary: message('catalog.nearby-groups.ngc1399.summary'),
-    distanceKpc: 60 * kpcPerMillionLightYears,
+    distanceKpc: 60 * KPC_PER_MLY,
     skyPosition: { rightAscension: 52.12083, declination: -35.45083 },
     modelRadiusKpc: 33,
     morphology: 'giant-elliptical',
@@ -61,10 +64,11 @@ export const fornaxMembers = [
   },
   {
     id: 'ngc-1365',
+    structure: { bar: 0.52, winding: 1.62, asymmetry: 0.20, dust: 0.95 },
     name: 'NGC 1365',
     aliases: ['Great Barred Spiral Galaxy'],
     summary: message('catalog.nearby-groups.ngc1365.summary'),
-    distanceKpc: 56 * kpcPerMillionLightYears,
+    distanceKpc: 56 * KPC_PER_MLY,
     skyPosition: { rightAscension: 53.40155, declination: -36.1404 },
     modelRadiusKpc: 32,
     morphology: 'barred-spiral',
@@ -78,10 +82,11 @@ const messierCoordinates = { label: 'NASA/IPAC NED · Messier coordinates', href
 export const leoMembers = [
   {
     id: 'm96',
+    structure: { bar: 0.21, winding: 3.12, asymmetry: 0.58, dust: 1.04, ring: 0.47 },
     name: 'M96',
     title: 'M96 · NGC 3368',
     summary: message('catalog.nearby-groups.m96.summary'),
-    distanceKpc: 35 * kpcPerMillionLightYears,
+    distanceKpc: 35 * KPC_PER_MLY,
     skyPosition: { rightAscension: 161.6875, declination: 11.82111 },
     modelRadiusKpc: 14,
     morphology: 'open-spiral',
@@ -90,10 +95,11 @@ export const leoMembers = [
   },
   {
     id: 'm95',
+    structure: { bar: 0.34, winding: 2.66, ring: 0.36, dust: 0.60 },
     name: 'M95',
     title: 'M95 · NGC 3351',
     summary: message('catalog.nearby-groups.m95.summary'),
-    distanceKpc: 33 * kpcPerMillionLightYears,
+    distanceKpc: 33 * KPC_PER_MLY,
     skyPosition: { rightAscension: 160.99167, declination: 11.70417 },
     modelRadiusKpc: 14,
     morphology: 'barred-spiral',
@@ -102,10 +108,11 @@ export const leoMembers = [
   },
   {
     id: 'm105',
+    structure: { axis: 0.94, thickness: 0.85, core: 0.14 },
     name: 'M105',
     title: 'M105 · NGC 3379',
     summary: message('catalog.nearby-groups.m105.summary'),
-    distanceKpc: 32 * kpcPerMillionLightYears,
+    distanceKpc: 32 * KPC_PER_MLY,
     skyPosition: { rightAscension: 161.95833, declination: 12.5825 },
     modelRadiusKpc: 14,
     morphology: 'giant-elliptical',
@@ -122,6 +129,7 @@ const hydraDistanceKpc = 47_200;
 export const hydraMembers = [
   {
     id: 'ngc-3311',
+    structure: { axis: 0.98, thickness: 0.9, core: 0.32 },
     name: 'NGC 3311',
     summary: message('catalog.nearby-groups.ngc3311.summary'),
     distanceKpc: hydraDistanceKpc,
@@ -133,6 +141,7 @@ export const hydraMembers = [
   },
   {
     id: 'ngc-3309',
+    structure: { axis: 0.78, thickness: 0.69, core: 0.16 },
     name: 'NGC 3309',
     summary: message('catalog.nearby-groups.ngc3309.summary'),
     distanceKpc: hydraDistanceKpc,

@@ -18,10 +18,11 @@ import { GalacticLabelLayer, GalacticMarker } from '../three/maps/galactic-marke
 import { useCursorZoom } from '../three/shared/use-cursor-zoom';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { OortCloudModel } from '../three/planetary-systems/oort-cloud';
-import { AU_PER_KPC, DAYS_PER_YEAR, KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
+import { AU_PER_KPC, DAYS_PER_YEAR, KM_PER_KPC, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { galacticOrbitColor, nearbyPositions } from '../utils/nearby-positions';
 import { BLACK_HOLE_EXIT_DISTANCE, GALACTIC_CENTER_ENTRY_KPC, GALACTIC_CENTER_RETURN_KPC, GALAXY_EXIT_KPC, featuredOverviewDistanceKpc, galaxyHandoffDistanceAu, type ZoomHandoff } from '../utils/zoom';
+import { seededRandom } from '../utils/random';
 
 type GalaxySceneProps = {
   anchor: StarSystem;
@@ -58,7 +59,7 @@ const COUNT = 24_000;
 const PHASE = 0.36;
 const BAR_ANGLE = 0.29;
 const BAR_HALF_LENGTH = 3.8;
-const LIGHT_YEAR_TO_KPC = KM_PER_LIGHT_YEAR / (AU_PER_KPC * KM_PER_AU);
+const LIGHT_YEAR_TO_KPC = 1 / LIGHT_YEARS_PER_KPC;
 const LOCAL_RADIUS = 0.0046;
 const OORT_TO_KPC = 1 / (AU_PER_KPC * UNITS_PER_AU);
 
@@ -90,12 +91,7 @@ function buildGalaxy() {
   const warm = new Color('#ffd7ac');
   const cool = new Color('#8ab0ec');
   const color = new Color();
-  let seed = 19650218;
-
-  function sample() {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 2 ** 32;
-  }
+  const sample = seededRandom(19650218);
 
   for (let index = 0; index < COUNT; index++) {
     const population = sample();
@@ -399,7 +395,7 @@ function GalacticMap({
             {(object.extentLightYears > 0 || object.photosphere || object.id === focusedObjectId) && <FeaturedObjectPreview
               object={object}
               focused={object.id === focusedObjectId}
-              playbackTime={object.id === 'cygnus-x-1' ? accretionPlaybackTime : undefined}
+              playbackTime={object.kind === 'x-ray-binary' ? accretionPlaybackTime : undefined}
               simulationDays={simulationDaysRef}
             />}
             <GalacticMarker name={object.name} color={object.color} labelOffset={index ? -1.0 : 1.0} modelRadius={object.id === focusedObjectId ? featuredOverviewDistanceKpc(object) * 0.13 : undefined} priority={object.id === focusedObjectId ? 3 : 0} localOpacity={cloudOpacity} onSelect={() => onSelectObject(object.id)} />
@@ -452,7 +448,9 @@ function Scene({
   }, [neighbors, selectedNeighbor]);
   const focusLocal = target === system.bodies[0].id;
   const camera = useThree((state) => state.camera);
-  const { width, height } = useThree((state) => state.size);
+  const height = useThree((state) => state.size.height);
+  // 카메라 초기 위치는 그 시점 화면 비율로만 정한다 — 창 크기가 바뀌어도 사용자가 돌려 둔 시점을 되돌리지 않는다.
+  const getState = useThree((state) => state.get);
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const cursorZoomRef = useCursorZoom();
   const sun = useRef<Group>(null);
@@ -484,6 +482,7 @@ function Scene({
   useLayoutEffect(() => {
     const orbit = controls.current;
     if (!orbit) return;
+    const { width, height } = getState().size;
     cursorZoomRef.current = false;
     if (centerFocused && centerEntry) {
       orbit.target.set(0, 0, 0);
@@ -494,7 +493,7 @@ function Scene({
     } else if (focusedPosition) {
       orbit.target.copy(focusedPosition);
       const direction = groupEntry ? scratch.offset.set(...groupEntry.direction) : scratch.offset.copy(MAP_CAMERA).normalize();
-      if (!groupEntry && focusedObjectId === 'cygnus-x-1') direction.set(0.025, 0.38, 1).normalize();
+      if (!groupEntry && focusedObject?.kind === 'x-ray-binary') direction.set(0.025, 0.38, 1).normalize();
       camera.position.copy(focusedPosition).addScaledVector(direction, groupEntry ? groupEntry.distanceAu / AU_PER_KPC : focusedDistance);
     } else if (!close && !centerFocused && ((entry && recenter === initialRecenter.current) || focusLocal)) {
       solarPosition(scratch.sun, star, simulationDaysRef.current / DAYS_PER_YEAR + demoYears.current);
@@ -510,7 +509,7 @@ function Scene({
       camera.position.copy(close ? CENTER_CAMERA : MAP_CAMERA).multiplyScalar(Math.max(1, ((close ? 0.55 : 0.85) * height) / Math.max(width, 1)));
     }
     orbit.update();
-  }, [camera, centerEntry, centerFocused, close, cursorZoomRef, entry, focusLocal, focusedDistance, focusedObjectId, focusedPosition, groupEntry, handoffRadius, height, localCenter, recenter, scratch, simulationDaysRef, star, system.id, width]);
+  }, [camera, centerEntry, centerFocused, close, cursorZoomRef, entry, focusLocal, focusedDistance, focusedObject, focusedPosition, getState, groupEntry, handoffRadius, localCenter, recenter, scratch, simulationDaysRef, star, system.id]);
 
   useFrame(({ camera }, delta) => {
     if (!paused) {
@@ -523,7 +522,7 @@ function Scene({
       solarPosition(scratch.sun, star, galacticYears.current);
       sun.current?.position.copy(scratch.sun);
       const radius = orbit.getDistance();
-      reportDistance(kmPerPixel(camera, height, radius, AU_PER_KPC * KM_PER_AU));
+      reportDistance(kmPerPixel(camera, height, radius, KM_PER_KPC));
       const logDistance = Math.log(radius);
       // Cross the sparsely populated range quickly without changing the controls near either end.
       const faster = MathUtils.smoothstep(logDistance, Math.log(0.008), Math.log(0.08)) * (1 - MathUtils.smoothstep(logDistance, Math.log(8), Math.log(30)));

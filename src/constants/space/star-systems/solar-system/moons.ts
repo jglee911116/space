@@ -10,7 +10,7 @@ const satelliteNote = message('catalog.moons.satellite-note.text');
 type MeanElements = [axisKm: number, eccentricity: number, periapsis: number, meanAnomaly: number, inclination: number, node: number, periodDays: number];
 
 function satellite(
-  body: Pick<Body, 'id' | 'name' | 'parent' | 'radiusKm' | 'displayRadius' | 'colors' | 'appearance' | 'shape' | 'surfaceFeatures' | 'note'> & Partial<Pick<Body, 'sources'>>,
+  body: Pick<Body, 'id' | 'name' | 'parent' | 'radiusKm' | 'displayRadius' | 'colors' | 'appearance' | 'shape' | 'surfaceFeatures' | 'surfaceEffect' | 'rockySurface' | 'silhouette' | 'note'> & Partial<Pick<Body, 'sources'>>,
   [axisKm, eccentricity, periapsis, meanAnomaly, inclination, node, periodDays]: MeanElements,
   referencePlane: OrbitReferencePlane,
 ): Body {
@@ -109,7 +109,7 @@ export const moons: Body[] = [
     saturnPole,
   ),
   satellite(
-    { id: 'enceladus', name: message('catalog.moons.enceladus.name'), parent: 'saturn', radiusKm: 252.1, displayRadius: 0.045, appearance: 'rock', colors: ['#9bb0bc', '#d4e5e8', '#fffdf4'] },
+    { id: 'enceladus', name: message('catalog.moons.enceladus.name'), parent: 'saturn', radiusKm: 252.1, displayRadius: 0.045, appearance: 'rock', colors: ['#9bb0bc', '#d4e5e8', '#fffdf4'], surfaceEffect: 'ice-plumes' },
     [238400, 0.005, 119.5, 57, 0, 0, 1.370218],
     saturnPole,
   ),
@@ -173,6 +173,8 @@ export const moons: Body[] = [
       appearance: 'craters',
       colors: ['#32343d', '#656976', '#9195a4'],
       shape: [1.08, 0.9, 1.03],
+      rockySurface: [73, 0.06, 0.59, 0.92],
+      silhouette: 'rounded-box',
       note: message('catalog.moons.proteus.surface'),
       sources: [{ label: 'NASA · Proteus', href: 'https://science.nasa.gov/neptune/moons/proteus/' }],
     },

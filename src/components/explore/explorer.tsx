@@ -3,21 +3,19 @@
 import { Message, useLanguage } from '@/i18n/language';
 import dynamic from 'next/dynamic';
 import { withLocale, withoutLocale } from '@/i18n/routing';
-import { galaxyAssociations } from '@/constants/space/galaxy-associations';
-import { LANIAKEA_REGION_ID, VIRGO_REGION_ID } from '@/constants/space/superclusters';
 import type { Locale } from '@/i18n/messages';
 import { CatalogSearch } from './catalog-search';
 import { LanguageSelect } from './language-select';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { superclusters, observableUniverse, distantObjects, featuredObjects, galaxies, localGroup, milkyWay, systems as catalogSystems, type Galaxy, type StarSystem } from '@/constants/space';
+import { galaxyAssociations, superclusters, observableUniverse, distantObjects, featuredObjects, galaxies, localGroup, milkyWay, systems as catalogSystems, type Galaxy, type StarSystem } from '@/constants/space';
 import { featuredGalaxyPosition } from './utils/nearby-positions';
 import { SITE_NAME_KEY } from '@/constants/site';
 import {
   BlackHoleDetails,
   BodyDetails,
   BodyTooltip,
-  BodyDistance,
+  ComparisonDistance,
   GalaxyDetails,
   isMultiStar,
   OortCloudDetails,
@@ -32,6 +30,7 @@ import {
 } from './details';
 import { isNearbySystem } from './utils/nearby-positions';
 import { distanceScale } from './utils/distance-scale';
+import { createDistanceStore } from './utils/distance-store';
 import { galaxyFocusPath, readExplorerQuery, universeFocusPath, updateSystemLocation, associationPath, distantObjectPath, featuredObjectPath, galaxyPath, HOME_PATH, LOCAL_GROUP_PATH, localGroupPath, superclusterPath, systemPath, UNIVERSE_PATH } from './utils/paths';
 import { elapsedSimulationDays, REALTIME_DAYS_PER_SECOND } from './utils/orbit';
 import type { Overview, Target } from './scenes/system-scene';
@@ -113,7 +112,10 @@ function recordView(locale: Locale, target: Target, overview: ExplorerView, syst
   return true;
 }
 
-export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
+// 카탈로그는 클라이언트 번들에 이미 있으므로 서버 props(RSC payload)로 다시 보내지 않는다.
+const systems: readonly StarSystem[] = Object.values(catalogSystems);
+
+export function Explorer() {
   const { t, catalogText, locale, number, measurement } = useLanguage();
   const pathname = withoutLocale(usePathname());
   const { system: systemParam, target: targetParam, view: viewParam, focus, galaxy: galaxyParam, cluster: clusterParam } = readExplorerQuery(useSearchParams());
@@ -128,7 +130,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const pathGalaxy = galaxies.find(({ id }) => pathname === galaxyPath(id));
   const activeGalaxy = pathGalaxy ?? (groupView ? localGroup.galaxies.find(({ id }) => galaxyParam === id) : undefined) ?? milkyWay;
   const [spaceEntry, setSpaceEntry] = useState<ZoomHandoff>();
-  const galaxySystems = useMemo(() => systems.filter((item) => (item.galaxyId ?? milkyWay.id) === activeGalaxy.id), [activeGalaxy.id, systems]);
+  const galaxySystems = useMemo(() => systems.filter((item) => (item.galaxyId ?? milkyWay.id) === activeGalaxy.id), [activeGalaxy.id]);
   const systemMarkers = useMemo(() => galaxySystems.flatMap((item) => (item.galaxyMarkerKpc ? [{ id: item.id, name: item.name, position: item.galaxyMarkerKpc }] : [])), [galaxySystems]);
   const selectedSystem = galaxySystems.find((item) => item.id === systemParam);
   const externalGalaxy = !!pathGalaxy && pathGalaxy.id !== milkyWay.id;
@@ -159,9 +161,9 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const focusGalacticCenter = galaxyView && targetParam === milkyWay.center.id;
   const focusBlackHole = focusGalacticCenter && (centerZoom?.close ?? true);
   const animatedAccretion = distantObject?.kind === 'quasar' || featuredObject?.kind === 'black-hole'
-    || featuredObject?.kind === 'x-ray-binary' || (extraView && activeGalaxy.id === 'm87' && focus === 'm87-star');
+    || featuredObject?.kind === 'x-ray-binary' || (extraView && galaxyObjects.find(({ id }) => id === focus)?.kind === 'black-hole');
   const featuredShape = featuredObject?.observationImage?.shape;
-  const animatedFeaturedVolume = featuredObject?.id === 'betelgeuse' || featuredObject?.id === 'rigel-a' || featuredShape === 'bipolar-jet' || featuredShape === 'shocked-shell' || featuredShape === 'dust-spiral' || featuredShape === 'edge-on-disk' || featuredShape === 'light-echo';
+  const animatedFeaturedVolume = !!featuredObject?.stellarWind || featuredShape === 'bipolar-jet' || featuredShape === 'shocked-shell' || featuredShape === 'dust-spiral' || featuredShape === 'edge-on-disk' || featuredShape === 'light-echo';
   const heading = region
     ? association
       ? association.name
@@ -231,13 +233,12 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const [hovered, setHovered] = useState<HoveredBody | null>(null);
   const hoveredBody = hovered && system.bodies.find((other) => other.id === hovered.id);
   const [comparison, setComparison] = useState<{ origin: string; destination: Target } | null>(null);
-  const canCompare = target !== null && system.id === 'solar' && !galaxyView && !cosmicView && !extraView && !featuredObject && !neighborhoodView;
+  const canCompare = target !== null && system.home === true && !galaxyView && !cosmicView && !extraView && !featuredObject && !neighborhoodView;
   const activeComparison = canCompare && comparison?.origin === target ? comparison : null;
   const comparisonBody = activeComparison && system.bodies.find((item) => item.id === activeComparison.destination);
   const distanceTarget = activeComparison ? activeComparison.destination : hovered?.id ?? null;
-  const [hoverDistance, setHoverDistance] = useState<{ origin: string; body: string; au: number } | null>(null);
-  const distanceOrigin = hoverDistance && hoverDistance.origin === target && hoverDistance.body === distanceTarget && canCompare
-    ? system.bodies.find((body) => body.id === hoverDistance.origin) : undefined;
+  const [distanceStore] = useState(createDistanceStore);
+  const distanceOrigin = canCompare ? system.bodies.find((body) => body.id === target) : undefined;
 
   useEffect(() => {
     const resetWheelView = () => {
@@ -276,7 +277,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
       setSpaceEntry(undefined);
       if (!recordView(locale, next, nextOverview, nextSystem, DEFAULT_SYSTEM_ID, systems.find((item) => item.id === nextSystem)?.galaxyId ?? milkyWay.id)) setRecenter((revision) => revision + 1);
     },
-    [locale, systemId, systems, setHovered, setComparison],
+    [locale, systemId, setHovered, setComparison],
   );
 
   const navigateSpace = useCallback(
@@ -292,7 +293,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
       if (current.href !== destination.href) window.history.pushState(null, '', destination);
       else setRecenter((revision) => revision + 1);
     },
-    [locale, setHovered, setComparison],
+    [locale, setHovered, setComparison, setShowCounterjet],
   );
   const enterUniverse = useCallback((entry?: ZoomHandoff) => navigateSpace(UNIVERSE_PATH, entry), [navigateSpace]);
   const selectDistantObject = useCallback((id: string) => navigateSpace(distantObjectPath(id)), [navigateSpace]);
@@ -309,22 +310,25 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
     [navigateSpace],
   );
   const enterRegion = useCallback((id: string, entry?: ZoomHandoff) => navigateSpace(superclusterPath(id), entry), [navigateSpace]);
+  // superclusters 는 안쪽 → 바깥 순서, 우주 전체는 마지막 다음 칸.
+  const regionIndex = region ? superclusters.indexOf(region) : superclusters.length;
   const zoomInCosmic = useCallback(
     (entry?: ZoomHandoff) => {
-      if (region?.id === VIRGO_REGION_ID) navigateSpace(localGroupPath(milkyWay.id), entry);
-      else enterRegion(region ? VIRGO_REGION_ID : LANIAKEA_REGION_ID, entry);
+      const inner = superclusters[regionIndex - 1];
+      if (inner) enterRegion(inner.id, entry);
+      else navigateSpace(localGroupPath(milkyWay.id), entry);
     },
-    [navigateSpace, enterRegion, region],
+    [navigateSpace, enterRegion, regionIndex],
   );
   const zoomOutCosmic = useCallback(
     (entry: ZoomHandoff) => {
       if (association) enterRegion(association.mapRegionId);
-      else if (region?.id === VIRGO_REGION_ID) enterRegion(LANIAKEA_REGION_ID, entry);
+      else if (superclusters[regionIndex + 1]) enterRegion(superclusters[regionIndex + 1].id, entry);
       else enterUniverse(entry);
     },
-    [association, enterRegion, enterUniverse, region],
+    [association, enterRegion, enterUniverse, regionIndex],
   );
-  const leaveLocalGroup = useCallback((entry: ZoomHandoff) => enterRegion(VIRGO_REGION_ID, entry), [enterRegion]);
+  const leaveLocalGroup = useCallback((entry: ZoomHandoff) => enterRegion(superclusters[0].id, entry), [enterRegion]);
 
   const enterExternalGalaxy = useCallback((item: Galaxy, entry?: ZoomHandoff) => navigateSpace(galaxyPath(item.id), entry), [navigateSpace]);
 
@@ -365,14 +369,21 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
     setHovered({ id, x, y });
   }, [setHovered]);
 
+  // memo(SystemScene) 가 hover 마다 다시 그려지지 않도록 안정된 콜백.
+  const selectSystemBody = useCallback(
+    (next: Target) => {
+      if (!activeComparison) navigateTo(next);
+      else if (next && next !== activeComparison.origin) {
+        setComparison({ origin: activeComparison.origin, destination: next });
+        setHovered(null);
+      }
+    },
+    [activeComparison, navigateTo, setComparison, setHovered],
+  );
+
   const leaveBody = useCallback((id: string) => {
     setHovered((current) => (current?.id === id ? null : current));
   }, [setHovered]);
-
-  const reportHoverDistance = useCallback((origin: string, body: string, au: number) => {
-    setHoverDistance((previous) => previous?.origin === origin && previous.body === body && previous.au === au
-      ? previous : { origin, body, au });
-  }, []);
 
   return (
     <>
@@ -467,22 +478,16 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             paused={paused}
             simulationDaysRef={simulationDaysRef}
             recenter={recenter}
-            onSelect={(next) => {
-              if (!activeComparison) navigateTo(next);
-              else if (next && next !== target) {
-                setComparison({ origin: activeComparison.origin, destination: next });
-                setHovered(null);
-              }
-            }}
+            onSelect={selectSystemBody}
             onScaleChange={setScale}
             onHoverBody={hoverBody}
             onLeaveBody={leaveBody}
-            onHoverDistance={reportHoverDistance}
+            onHoverDistance={distanceStore.set}
           />
         )}
       </div>
       {!activeComparison && hovered && hoveredBody && <BodyTooltip body={hoveredBody} x={hovered.x} y={hovered.y}
-        distance={distanceOrigin && hoverDistance ? { origin: distanceOrigin, au: hoverDistance.au } : undefined} />}
+        distanceFrom={distanceOrigin && { store: distanceStore, origin: distanceOrigin }} />}
 
       <header className={styles.header}>
         <div className={styles.brand}>
@@ -686,12 +691,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
               >
                 {t('details.compareDistance')}
               </button>
-              {activeComparison && (comparisonBody && distanceOrigin && hoverDistance ? (
-                <div className={styles.distanceReadout}>
-                  <strong>{catalogText(comparisonBody.name)}</strong>
-                  <BodyDistance origin={distanceOrigin} au={hoverDistance.au} />
-                </div>
-              ) : <p className={styles.hint}>{t('details.pickDistanceTarget')}</p>)}
+              {activeComparison && distanceOrigin && <ComparisonDistance store={distanceStore} origin={distanceOrigin} destination={comparisonBody || undefined} />}
             </div>
           )}
         </div>

@@ -1,19 +1,8 @@
 import { Color } from 'three';
-import type { Galaxy } from '@/constants/space';
+import type { Galaxy, GalaxyStructure } from '@/constants/space';
+import { seededRandom } from '../../utils/random';
 
-type Profile = {
-  shape: 'spiral' | 'irregular' | 'elliptical';
-  axis: number;
-  thickness: number;
-  core: number;
-  asymmetry: number;
-  arms: number;
-  winding: number;
-  bar: number;
-  dust: number;
-  ring: number;
-  wind: number;
-};
+type Profile = Omit<GalaxyStructure, 'phase'>;
 
 const disk: Profile = { shape: 'spiral', axis: 0.92, thickness: 0.052, core: 0.20, asymmetry: 0.12, arms: 2, winding: 2.5, bar: 0, dust: 0.72, ring: 0, wind: 0 };
 const irregular: Profile = { ...disk, shape: 'irregular', axis: 0.68, thickness: 0.16, core: 0.15, asymmetry: 0.36, arms: 0, dust: 0.30 };
@@ -30,42 +19,10 @@ const morphology: Partial<Record<NonNullable<Galaxy['morphology']>, Profile>> = 
   'dust-lane-elliptical': { ...elliptical, dust: 1 },
 };
 
-const variants: Readonly<Record<string, Partial<Profile & { phase: number }>>> = {
-  'large-magellanic-cloud': { axis: 0.80, bar: 0.37, asymmetry: 0.45 },
-  'small-magellanic-cloud': { axis: 0.57, thickness: 0.25, asymmetry: 0.55 },
-  triangulum: { arms: 3, winding: 1.69, core: 0.085, dust: 0.44, asymmetry: 0.23 },
-  m32: { core: 0.11, axis: 0.82 },
-  m110: { axis: 0.62, core: 0.34, dust: 0.12 },
-  'ngc-253': { axis: 0.72, thickness: 0.047, core: 0.16, dust: 1.2, winding: 3.15 },
-  'centaurus-a': { axis: 0.84, thickness: 0.69, dust: 2.25 },
-  'ngc-5195': { axis: 0.74, core: 0.24, asymmetry: 0.63, dust: 0.66 },
-  m81: { core: 0.29, winding: 3.45, asymmetry: 0.08 },
-  m82: { shape: 'spiral', axis: 0.68, thickness: 0.039, arms: 0, bar: 0.30, dust: 1.5, wind: 1 },
-  'ngc-3077': { axis: 0.86, core: 0.28, asymmetry: 0.46, dust: 0.64 },
-  m87: { axis: 0.95, thickness: 0.81, core: 0.19 },
-  m84: { axis: 0.91, thickness: 0.79, core: 0.16 },
-  m86: { axis: 0.78, thickness: 0.62, core: 0.18 },
-  m49: { axis: 0.85, thickness: 0.72, core: 0.25 },
-  'ngc-1399': { axis: 0.92, thickness: 0.85, core: 0.24 },
-  'ngc-1365': { bar: 0.52, winding: 1.62, asymmetry: 0.20, dust: 0.95 },
-  m95: { bar: 0.34, winding: 2.66, ring: 0.36, dust: 0.60 },
-  m96: { bar: 0.21, winding: 3.12, asymmetry: 0.58, dust: 1.04, ring: 0.47 },
-  m105: { axis: 0.94, thickness: 0.85, core: 0.14 },
-  'ngc-3311': { axis: 0.98, thickness: 0.9, core: 0.32 },
-  'ngc-3309': { axis: 0.78, thickness: 0.69, core: 0.16 },
-  'ngc-6822': { axis: 0.74, thickness: 0.24, core: 0.11, asymmetry: 0.52, dust: 0.68 },
-  wlm: { axis: 0.43, thickness: 0.21, core: 0.10, asymmetry: 0.32 },
-  'ngc-1566': { winding: -1.65, phase: -1.95, axis: 0.96, core: 0.16 },
-  'phoenix-dwarf': { axis: 0.76, thickness: 0.33, core: 0.16, asymmetry: 0.19, dust: 0.08 },
-  'ngc-147': { axis: 0.71, thickness: 0.55, core: 0.24 },
-  'ngc-185': { axis: 0.85, thickness: 0.63, core: 0.19 },
-  'sagittarius-dsph': { axis: 0.42, thickness: 0.45, core: 0.28, asymmetry: 0.22 },
-};
-
 export function galaxyStructure(galaxy: Galaxy) {
   const base = galaxy.morphology ? morphology[galaxy.morphology] ?? disk : disk;
   const seed = [...galaxy.id].reduce((value, character) => Math.imul(value, 31) + character.charCodeAt(0) | 0, 119);
-  return { ...base, seed, phase: (seed >>> 0) % 4096 / 4096 * Math.PI * 2, ...variants[galaxy.id] };
+  return { ...base, seed, phase: (seed >>> 0) % 4096 / 4096 * Math.PI * 2, ...galaxy.structure };
 }
 
 export function galaxyParticles(galaxy: Galaxy, count: number) {
@@ -77,11 +34,7 @@ export function galaxyParticles(galaxy: Galaxy, count: number) {
   const hotColor = new Color('#b8ceff');
   const nebulaColor = new Color('#df7394');
   const tint = new Color();
-  let seed = profile.seed;
-  function random() {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 2 ** 32;
-  }
+  const random = seededRandom(profile.seed);
 
   for (let offset = 0; offset < positions.length; offset += 3) {
     const elliptical = profile.shape === 'elliptical';

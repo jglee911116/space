@@ -11,6 +11,7 @@ import { KUIPER_BELT, transNeptunianBodies, transNeptunianMoons } from './trans-
 
 export const solarSystem: StarSystem = {
   id: 'solar',
+  home: true,
   name: message('catalog.solar-system.solar.name'),
   overviewDistance: 875,
   outerRegion: { name: message('catalog.solar-system.outer-region.name'), beltName: message('catalog.solar-system.solar.beltName'), overviewDistance: 2950, beltAu: [30, 50], source: KUIPER_BELT },

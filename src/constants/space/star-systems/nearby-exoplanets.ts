@@ -1,8 +1,8 @@
 import { message } from '@/i18n/messages';
 import type { Body, Source, StarSystem } from '../types';
-import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR, SOLAR_LUMINOSITY_W, SOLAR_RADIUS_KM } from '../units';
+import { LIGHT_YEARS_PER_KPC, SOLAR_LUMINOSITY_W, SOLAR_RADIUS_KM } from '../units';
 
-const lightYearsPerParsec = (AU_PER_KPC * KM_PER_AU) / (1000 * KM_PER_LIGHT_YEAR);
+const lightYearsPerParsec = LIGHT_YEARS_PER_KPC / 1000;
 const earthMeanRadiusKm = 6371;
 const lhsSource = { label: 'NASA Exoplanet Archive · LHS 1140', href: 'https://exoplanetarchive.ipac.caltech.edu/overview/GJ%203053' };
 const glieseSource = { label: 'NASA Exoplanet Archive · Gliese 12', href: 'https://exoplanetarchive.ipac.caltech.edu/overview/Gliese%2012%20b' };

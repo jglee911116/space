@@ -78,11 +78,20 @@ const observationSources: Partial<Record<string, readonly Source[]>> = {
 };
 
 const individualSummaries: Partial<Record<string, Galaxy['summary']>> = {
-  'phoenix-dwarf': message('catalog.new.phoenix.summary'),
+  'phoenix-dwarf': message('catalog.dwarf.phoenix-dwarf.summary'),
   'ngc-6822': message('catalog.dwarf.ngc-6822'),
   wlm: message('catalog.dwarf.wlm'),
   'ngc-147': message('catalog.dwarf.ngc-147'),
   'ngc-185': message('catalog.dwarf.ngc-185'),
+};
+
+const individualStructures: Partial<Record<string, Galaxy['structure']>> = {
+  'ngc-6822': { axis: 0.74, thickness: 0.24, core: 0.11, asymmetry: 0.52, dust: 0.68 },
+  wlm: { axis: 0.43, thickness: 0.21, core: 0.10, asymmetry: 0.32 },
+  'phoenix-dwarf': { axis: 0.76, thickness: 0.33, core: 0.16, asymmetry: 0.19, dust: 0.08 },
+  'ngc-147': { axis: 0.71, thickness: 0.55, core: 0.24 },
+  'ngc-185': { axis: 0.85, thickness: 0.63, core: 0.19 },
+  'sagittarius-dsph': { axis: 0.42, thickness: 0.45, core: 0.28, asymmetry: 0.22 },
 };
 
 function dwarfGalaxies(rows: readonly DwarfRow[], summary: Galaxy['summary'], parentGalaxyId?: string): Galaxy[] {
@@ -92,6 +101,7 @@ function dwarfGalaxies(rows: readonly DwarfRow[], summary: Galaxy['summary'], pa
     return {
       id, name, aliases, parentGalaxyId, distanceKpc, morphology,
       summary: individualSummaries[id] ?? summary,
+      structure: individualStructures[id],
       skyPosition: { rightAscension, declination },
       modelRadiusKpc: Math.max(0.35, halfLightKpc * 3),
       color: colors[index % colors.length],

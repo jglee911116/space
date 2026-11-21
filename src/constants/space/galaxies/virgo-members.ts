@@ -1,19 +1,19 @@
 import { message } from '@/i18n/messages';
-import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '../units';
+import { KPC_PER_MLY } from '../units';
 import type { Galaxy } from '../types';
 import { m87 } from './m87';
 
-const kpcPerMillionLightYears = (1e6 * KM_PER_LIGHT_YEAR) / (AU_PER_KPC * KM_PER_AU);
 
 export const virgoGalaxies = [
   m87,
   {
     id: 'm84',
+    structure: { axis: 0.91, thickness: 0.79, core: 0.16 },
     name: 'M84',
     title: 'M84 · NGC 4374',
     summary: message('catalog.virgo-galaxies.m84.summary'),
     superclusterId: 'virgo',
-    distanceKpc: 60 * kpcPerMillionLightYears,
+    distanceKpc: 60 * KPC_PER_MLY,
     skyPosition: { rightAscension: 186.2656, declination: 12.887 },
     modelRadiusKpc: 23,
     morphology: 'giant-elliptical',
@@ -22,11 +22,12 @@ export const virgoGalaxies = [
   },
   {
     id: 'm86',
+    structure: { axis: 0.78, thickness: 0.62, core: 0.18 },
     name: 'M86',
     title: 'M86 · NGC 4406',
     summary: message('catalog.virgo-galaxies.m86.summary'),
     superclusterId: 'virgo',
-    distanceKpc: 52 * kpcPerMillionLightYears,
+    distanceKpc: 52 * KPC_PER_MLY,
     skyPosition: { rightAscension: 186.55, declination: 12.9464 },
     modelRadiusKpc: 30,
     morphology: 'giant-elliptical',
@@ -35,11 +36,12 @@ export const virgoGalaxies = [
   },
   {
     id: 'm49',
+    structure: { axis: 0.85, thickness: 0.72, core: 0.25 },
     name: 'M49',
     title: 'M49 · NGC 4472',
     summary: message('catalog.virgo-galaxies.m49.summary'),
     superclusterId: 'virgo',
-    distanceKpc: 60 * kpcPerMillionLightYears,
+    distanceKpc: 60 * KPC_PER_MLY,
     skyPosition: { rightAscension: 187.4417, declination: 7.9967 },
     modelRadiusKpc: 38,
     morphology: 'giant-elliptical',

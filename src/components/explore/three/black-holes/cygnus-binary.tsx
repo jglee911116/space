@@ -8,8 +8,9 @@ import { AccretionGeometry } from './accretion-model';
 import { HelicalJets } from './helical-jets';
 import { CygnusGas } from './cygnus-gas';
 import { previewVisibility } from '../maps/map-detail';
+import type { AccretionDisk } from '@/constants/space';
 
-export function CygnusBinary({ size, days, time, preview = false }: { size: number; days: RefObject<number>; time: RefObject<number>; preview?: boolean }) {
+export function CygnusBinary({ disk, size, days, time, preview = false }: { disk?: AccretionDisk; size: number; days: RefObject<number>; time: RefObject<number>; preview?: boolean }) {
   const binary = useRef<Group>(null);
   const center = useMemo(() => new Vector3(), []);
   const surfaceUniforms = useMemo(() => ({
@@ -39,10 +40,10 @@ export function CygnusBinary({ size, days, time, preview = false }: { size: numb
         {!preview && <StellarGlow radius={0.19} color="#8dbaff" strength={0.8} />}
       </group>
       <group position={[-0.31, 0, 0]} rotation-z={-0.24} scale={0.081}>
-        <AccretionGeometry id="cygnus-x-1" color="#eea88b" time={time} lowDetail={preview} />
+        <AccretionGeometry disk={disk} color="#eea88b" time={time} lowDetail={preview} />
         <HelicalJets color="#8fbcff" time={time} counterjet={0.15} collimation={0.74} lowDetail={preview} />
       </group>
-      <CygnusGas time={time} preview={preview} />
+      <CygnusGas rate={disk?.rate ?? 0} time={time} preview={preview} />
     </group>
   );
 }

@@ -1,5 +1,6 @@
 import { Color, MathUtils, SRGBColorSpace, type Texture } from 'three';
 import type { Galaxy } from '@/constants/space';
+import { seededRandom } from '../../utils/random';
 
 const SAMPLE_SIZE = 220;
 
@@ -38,11 +39,7 @@ export function galaxyObservationPoints(texture: Texture, observation: NonNullab
   }
   if (total === 0) return null;
 
-  let seed = 2195;
-  function random() {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 2 ** 32;
-  }
+  const random = seededRandom(2195);
 
   const positions = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);

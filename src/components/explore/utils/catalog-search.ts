@@ -1,5 +1,4 @@
-import { galaxyAssociations } from '@/constants/space/galaxy-associations';
-import { distantObjects, featuredObjects, galaxies, localGroup, milkyWay, observableUniverse, superclusters, type StarSystem } from '@/constants/space';
+import { distantObjects, featuredObjects, galaxies, galaxyAssociations, localGroup, milkyWay, observableUniverse, superclusters, type StarSystem } from '@/constants/space';
 import { translate, type CatalogText, type MessageKey } from '@/i18n/messages';
 import { localeCodes } from '@/i18n/routing';
 import { associationPath, distantObjectPath, featuredObjectPath, galaxyPath, LOCAL_GROUP_PATH, superclusterPath, systemPath, UNIVERSE_PATH } from './paths';

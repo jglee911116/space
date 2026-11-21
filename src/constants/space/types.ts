@@ -2,6 +2,8 @@ import type { CatalogText } from '@/i18n/messages';
 
 export type BodyKind = 'star' | 'planet' | 'dwarf-planet' | 'small-body' | 'moon';
 
+export type BodySilhouette = 'irregular' | 'lobed' | 'rounded-box';
+
 /** 행성 표면 셰이더 종류. craters 는 캔버스 텍스처를 쓴다. */
 export type Appearance = 'craters' | 'clouds' | 'earth' | 'rock' | 'bands' | 'ice' | 'pluto';
 
@@ -51,9 +53,14 @@ export type Body = {
   rings?: readonly Ring[];
   ringMap?: { file: string; inner: number; outer: number };
   shapeModel?: string;
-  surfaceMap?: { file: string; longitudeOffset?: number; fillMissing?: boolean };
+  /** hidden 은 대기에 가려진 지도라 초점일 때 버튼으로만 켠다. */
+  surfaceMap?: { file: string; longitudeOffset?: number; fillMissing?: boolean; hidden?: boolean };
   surfaceFeatures?: 'jupiter' | 'saturn' | 'mars' | 'neptune' | 'io' | 'europa';
   polarCaps?: boolean;
+  /** 초점 시 연출. red-spot 은 대적점 쪽으로 카메라를 돌리고, ice-plumes 는 얼음 분출을 그린다. */
+  surfaceEffect?: 'red-spot' | 'ice-plumes';
+  /** 소형 천체의 구면 변형 형태. 시드는 rockySurface[0]. */
+  silhouette?: BodySilhouette;
   rockySurface?: readonly [seed: number, brightDeposits: number, contrast: number, craters: number];
   cloudBands?: readonly [seed: number, frequency: number, turbulence: number, contrast: number];
   /** 카메라 초점 거리 = displayRadius × focusScale (기본 6.75). */
@@ -68,6 +75,8 @@ export type Body = {
     emissionColor: string;
     glowStrength?: number;
     poleSpinDays?: number;
+    /** 홍염·태양풍·활동 주기 미리보기를 켠다. */
+    prominences?: boolean;
     photosphere?: {
       seed: number;
       granuleScale: number; // Zero selects a smooth photosphere.
@@ -89,6 +98,8 @@ export type OortCloud = {
 
 export type StarSystem = {
   id: string;
+  /** 모항성계: 천체 이름표와 크기 비교를 켠다. */
+  home?: boolean;
   galaxyId?: string;
   galaxyMarkerKpc?: readonly [number, number, number];
   initialView?: readonly [number, number, number];
@@ -129,8 +140,29 @@ export type Galaxy = {
   color: string;
   /** 국부은하군 장면에서 원반의 X축 기울기(라디안). */
   diskTilt?: number;
-  diskObservation?: { file: string; previewFile?: string; center: readonly [number, number]; span: readonly [number, number]; rotation?: number };
+  /** blendProcedural: 상세 원반에서 관측 이미지 위에 절차 생성 은하를 겹쳐 그린다. */
+  diskObservation?: { file: string; previewFile?: string; center: readonly [number, number]; span: readonly [number, number]; rotation?: number; blendProcedural?: boolean };
+  /** 형태(morphology) 기본값 위에 덮어쓰는 원반 모형 값. */
+  structure?: Partial<GalaxyStructure>;
+  /** 램 압력으로 벗겨진 가스 꼬리. twin 이면 두 갈래. */
+  ramPressureTail?: { twin?: boolean };
   sources: readonly Source[];
+};
+
+/** 은하 입자 원반 모형의 형태 값. */
+export type GalaxyStructure = {
+  shape: 'spiral' | 'irregular' | 'elliptical';
+  axis: number;
+  thickness: number;
+  core: number;
+  asymmetry: number;
+  arms: number;
+  winding: number;
+  bar: number;
+  dust: number;
+  ring: number;
+  wind: number;
+  phase: number;
 };
 
 /** 항성계를 품어 은하 ↔ 항성계 줌 전환이 되는 은하. */
@@ -151,6 +183,8 @@ export type LocalGroup = {
   summary: CatalogText;
   /** 첫 항목이 기준 은하(거리 0). */
   galaxies: readonly [HostGalaxy, ...Galaxy[]];
+  /** galaxies 중 작은 왜소은하(장면에서 미리보기로만 그린다). */
+  dwarfs: readonly Galaxy[];
   source: Source;
 };
 
@@ -207,6 +241,38 @@ export type FeaturedObject = {
   color: string;
   /** 성운 속 성단 별 위치(장면 scale 비율). 있으면 중심이 밝게 열린 성운으로 그린다. */
   embeddedCluster?: readonly (readonly [number, number, number])[];
+  /** 성단 별 분포 모델. 없으면 kind 기본 모양. */
+  clusterModel?: 'pleiades' | '47-tucanae' | 'omega-centauri';
+  /** 항성풍 볼륨 모양과 따뜻한(적색) 헤일로 여부. */
+  stellarWind?: { shape: 'betelgeuse-plume' | 'rigel-wind'; warm: boolean };
+  /** 빔 대신 회전하는 열 반점 표면으로 그리는 중성자별. */
+  thermalSurface?: boolean;
+  /** 항성 상세 모델 카메라 거리. 없으면 photosphere 유무로 정한다. */
+  modelCameraDistance?: number;
+  accretionDisk?: AccretionDisk;
+  sources: readonly Source[];
+};
+
+/** 강착원반 시각 회전 속도·반경 폭·대비와 관측 이미지, 제트 모양. */
+export type AccretionDisk = {
+  rate: number;
+  width: number;
+  contrast: number;
+  observationMap?: string;
+  jet?: { map: string; counterjet: number; collimation: number };
+};
+
+/** 초은하단 지도 위 은하군·은하단(첫 member 가 지도 기준 은하). */
+export type GalaxyAssociation = {
+  id: string;
+  mapRegionId: string;
+  name: CatalogText;
+  aliases?: readonly string[];
+  summary?: CatalogText;
+  members: readonly Galaxy[];
+  gridRadiusMly: number;
+  volumeMembers?: boolean;
+  illustrativeDepthMly?: number;
   sources: readonly Source[];
 };
 
@@ -248,7 +314,7 @@ type DistantObjectFields = {
 };
 
 export type DistantObject = DistantObjectFields & (
-  | { kind: 'quasar'; visibleJet: boolean; blackHoleMassSolar?: number }
+  | { kind: 'quasar'; visibleJet: boolean; blackHoleMassSolar?: number; accretionDisk: AccretionDisk }
   | { kind: 'early-galaxy'; ultravioletHalfLightRadiusParsecs: number }
   | { kind: 'ring-galaxy'; observationImage: string }
   | { kind: 'galaxy-group'; observationImage: string }

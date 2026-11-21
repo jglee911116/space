@@ -7,6 +7,7 @@ export const pleiades: FeaturedObject = {
   designation: message('catalog.featured-objects.m45.designation'),
   description: message('catalog.featured-objects.m45.description'),
   kind: 'open-cluster',
+  clusterModel: 'pleiades',
   observationStatus: 'observed',
   distanceLightYears: 445,
   rightAscension: 56.75,
@@ -40,6 +41,7 @@ export const omegaCentauri: FeaturedObject = {
   aliases: ['Omega Centauri', 'Omega Cen', 'ω Cen', 'C80', '오메가 센타우리'],
   description: message('catalog.featured-objects.ngc-5139.description'),
   kind: 'globular-cluster',
+  clusterModel: 'omega-centauri',
   observationStatus: 'observed',
   distanceLightYears: 17000,
   rightAscension: 201.69279,
@@ -50,9 +52,9 @@ export const omegaCentauri: FeaturedObject = {
 };
 
 export const tucanae47: FeaturedObject = {
-  id: 'ngc-104', name: message('catalog.new.ngc-104.name'), designation: 'NGC 104 · Caldwell 106',
+  id: 'ngc-104', name: message('catalog.featured-objects.ngc-104.name'), designation: 'NGC 104 · Caldwell 106',
   aliases: ['47 Tuc', '47 Tucanae', 'C106', '큰부리새자리 47'],
-  description: message('catalog.new.ngc-104.summary'), kind: 'globular-cluster', observationStatus: 'observed',
+  description: message('catalog.featured-objects.ngc-104.summary'), kind: 'globular-cluster', clusterModel: '47-tucanae', observationStatus: 'observed',
   distanceLightYears: 16700, rightAscension: 6.02233, declination: -72.08144, extentLightYears: 120, color: '#f2d6ac',
   sources: [{ label: 'NASA Hubble · 47 Tucanae', href: 'https://science.nasa.gov/asset/hubble/globular-cluster-47-tucanae-2/' }],
 };

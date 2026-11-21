@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { CanvasTexture, SRGBColorSpace } from 'three';
+import { seededRandom } from '../../utils/random';
 
 function createSurface(seed: number) {
   const canvas = document.createElement('canvas');
@@ -10,10 +11,7 @@ function createSurface(seed: number) {
   const context = canvas.getContext('2d');
   if (!context) return null;
 
-  function random() {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 2 ** 32;
-  }
+  const random = seededRandom(seed);
 
   const pixels = context.createImageData(width, height);
   for (let index = 0; index < pixels.data.length; index += 4) {

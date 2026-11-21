@@ -7,8 +7,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from 'react';
 import { AdditiveBlending, Box3, MathUtils, NormalBlending, Quaternion, Vector3, type Group, type Points, type PointsMaterial } from 'three';
 import { localGroup, type FeaturedObject, type Galaxy } from '@/constants/space';
-import { localDwarfs } from '@/constants/space/galaxies/local-dwarfs';
-import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
+import { AU_PER_KPC, KM_PER_KPC, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 import { useCursorZoom } from '../three/shared/use-cursor-zoom';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { GalaxyObservationDisk } from '../three/galaxies/galaxy-observation-disk';
@@ -56,10 +55,16 @@ if (reference) {
 const galaxyPositions = new Map(localGroup.galaxies.map((galaxy, index) => [galaxy.id, positions[index]]));
 const origin = new Vector3();
 const nearbyGalaxies = localGroup.galaxies.filter(({ distanceKpc }) => distanceKpc < 100);
-const dwarfIds = new Set(localDwarfs.map(({ id }) => id));
+const dwarfs = new Set(localGroup.dwarfs);
 const GROUP_CENTER = new Box3().setFromPoints(positions).getCenter(new Vector3());
 const VIEW = new Vector3(0, 0.48, 1).normalize();
 const CAMERA = { position: [0, 0, 115] as [number, number, number], fov: 45, near: 0.1, far: 10_000 };
+
+// 화면이 세로로 길수록 더 멀리서 시작해 은하군이 잘리지 않게 한다.
+function defaultRadiusFor(overview: boolean | undefined, galaxy: Galaxy, width: number, height: number) {
+  return (overview ? 1250 : Math.min(112, galaxy.modelRadiusKpc * 3.8)) * Math.max(1, (0.86 * height) / Math.max(1, width));
+}
+const groupExitFor = (defaultRadius: number) => Math.max(LOCAL_GROUP_EXIT_KPC, defaultRadius * 1.28);
 
 function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
   const observation = galaxy.diskObservation;
@@ -88,11 +93,11 @@ function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
   });
   return (
     <group rotation-x={galaxy.diskTilt ?? 0}>
-      {(!observation || (!compact && galaxy.id === 'ngc-1566')) && (
+      {(!observation || (!compact && observation.blendProcedural)) && (
         <ProceduralGalaxy galaxy={galaxy} compact={compact} opacity={texture ? 0.48 : 1} blendObservation={!!texture} />
       )}
-      {!compact && (galaxy.id === 'eso-137-001' || galaxy.id === 'eso-137-002') && (
-        <RamPressureTail radius={galaxy.modelRadiusKpc} twin={galaxy.id === 'eso-137-001'} />
+      {!compact && galaxy.ramPressureTail && (
+        <RamPressureTail radius={galaxy.modelRadiusKpc} twin={!!galaxy.ramPressureTail.twin} />
       )}
       {observation && compact && <GalaxyPreview galaxy={galaxy} texture={texture} />}
       {!compact && texture && observation && (
@@ -119,6 +124,7 @@ function Scene({ overview, centerOnGalaxy, galaxy, entry, reportDistance, onEnte
   const start = useRef(0);
   const camera = useThree((state) => state.camera);
   const { width, height } = useThree((state) => state.size);
+  const getState = useThree((state) => state.get);
   const scratch = useMemo(() => ({ aim: new Vector3(), offset: new Vector3() }), []);
   const focusedObject = !overview ? objectMarkers.find(({ object }) => object.id === focusId) : undefined;
   const objectDistance = focusedObject ? featuredOverviewDistanceKpc(focusedObject.object) : 0;
@@ -129,14 +135,17 @@ function Scene({ overview, centerOnGalaxy, galaxy, entry, reportDistance, onEnte
   // Small galaxies should open at a scale where their structure is already visible.
   const exitDistance = Math.min(GALAXY_EXIT_KPC, Math.max(24, galaxy.modelRadiusKpc * 8.5));
   const entryDistance = exitDistance * (GALAXY_ENTRY_KPC / GALAXY_EXIT_KPC);
-  const defaultRadius = (overview ? 1250 : Math.min(112, galaxy.modelRadiusKpc * 3.8)) * Math.max(1, (0.86 * height) / Math.max(1, width));
-
-  const groupExit = Math.max(LOCAL_GROUP_EXIT_KPC, defaultRadius * 1.28);
+  const defaultRadius = defaultRadiusFor(overview, galaxy, width, height);
+  const groupExit = groupExitFor(defaultRadius);
   const overviewTarget = centerOnGalaxy ? galaxyPosition : GROUP_CENTER;
 
   useLayoutEffect(() => {
     const orbit = controls.current;
     if (!orbit) return;
+    // 창 크기 변경으로는 다시 실행하지 않도록 크기는 실행 시점 값만 읽는다.
+    const { width, height } = getState().size;
+    const defaultRadius = defaultRadiusFor(overview, galaxy, width, height);
+    const groupExit = groupExitFor(defaultRadius);
     cursorZoomRef.current = false;
     const returnFromSystem = entry && !overview && focusId && focusPosition;
     const entryLimit = overview ? groupExit * 0.95 : defaultRadius;
@@ -147,7 +156,7 @@ function Scene({ overview, centerOnGalaxy, galaxy, entry, reportDistance, onEnte
     const direction = entry ? scratch.offset.set(...entry.direction) : VIEW;
     camera.position.copy(orbit.target).addScaledVector(direction, distance);
     orbit.update();
-  }, [camera, cursorZoomRef, defaultRadius, entry, focusId, focusPosition, focusedObject, groupExit, objectDistance, overview, overviewTarget, scratch]);
+  }, [camera, cursorZoomRef, entry, focusId, focusPosition, focusedObject, galaxy, getState, objectDistance, overview, overviewTarget, scratch]);
 
   useFrame(({ camera }) => {
     const orbit = controls.current;
@@ -171,13 +180,13 @@ function Scene({ overview, centerOnGalaxy, galaxy, entry, reportDistance, onEnte
       camera.near = near;
       camera.updateProjectionMatrix();
     }
-    reportDistance(kmPerPixel(camera, height, radius, AU_PER_KPC * KM_PER_AU));
+    reportDistance(kmPerPixel(camera, height, radius, KM_PER_KPC));
     background.current?.position.copy(camera.position);
   });
 
   return (
     <>
-      {focusedObject?.object.id === 'm87-star' && (
+      {focusedObject?.object.kind === 'black-hole' && (
         <LensedStarfield
           center={focusedObject.position}
           einsteinRadius={objectDistance * ACCRETION_MODEL_EINSTEIN_RADIUS / ACCRETION_MODEL_EXIT_DISTANCE}
@@ -189,9 +198,9 @@ function Scene({ overview, centerOnGalaxy, galaxy, entry, reportDistance, onEnte
       </group>
       {overview ? (
         <>
-          <DistanceRings outerRadius={1000} lightYearsPerUnit={(AU_PER_KPC * KM_PER_AU) / KM_PER_LIGHT_YEAR} />
+          <DistanceRings outerRadius={1000} lightYearsPerUnit={LIGHT_YEARS_PER_KPC} />
           {localGroup.galaxies.map((item, index) => {
-            const dwarf = dwarfIds.has(item.id);
+            const dwarf = dwarfs.has(item);
             const select = () => onEnterGalaxy(item);
             const staggeredOffset = index % 2 === 0 ? 0.85 : -0.92;
             const labelOffset = dwarf ? staggeredOffset : item.parentGalaxyId
@@ -230,7 +239,7 @@ function Scene({ overview, centerOnGalaxy, galaxy, entry, reportDistance, onEnte
           {objectMarkers.map(({ object, position }) => (
             <group key={object.id} position={[...position]}>
               {(object.extentLightYears > 0 || object.photosphere || object.id === focusId) && (
-                <FeaturedObjectPreview object={object} focused={object.id === focusId} playbackTime={object.id === 'm87-star' ? accretionPlaybackTime : undefined} />
+                <FeaturedObjectPreview object={object} focused={object.id === focusId} playbackTime={object.kind === 'black-hole' ? accretionPlaybackTime : undefined} />
               )}
               <GalacticMarker name={object.name} color={object.color} labelOffset={-1.0} modelRadius={object.id === focusId ? objectDistance * 0.13 : undefined} priority={object.id === focusId ? 3 : 0} onSelect={() => onSelectObject(object.id)} />
             </group>

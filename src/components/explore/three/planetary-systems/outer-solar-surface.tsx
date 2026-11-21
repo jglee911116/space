@@ -1,41 +1,14 @@
 import { useEffect, useMemo } from 'react';
 import { SphereGeometry } from 'three';
+import type { Body } from '@/constants/space';
 
-type Silhouette = 'irregular' | 'lobed' | 'rounded-box';
-type SurfaceProfile = readonly [
-  seed: number, frost: number, contrast: number, craters: number, silhouette?: Silhouette,
-];
-
-const profiles: Readonly<Partial<Record<string, SurfaceProfile>>> = {
-  haumea: [11, 0.70, 0.45, 0.06],
-  makemake: [23, 0.53, 0.72, 0.10],
-  eris: [37, 0.92, 0.20, 0.03],
-  orcus: [41, 0.47, 0.62, 0.21],
-  quaoar: [47, 0.37, 0.67, 0.17],
-  gonggong: [59, 0.23, 0.76, 0.16],
-  sedna: [61, 0.16, 0.58, 0.09],
-  proteus: [73, 0.06, 0.59, 0.92, 'rounded-box'],
-  styx: [83, 0.48, 0.76, 0.49, 'irregular'],
-  nix: [89, 0.70, 0.61, 0.83, 'irregular'],
-  kerberos: [97, 0.60, 0.63, 0.32, 'lobed'],
-  hydra: [101, 0.73, 0.72, 0.72, 'irregular'],
-  namaka: [103, 0.40, 0.52, 0.25],
-  hiiaka: [107, 0.62, 0.50, 0.25],
-  dysnomia: [113, 0.12, 0.49, 0.28],
-};
-
-export function outerSolarSurface(id: string) {
-  return profiles[id];
-}
-
-export function PlanetGeometry({ radius, id }: { radius: number; id: string }) {
-  const profile = profiles[id];
-  const silhouette = profile?.[4];
+export function PlanetGeometry({ radius, body }: { radius: number; body: Body }) {
+  const { silhouette } = body;
+  const seed = body.rockySurface?.[0] ?? 0;
   const geometry = useMemo(() => {
     if (!silhouette) return undefined;
     const sphere = new SphereGeometry(radius, 56, 40);
     const positions = sphere.attributes.position;
-    const seed = profile[0];
 
     for (let index = 0; index < positions.count; index++) {
       const x = positions.getX(index) / radius;
@@ -69,7 +42,7 @@ export function PlanetGeometry({ radius, id }: { radius: number; id: string }) {
     }
     sphere.computeBoundingSphere();
     return sphere;
-  }, [profile, radius, silhouette]);
+  }, [seed, radius, silhouette]);
   useEffect(() => () => geometry?.dispose(), [geometry]);
 
   return geometry ? <primitive object={geometry} attach="geometry" /> : <sphereGeometry args={[radius, 56, 40]} />;

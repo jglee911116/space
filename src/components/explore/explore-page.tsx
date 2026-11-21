@@ -3,12 +3,11 @@
 import { Message } from '@/i18n/language';
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
-import type { StarSystem } from '@/constants/space';
 import styles from './explore.module.scss';
 
 const Explorer = dynamic(() => import('./explorer').then(({ Explorer }) => Explorer), { ssr: false });
 
-export function ExplorePage({ systems }: { systems: readonly StarSystem[] }) {
+export function ExplorePage() {
   return (
     <main className={styles.explore}>
       <Suspense
@@ -18,7 +17,7 @@ export function ExplorePage({ systems }: { systems: readonly StarSystem[] }) {
           </p>
         }
       >
-        <Explorer systems={systems} />
+        <Explorer />
       </Suspense>
     </main>
   );

@@ -36,6 +36,7 @@ export const cygnusX1: FeaturedObject = {
   extentLightYears: 0.000011,
   blackHoleMassSolar: 21.2,
   color: '#a6caff',
+  accretionDisk: { rate: 1.24, width: 0.1, contrast: 0.82 },
   sources: [
     { label: 'Miller-Jones et al. · Cygnus X-1 radio astrometry', href: 'https://doi.org/10.1126/science.abb3363' },
     { label: 'Chandra · Cygnus X-1', href: 'https://chandra.si.edu/photo/2011/cygx1/' },
@@ -94,6 +95,7 @@ export const rxJ1856: FeaturedObject = {
   designation: message('catalog.featured-objects.rx-j1856.designation'),
   description: message('catalog.featured-objects.rx-j1856.description'),
   kind: 'neutron-star',
+  thermalSurface: true,
   observationStatus: 'observed',
   distanceLightYears: 401,
   rightAscension: 284.14836,
@@ -141,6 +143,7 @@ export const m87Star: FeaturedObject = {
   extentLightYears: 0.017,
   blackHoleMassSolar: 6.5e9,
   color: '#ffc386',
+  accretionDisk: { rate: 0.46, width: 0.092, contrast: 0.88, observationMap: '/textures/black-holes/m87-star/eht-ring.jpg' },
   sources: [
     {
       label: message('catalog.featured-objects.m87-star.source.eht-first-black-hole-image'),

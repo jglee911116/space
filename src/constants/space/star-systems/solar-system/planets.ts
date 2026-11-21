@@ -79,6 +79,7 @@ export const planets: Body[] = [
     orbit: { axisAu: 5.202887, eccentricity: 0.04838624, inclination: 1.30439695, meanLongitude: 34.39644051, perihelionLongitude: 14.72847983, ascendingNode: 100.47390909, periodDays: 4331 },
     rings: [{ inner: 1.68, outer: 1.7, color: '#b29b88', opacity: 0.22 }],
     surfaceFeatures: 'jupiter',
+    surfaceEffect: 'red-spot',
     note: message('catalog.planets.jupiter.atmosphere'),
     sources: [
       ...sources,

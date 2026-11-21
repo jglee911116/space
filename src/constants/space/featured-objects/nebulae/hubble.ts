@@ -4,10 +4,10 @@ import type { FeaturedObject } from '../../types';
 export const hubbleNebulae: readonly FeaturedObject[] = [
   {
     id: 'ngc-7027',
-    name: message('catalog.new.ngc-7027.name'),
+    name: message('catalog.featured-objects.ngc-7027.name'),
     designation: 'NGC 7027',
     aliases: ['Jewel Bug Nebula', 'Pink Pillow Nebula', '보석벌레성운'],
-    description: message('catalog.new.ngc-7027.summary'),
+    description: message('catalog.featured-objects.ngc-7027.summary'),
     kind: 'planetary-nebula',
     observationStatus: 'observed',
     distanceLightYears: 3000,

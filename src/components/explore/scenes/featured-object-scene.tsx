@@ -23,6 +23,7 @@ import { STELLAR_DETAIL_EXIT, STELLAR_WIND_RADIUS } from '../three/stellar/stell
 import { StellarWindHalo } from '../three/stellar/stellar-wind-halo';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { REALTIME_DAYS_PER_SECOND } from '../utils/orbit';
+import { seededRandom } from '../utils/random';
 
 const TAU = Math.PI * 2;
 const vertexShader = /* glsl */ `
@@ -54,11 +55,7 @@ function nebulaParticles(object: FeaturedObject) {
   const colors: number[] = [];
   const sizes: number[] = [];
   const expansionMask: number[] = [];
-  let seed = 1911;
-  function random() {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 2 ** 32;
-  }
+  const random = seededRandom(1911);
   const pale = new Color('#ffd2a0');
   const orange = new Color('#d76d42');
   const dark = new Color('#51394c');
@@ -226,7 +223,7 @@ function nebulaParticles(object: FeaturedObject) {
 }
 
 function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTime, paused, daysPerSecond, onLeave }: Props) {
-  const pleiades = object.id === 'm45';
+  const pleiades = object.clusterModel === 'pleiades';
   const globular = object.kind === 'globular-cluster';
   const scale = object.kind === 'pillars' || object.kind === 'supernova-remnant' ? 1 : object.extentLightYears / 6;
   const backgroundScale = Math.max(1, scale);
@@ -255,8 +252,8 @@ function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTim
     <>
       <Stars radius={46 * backgroundScale} depth={23 * backgroundScale} count={1800} factor={3} saturation={0} fade speed={0} />
       {pleiades && <PleiadesCluster radius={object.extentLightYears * 0.61} />}
-      {globular && <GlobularCluster radius={object.extentLightYears * 0.50} objectId={object.id} />}
-      {object.kind === 'x-ray-binary' && <CygnusBinary size={object.extentLightYears} days={simulationDaysRef} time={accretionPlaybackTime} />}
+      {globular && <GlobularCluster radius={object.extentLightYears * 0.50} profile={object.clusterModel} />}
+      {object.kind === 'x-ray-binary' && <CygnusBinary disk={object.accretionDisk} size={object.extentLightYears} days={simulationDaysRef} time={accretionPlaybackTime} />}
       {image && <NebulaVolume texture={texture} radius={object.extentLightYears * (image.shape === 'crab' ? 0.71 : 0.61)} shape={image.shape} paused={paused} daysPerSecond={daysPerSecond} />}
       {particles && <points scale={scale} visible={!image || image.shape === 'crab' || image.shape === 'ejecta'}>
         <bufferGeometry>
@@ -340,7 +337,7 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
   const beams = useRef<Group>(null);
   const surface = useRef<ShaderMaterial>(null);
   const brightness = useRef(1);
-  const thermalSurface = object.id === 'rx-j1856-5-3754';
+  const thermalSurface = object.thermalSurface;
   const thermalUniforms = useMemo(() => ({ phase: { value: 0.65 } }), []);
   const { photosphere } = object;
   const magnetar = object.kind === 'magnetar';
@@ -383,9 +380,12 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
           <StellarGlow radius={1} color={object.color} strength={thermalSurface ? 0.31 : photosphere ? 1.15 : 0.65} brightness={brightness} paused={paused || !photosphere} />
         </>
       )}
-      {object.id === 'betelgeuse' && <NebulaVolume radius={STELLAR_WIND_RADIUS} shape="betelgeuse-plume" paused={paused} daysPerSecond={daysPerSecond} />}
-      {object.id === 'rigel-a' && <NebulaVolume radius={STELLAR_WIND_RADIUS} shape="rigel-wind" paused={paused} daysPerSecond={daysPerSecond} />}
-      {(object.id === 'betelgeuse' || object.id === 'rigel-a') && <StellarWindHalo warm={object.id === 'betelgeuse'} />}
+      {object.stellarWind && (
+        <>
+          <NebulaVolume radius={STELLAR_WIND_RADIUS} shape={object.stellarWind.shape} paused={paused} daysPerSecond={daysPerSecond} />
+          <StellarWindHalo warm={object.stellarWind.warm} />
+        </>
+      )}
       {spinPeriod && !thermalSurface && (
         <>
           <group ref={beams}>
@@ -438,17 +438,18 @@ export default function FeaturedObjectScene(props: Props) {
     <CanvasBoundary>
       <Canvas
         camera={{
-          position: blackHole ? [5, 5.6, 13] : stellar ? [0, 1.5, object.id === 'betelgeuse' ? 7.5 : object.photosphere ? 5.7 : 8] : [distance * 0.023, distance * (object.kind === 'x-ray-binary' ? 0.38 : 0.063), distance],
+          position: blackHole ? [5, 5.6, 13] : stellar ? [0, 1.5, object.modelCameraDistance ?? (object.photosphere ? 5.7 : 8)] : [distance * 0.023, distance * (object.kind === 'x-ray-binary' ? 0.38 : 0.063), distance],
           fov: 45,
           near: stellar || blackHole ? 0.05 : Math.min(0.05, object.extentLightYears * 0.015),
           far: Math.max(170, object.extentLightYears * 32),
         }}
-        dpr={[1, 1.5]}
+        // 관측 성운은 화면 전체를 픽셀마다 44~64스텝 raymarch 하므로 레티나에서도 1배로 그린다(부드러운 가스라 차이가 거의 없다).
+        dpr={object.observationImage ? 1 : [1, 1.5]}
         aria-label={t('canvas.namedObjectModel', [catalogText(object.name)])}
       >
         {blackHole ? (
           <AccretionModel
-            object={{ id: object.id, color: object.color, visibleJet: true }}
+            object={{ color: object.color, visibleJet: true, accretionDisk: object.accretionDisk }}
             onExit={props.onLeave}
             time={props.accretionPlaybackTime}
           />

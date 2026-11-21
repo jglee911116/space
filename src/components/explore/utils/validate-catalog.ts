@@ -1,8 +1,7 @@
-import { galaxyAssociations } from './galaxy-associations';
-import { readExplorerQuery } from '@/components/explore/utils/paths';
-import { createSearchCatalog } from '@/components/explore/utils/catalog-search';
+import { readExplorerQuery } from './paths';
+import { createSearchCatalog } from './catalog-search';
 import { languages } from '@/i18n/messages';
-import { distantObjects, featuredObjects, galaxies, localGroup, milkyWay, observableUniverse, superclusters, systems } from './index';
+import { distantObjects, featuredObjects, galaxies, galaxyAssociations, localGroup, milkyWay, observableUniverse, superclusters, systems } from '@/constants/space';
 
 function requireValue(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`Catalog: ${message}`);
@@ -16,6 +15,7 @@ function checkRelationships() {
   const galaxyIds = new Set(galaxies.map(({ id }) => id));
   const regionIds = new Set(superclusters.map(({ id }) => id));
   const objectIds = new Set(featuredObjects.map(({ id }) => id));
+  requireValue(objectIds.size === featuredObjects.length, 'duplicate featured object id');
 
   requireValue(galaxyIds.size === galaxies.length, 'duplicate galaxy id');
   checkReference(`${milkyWay.id}.systemId`, milkyWay.systemId, new Set(Object.keys(systems)));

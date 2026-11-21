@@ -4,21 +4,7 @@ import { fornaxMembers, hydraMembers, hydraSurvey, leoMembers, m81Members } from
 import { virgoGalaxies } from './galaxies/virgo-members';
 import { normaMembers, normaStudy, normaSurvey } from './galaxies/norma-members';
 import { ngc3109Members, ngc3109Study } from './galaxies/local-dwarfs';
-import type { CatalogText } from '@/i18n/messages';
-import type { Galaxy, Source } from './types';
-
-export type GalaxyAssociation = {
-  id: string;
-  mapRegionId: string;
-  name: CatalogText;
-  aliases?: readonly string[];
-  summary?: CatalogText;
-  members: readonly Galaxy[];
-  gridRadiusMly: number;
-  volumeMembers?: boolean;
-  illustrativeDepthMly?: number;
-  sources: readonly Source[];
-};
+import type { GalaxyAssociation } from './types';
 
 export const galaxyAssociations: readonly GalaxyAssociation[] = [
   {

@@ -1,4 +1,3 @@
-import { galaxyAssociations, type GalaxyAssociation } from '@/constants/space/galaxy-associations';
 import type { CatalogText } from '@/i18n/messages';
 import { useLanguage } from '@/i18n/language';
 import {
@@ -6,18 +5,23 @@ import {
   observableUniverse,
   type DistantObject,
   type FeaturedObject,
+  galaxyAssociations,
   localGroup,
   milkyWay,
   type Body,
   type Galaxy,
+  type GalaxyAssociation,
   type OortCloud,
   type ObservationStatus,
   type Source,
   type StarSystem,
 } from '@/constants/space';
 import { cosmologicalDistances } from './utils/cosmology';
+import { createDistanceStore, useDistance, type DistanceStore } from './utils/distance-store';
+
+const emptyDistanceStore = createDistanceStore();
 import { useState, type CSSProperties, type ReactNode } from 'react';
-import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR, SOLAR_RADIUS_KM } from '@/constants/space/units';
+import { KM_PER_AU, SOLAR_RADIUS_KM, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 import { bodySize, formatAxis, formatPeriod, formatSpin, kindLabel } from './utils/format';
 import type { Target } from './scenes/system-scene';
 import styles from './explore.module.scss';
@@ -74,11 +78,12 @@ function DetailSources({ sources }: { sources: readonly Source[] }) {
   );
 }
 
-export function BodyTooltip({ body, x, y, distance }: { body: Body; x: number; y: number; distance?: { origin: Body; au: number } }) {
+export function BodyTooltip({ body, x, y, distanceFrom }: { body: Body; x: number; y: number; distanceFrom?: { store: DistanceStore; origin: Body } }) {
   const { t, catalogText, number } = useLanguage();
   const size = bodySize(body, t, number);
+  const au = useDistance(distanceFrom?.store ?? emptyDistanceStore, distanceFrom?.origin.id ?? '', body.id);
   return (
-    <aside className={styles.bodyTooltip} data-distance={Boolean(distance)} style={{ '--pointer-x': `${x}px`, '--pointer-y': `${y}px` } as CSSProperties} aria-hidden="true">
+    <aside className={styles.bodyTooltip} data-distance={au !== undefined} style={{ '--pointer-x': `${x}px`, '--pointer-y': `${y}px` } as CSSProperties} aria-hidden="true">
       <strong>{catalogText(body.name)}</strong>
       {body.stellar && (
         <span>
@@ -92,12 +97,26 @@ export function BodyTooltip({ body, x, y, distance }: { body: Body; x: number; y
       )}
       {body.orbit && <span>{t('details.orbitValue', [formatPeriod(body, t, number)])}</span>}
       <span>{t('details.rotationValue', [formatSpin(body, t, number, catalogText)])}</span>
-      {distance && <BodyDistance origin={distance.origin} au={distance.au} />}
+      {distanceFrom && au !== undefined && <BodyDistance origin={distanceFrom.origin} au={au} />}
     </aside>
   );
 }
 
-export function BodyDistance({ origin, au }: { origin: Body; au: number }) {
+/** 거리 비교: 대상을 고르고 첫 측정이 오기 전에는 안내 문구. */
+export function ComparisonDistance({ store, origin, destination }: { store: DistanceStore; origin: Body; destination: Body | undefined }) {
+  const { t, catalogText } = useLanguage();
+  const au = useDistance(store, origin.id, destination?.id ?? null);
+  return destination && au !== undefined ? (
+    <div className={styles.distanceReadout}>
+      <strong>{catalogText(destination.name)}</strong>
+      <BodyDistance origin={origin} au={au} />
+    </div>
+  ) : (
+    <p className={styles.hint}>{t('details.pickDistanceTarget')}</p>
+  );
+}
+
+function BodyDistance({ origin, au }: { origin: Body; au: number }) {
   const { t, catalogText, number } = useLanguage();
   return (
     <span className={styles.hoverDistance}>
@@ -361,7 +380,7 @@ export function LocalGroupDetails({ focus }: { focus: Galaxy }) {
 
 export function GalaxySummaryDetails({ galaxy }: { galaxy: Galaxy }) {
   const { t, catalogText, number } = useLanguage();
-  const distance = (galaxy.distanceKpc * (AU_PER_KPC * KM_PER_AU)) / KM_PER_LIGHT_YEAR;
+  const distance = galaxy.distanceKpc * LIGHT_YEARS_PER_KPC;
   return (
     <section className={styles.details} aria-labelledby="body-name">
       <h2 id="body-name">{catalogText(galaxy.title ?? galaxy.name)}</h2>

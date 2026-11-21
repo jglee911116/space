@@ -2,7 +2,6 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef, type RefObject } from 'react';
 import { BackSide, type ShaderMaterial } from 'three';
 import { spatialNoise } from '../shared/shaders';
-import { CYGNUS_DISK_RATE } from './accretion-model';
 
 const vertex = /* glsl */ `
   varying vec3 localEye;
@@ -113,6 +112,7 @@ const fragment = /* glsl */ `
       vec3 light = (vec3(0.10, 0.33, 0.78) * wind + gas.rgb * gas.a) / max(density, 0.0001);
       accumulated += remaining * opacity * light;
       remaining *= 1.0 - opacity;
+      if (remaining < 0.02) break;
     }
     float opacity = 1.0 - remaining;
     if (opacity < 0.004) discard;
@@ -121,14 +121,14 @@ const fragment = /* glsl */ `
   }
 `;
 
-export function CygnusGas({ time, preview = false }: { time: RefObject<number>; preview?: boolean }) {
+export function CygnusGas({ rate, time, preview = false }: { rate: number; time: RefObject<number>; preview?: boolean }) {
   const material = useRef<ShaderMaterial>(null);
   const uniforms = useMemo(() => ({ time: { value: 0 }, diskPhase: { value: 0 } }), []);
   const shader = preview ? fragment.replace('const int samples = 48;', 'const int samples = 18;') : fragment;
   useFrame(() => {
     if (!material.current) return;
     material.current.uniforms.time.value = time.current;
-    material.current.uniforms.diskPhase.value = (time.current * CYGNUS_DISK_RATE) % (2 * Math.PI);
+    material.current.uniforms.diskPhase.value = (time.current * rate) % (2 * Math.PI);
   });
   return (
     <mesh renderOrder={1} raycast={() => {}}>

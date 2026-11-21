@@ -15,10 +15,10 @@ export const observableUniverse: ObservableUniverse = {
 
 export const distantObjects: readonly DistantObject[] = [
   {
-    id: 'abell-2744', kind: 'galaxy-cluster', name: message('catalog.new.pandora.name'),
+    id: 'abell-2744', kind: 'galaxy-cluster', name: message('catalog.observable-universe.abell-2744.name'),
     aliases: ['Abell 2744', 'ACO 2744', 'A2744', 'Pandora Cluster'], observationStatus: 'observed',
     redshift: 0.306, rightAscension: 3.583458, declination: -30.388278, color: '#e8c7ad',
-    summary: message('catalog.new.pandora.summary'),
+    summary: message('catalog.observable-universe.abell-2744.summary'),
     sources: [
       { label: 'NASA Webb · Pandora’s Cluster', href: 'https://science.nasa.gov/asset/webb/pandoras-cluster-nircam-image/' },
       { label: 'Richard et al. · MUSE spectroscopy', href: 'https://doi.org/10.26093/cds/vizier.36460083' },
@@ -68,6 +68,7 @@ export const distantObjects: readonly DistantObject[] = [
     declination: 2.05239,
     color: '#8bbcff',
     visibleJet: true,
+    accretionDisk: { rate: 0.67, width: 0.12, contrast: 0.72, jet: { map: '/textures/quasars/3c-273/hubble-jet-profile.png', counterjet: 0.12, collimation: 0.69 } },
     summary: message('catalog.observable-universe.3c-273.summary'),
     sources: [
       { label: 'ESA/Hubble & NASA · Optical jet brightness profile', href: 'https://esahubble.org/images/potw1346a/' },
@@ -86,6 +87,7 @@ export const distantObjects: readonly DistantObject[] = [
     declination: 31.47712,
     color: '#ffd4a2',
     visibleJet: false,
+    accretionDisk: { rate: 0.3, width: 0.15, contrast: 0.64 },
     blackHoleMassSolar: 4.07e10,
     summary: message('catalog.observable-universe.ton-618.summary'),
     sources: [
@@ -103,6 +105,7 @@ export const distantObjects: readonly DistantObject[] = [
     declination: -18.1101111,
     color: '#eaaef9',
     visibleJet: false,
+    accretionDisk: { rate: 0.91, width: 0.105, contrast: 0.78 },
     blackHoleMassSolar: 1.6e9,
     summary: message('catalog.observable-universe.j0313-1806.summary'),
     sources: [{ label: message('catalog.observable-universe.j0313-1806.source.wang-et-al-j0313-1806-discovery-and'), href: 'https://doi.org/10.3847/2041-8213/abd8c6' }],

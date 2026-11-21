@@ -1,6 +1,7 @@
 import { useThree } from '@react-three/fiber';
 import { useMemo } from 'react';
 import { AdditiveBlending } from 'three';
+import { seededRandom } from '../../utils/random';
 
 const vertex = /* glsl */ `
   attribute float grain;
@@ -39,11 +40,7 @@ export function RamPressureTail({ radius, twin }: { radius: number; twin: boolea
     const count = twin ? 2400 : 1250;
     const positions = new Float32Array(count * 3);
     const grains = new Float32Array(count);
-    let seed = twin ? 137001 : 137002;
-    const random = () => {
-      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-      return seed / 2 ** 32;
-    };
+    const random = seededRandom(twin ? 137001 : 137002);
     for (let index = 0; index < count; index++) {
       const t = random() ** 1.3;
       const branch = twin && index % 2 ? -1 : 1;
