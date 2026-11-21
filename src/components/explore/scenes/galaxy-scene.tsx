@@ -376,7 +376,8 @@ function GalacticMap({
           key={neighbor.system.id}
           {...neighbor}
           anchorRadius={radius}
-          anchorPeriod={star.galacticOrbit?.periodYears ?? 230_000_000}
+          // 기준 항성 공전 주기가 없으면 이웃 궤도 위상을 고정한다
+          anchorPeriod={star.galacticOrbit?.periodYears ?? Infinity}
           labelOffset={(index % 2 === 0 ? 1 : -1) * (Math.floor(index / 2) + 1)}
           wideLabelSpacing={wideLabelSpacing}
           years={years}
@@ -533,7 +534,7 @@ function Scene({
         const focusBlend = demoYears.current !== 0 ? 1 : 1 - MathUtils.smoothstep(radius, handoffRadius, LOCAL_RADIUS);
         const selectedPosition = scratch.selected.copy(scratch.sun);
         if (selectedNeighbor) {
-          const period = selectedPath?.periodYears ?? star.galacticOrbit?.periodYears ?? 230_000_000;
+          const period = selectedPath?.periodYears ?? star.galacticOrbit?.periodYears ?? Infinity;
           neighborPosition(selectedPosition, selectedNeighbor.position, anchorRadius, selectedPath, (galacticYears.current % period) / period);
         }
         center.lerp(selectedPosition, focusBlend);

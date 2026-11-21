@@ -8,6 +8,7 @@ import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } f
 import { AdditiveBlending, Box3, MathUtils, Vector3 } from 'three';
 import { observableUniverse, distantObjects, galaxies, type DistantObject, type GalaxyAssociation, superclusters, type Supercluster } from '@/constants/space';
 import { cosmologicalDistances } from '../utils/cosmology';
+import { regionMarkers } from '../utils/cluster-markers';
 import { KM_PER_AU, KM_PER_LIGHT_YEAR, KM_PER_KPC } from '@/constants/space/units';
 import { AccretionModel } from '../three/black-holes/accretion-model';
 import { NebulaVolume } from '../three/nebulae/nebula-volume';
@@ -121,13 +122,11 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
           : [];
       });
     }
-    return (
-      region?.markers.map((item) => ({
-        ...item,
-        galaxy: undefined,
-        position: positionAt(item.rightAscension, item.declination, item.distanceMly),
-      })) ?? []
-    );
+    return (region ? regionMarkers(region) : []).map((item) => ({
+      ...item,
+      galaxy: undefined,
+      position: positionAt(item.rightAscension, item.declination, item.distanceMly),
+    }));
   }, [association, region]);
   const bodies = useMemo(() => {
     if (association?.volumeMembers) return [];

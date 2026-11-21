@@ -1,5 +1,5 @@
 import { message } from '@/i18n/messages';
-import type { FeaturedObject } from '../../types';
+import type { FeaturedObject } from '../types';
 
 export const horseheadNebula: FeaturedObject = {
   id: 'horsehead-nebula',
@@ -51,7 +51,7 @@ export const helixNebula: FeaturedObject = {
   kind: 'planetary-nebula',
   observationStatus: 'observed',
   distanceLightYears: 650,
-  rightAscension: 337.410,
+  rightAscension: 337.41,
   declination: -20.837,
   extentLightYears: 5.1,
   color: '#7ecdc8',
@@ -212,5 +212,196 @@ export const orionNebula: FeaturedObject = {
   sources: [
     { label: 'ESA/Webb, NASA, CSA, M. Zamani, PDRs4All ERS Team · CC BY 4.0', href: 'https://esawebb.org/images/weic2315b/' },
     { label: message('catalog.featured-objects.orion-nebula.source.nasa-hubble-orion-nebula-and-trapezium'), href: 'https://science.nasa.gov/asset/hubble/orion-nebula/' },
+  ],
+};
+
+export const ngc346: FeaturedObject = {
+  id: 'ngc-346',
+  name: message('catalog.featured-objects.ngc-346.name'),
+  designation: 'NGC 346 · N66',
+  aliases: ['NGC346', 'N 66', '소마젤란은하 별 형성 영역', 'SMC stellar nursery'],
+  description: message('catalog.featured-objects.ngc-346.description'),
+  kind: 'star-forming-region',
+  galaxyId: 'small-magellanic-cloud',
+  observationStatus: 'observed',
+  distanceLightYears: 210000,
+  rightAscension: 14.768,
+  declination: -72.173806,
+  extentLightYears: 360,
+  color: '#efad9c',
+  embeddedCluster: [
+    [-0.3, 1.29, -0.33],
+    [0.16, 1.42, -0.14],
+    [0.43, 1.14, 0.22],
+    [-0.56, 1.06, 0.05],
+    [0.62, 1.59, -0.23],
+    [0.02, 1.81, 0.33],
+    [-0.19, 0.93, 0.42],
+    [-1.73, -0.93, -0.19],
+    [-1.91, -1.22, 0.12],
+    [1.49, 0.97, -0.46],
+    [1.18, 0.65, 0.33],
+  ],
+  observationImage: { file: '/textures/nebulae/star-forming/ngc-346/webb.jpg', shape: 'ngc-346-ridges' },
+  sources: [
+    { label: 'NASA, ESA, CSA, STScI, A. Pagan (STScI) · CC BY 4.0', href: 'https://esawebb.org/images/weic2301a/' },
+    { label: 'ESA/Webb · NGC 346 star formation', href: 'https://esawebb.org/news/sciann23003/' },
+  ],
+};
+
+export const hh30: FeaturedObject = {
+  id: 'hh-30',
+  name: message('catalog.featured-objects.hh-30.name'),
+  designation: 'HH 30 · Herbig–Haro 30 · LDN 1551',
+  aliases: ['HH30', 'Herbig Haro 30', '헤르빅 아로 30', '원시행성계 원반'],
+  description: message('catalog.featured-objects.hh-30.description'),
+  kind: 'star-forming-region',
+  observationStatus: 'observed',
+  distanceLightYears: 477,
+  rightAscension: 67.90621,
+  declination: 18.206675,
+  extentLightYears: 0.023,
+  color: '#99aaf0',
+  observationImage: { file: '/textures/nebulae/star-forming/hh-30/webb.jpg', shape: 'edge-on-disk' },
+  sources: [
+    { label: 'ESA/Webb, NASA & CSA, Tazaki et al. · CC BY 4.0', href: 'https://esawebb.org/images/potm2501a/' },
+    { label: 'ESA/Webb · HH 30 multiwavelength comparison', href: 'https://esawebb.org/images/potm2501b/' },
+  ],
+};
+
+export const l1527Irs: FeaturedObject = {
+  id: 'l1527-irs',
+  name: message('catalog.featured-objects.l1527-irs.name'),
+  designation: 'L1527 IRS · IRAS 04368+2557',
+  aliases: ['L1527', 'LDN 1527', '원시별', 'protostar', 'hourglass', '모래시계'],
+  description: message('catalog.featured-objects.l1527-irs.description'),
+  kind: 'star-forming-region',
+  observationStatus: 'observed',
+  distanceLightYears: 460,
+  rightAscension: 69.97379,
+  declination: 26.05247,
+  extentLightYears: 0.28,
+  color: '#e9a27e',
+  observationImage: { file: '/textures/nebulae/star-forming/l1527-irs/webb.jpg', shape: 'hourglass' },
+  sources: [
+    { label: 'NASA, ESA, CSA, STScI, J. DePasquale (STScI) · CC BY 4.0', href: 'https://esawebb.org/images/weic2219a/' },
+    { label: 'NASA Webb · L1527 IRS 3D', href: 'https://science.nasa.gov/asset/webb/webb-reveals-the-protostar-l1527-irs/' },
+  ],
+};
+
+export const hh211: FeaturedObject = {
+  id: 'hh-211',
+  name: message('catalog.featured-objects.hh-211.name'),
+  designation: 'HH 211 · Herbig–Haro 211',
+  aliases: ['HH211', 'Herbig Haro 211', '헤르빅 아로', 'protostellar jet'],
+  description: message('catalog.featured-objects.hh-211.description'),
+  kind: 'star-forming-region',
+  observationStatus: 'observed',
+  distanceLightYears: 1000,
+  rightAscension: 55.98738,
+  declination: 32.01374,
+  extentLightYears: 0.52,
+  color: '#da9d9f',
+  observationImage: { file: '/textures/nebulae/star-forming/hh-211/webb.jpg', shape: 'bipolar-jet' },
+  sources: [
+    { label: 'ESA/Webb, NASA, CSA, T. Ray (DIAS) · CC BY 4.0', href: 'https://esawebb.org/images/weic2322a/' },
+    { label: 'ESA/Webb · HH 211', href: 'https://esawebb.org/news/weic2322/' },
+  ],
+};
+
+export const cassiopeiaA: FeaturedObject = {
+  id: 'cassiopeia-a',
+  name: message('catalog.featured-objects.cassiopeia-a.name'),
+  designation: 'Cas A · Cassiopeia A',
+  aliases: ['Cas A', 'CasA', '카시오페이아 에이'],
+  description: message('catalog.featured-objects.cassiopeia-a.description'),
+  kind: 'supernova-remnant',
+  observationStatus: 'observed',
+  distanceLightYears: 11000,
+  rightAscension: 350.85817,
+  declination: 58.81815,
+  extentLightYears: 10,
+  color: '#f08e86',
+  observationImage: { file: '/textures/nebulae/supernova-remnants/cassiopeia-a/webb.jpg', shape: 'shocked-shell' },
+  sources: [
+    { label: 'NASA, ESA, CSA, D. Milisavljevic, T. Temim, I. De Looze, J. DePasquale · CC BY 4.0', href: 'https://esawebb.org/images/weic2311a/' },
+    { label: 'ESA/Webb · Hubble and Webb', href: 'https://esawebb.org/images/comparisons/weic2311a/' },
+  ],
+};
+
+export const ngc3132: FeaturedObject = {
+  id: 'ngc-3132',
+  name: message('catalog.featured-objects.ngc-3132.name'),
+  designation: 'NGC 3132 · Caldwell 74',
+  aliases: ['Southern Ring Nebula', 'Eight-Burst Nebula', '남쪽 고리 성운', 'C74'],
+  description: message('catalog.featured-objects.ngc-3132.description'),
+  kind: 'planetary-nebula',
+  observationStatus: 'observed',
+  distanceLightYears: 2500,
+  rightAscension: 151.75704,
+  declination: -40.43643,
+  extentLightYears: 0.5,
+  color: '#68bbd3',
+  observationImage: { file: '/textures/nebulae/planetary/ngc-3132/webb.jpg', shape: 'southern-ring' },
+  sources: [
+    { label: 'NASA, ESA, CSA, STScI, Webb ERO Production Team · CC BY 4.0', href: 'https://esawebb.org/images/weic2207b/' },
+    { label: 'NASA Webb · NIRCam / MIRI', href: 'https://science.nasa.gov/asset/webb/southern-ring-nebula-nircam-and-miri-images-side-by-side/' },
+  ],
+};
+
+export const ngc7027: FeaturedObject = {
+  id: 'ngc-7027',
+  name: message('catalog.featured-objects.ngc-7027.name'),
+  designation: 'NGC 7027',
+  aliases: ['Jewel Bug Nebula', 'Pink Pillow Nebula', '보석벌레성운'],
+  description: message('catalog.featured-objects.ngc-7027.summary'),
+  kind: 'planetary-nebula',
+  observationStatus: 'observed',
+  distanceLightYears: 3000,
+  rightAscension: 316.75725,
+  declination: 42.23636,
+  extentLightYears: 0.85,
+  color: '#8dcfef',
+  observationImage: { file: '/textures/nebulae/planetary/ngc-7027/hubble.jpg', shape: 'jewel-bug', telescope: 'hubble' },
+  sources: [{ label: 'NASA, ESA & J. Kastner (RIT) · Hubble', href: 'https://esahubble.org/images/heic2011c/' }],
+};
+
+export const ngc6302: FeaturedObject = {
+  id: 'ngc-6302',
+  name: message('catalog.featured-objects.ngc-6302.name'),
+  designation: 'NGC 6302 · Caldwell 69',
+  aliases: ['Butterfly Nebula', 'Bug Nebula', 'Caldwell 69', '나비성운'],
+  description: message('catalog.featured-objects.ngc-6302.description'),
+  kind: 'planetary-nebula',
+  observationStatus: 'observed',
+  distanceLightYears: 4000,
+  rightAscension: 258.45,
+  declination: -37.103,
+  extentLightYears: 2.8,
+  color: '#de987c',
+  observationImage: { file: '/textures/nebulae/planetary/ngc-6302/hubble.jpg', shape: 'butterfly', telescope: 'hubble' },
+  sources: [
+    { label: 'NASA, ESA & the Hubble SM4 ERO Team', href: 'https://esahubble.org/images/heic0910h/' },
+    { label: 'NASA Hubble · Caldwell 69', href: 'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-caldwell-catalog/caldwell-69/' },
+  ],
+};
+
+export const ngc6543: FeaturedObject = {
+  id: 'ngc-6543',
+  name: message('catalog.featured-objects.ngc-6543.name'),
+  designation: 'NGC 6543 · Caldwell 6',
+  aliases: ["Cat's Eye", 'Cat Eye', 'Caldwell 6', '고양이눈'],
+  description: message('catalog.featured-objects.ngc-6543.description'),
+  kind: 'planetary-nebula',
+  observationStatus: 'observed',
+  distanceLightYears: 3000,
+  rightAscension: 269.63925,
+  declination: 66.63319,
+  extentLightYears: 1.1,
+  color: '#8dbdf1',
+  observationImage: { file: '/textures/nebulae/planetary/ngc-6543/hubble.jpg', shape: 'cats-eye', telescope: 'hubble' },
+  sources: [
+    { label: 'ESA/Hubble & NASA, Z. Tsvetanov · Cat’s Eye Nebula', href: 'https://esahubble.org/images/potm2602b/' },
+    { label: 'NASA Hubble · Caldwell 6', href: 'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-caldwell-catalog/caldwell-6/' },
   ],
 };

@@ -23,7 +23,7 @@ export const ceres: Body = {
     inclination: 10.58802780183462,
     ascendingNode,
     perihelionLongitude,
-    meanLongitude: perihelionLongitude + 274.4193463761342 - (epoch - 2_451_545) * 360 / periodDays,
+    meanLongitude: perihelionLongitude + 274.4193463761342 - ((epoch - 2_451_545) * 360) / periodDays,
     periodDays,
   },
   note: message('catalog.ceres.note'),

@@ -31,7 +31,7 @@ export const sirius: StarSystem = {
   name: message('catalog.sirius.sirius.name'),
   neighborhood: { distanceLightYears: 8.59, rightAscension: 101.28715, declination: -16.71612, source: SIRIUS_HUBBLE },
   overviewDistance: 860,
-  overviewLabel: message('catalog.alpha-centauri.alpha-centauri.overviewLabel'),
+  overviewLabel: message('navigation.viewBinary'),
   summary: message('catalog.sirius.sirius.summary'),
   bodies: [
     {
@@ -69,7 +69,7 @@ export const sirius: StarSystem = {
       orbit: orbit(MASS_A, 149.161),
       mass: message('catalog.sirius.sirius-b.mass'),
       stellar: {
-        evolutionaryStage: message('catalog.procyon.procyon-b.evolutionaryStage'),
+        evolutionaryStage: message('catalog.stellar-stage.whiteDwarf'),
         spectralType: 'DA',
         temperatureK: 25_000,
         luminosityWatts: 0.0245 * SOLAR_LUMINOSITY_W,

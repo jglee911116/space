@@ -1,6 +1,7 @@
 import { message } from '@/i18n/messages';
 import type { Body } from '../../types';
 import { SOLAR_LUMINOSITY_W, SOLAR_RADIUS_KM } from '../../units';
+import { NASA_FACTSHEET, SOLAR_SYSTEM_SCOPE } from './sources';
 
 export const sun: Body = {
   id: 'sun',
@@ -25,13 +26,18 @@ export const sun: Body = {
     poleSpinDays: 36,
     prominences: true,
   },
-  galacticOrbit: { radiusKpc: 8, periodYears: 230_000_000, color: '#ffc875' },
+  galacticOrbit: {
+    radiusKpc: 8,
+    periodYears: 230_000_000,
+    color: '#ffc875',
+    source: { label: message('catalog.milky-way.milky-way.source.nasa-the-sun-s-galactic-orbit'), href: 'https://science.nasa.gov/sun/facts/' },
+  },
   note: message('catalog.sun.sun.note'),
   sources: [
-    { label: 'Solar System Scope · CC BY 4.0', href: 'https://www.solarsystemscope.com/textures/' },
+    SOLAR_SYSTEM_SCOPE,
     { label: 'NASA / Solar Flares', href: 'https://science.nasa.gov/blogs/solar-cycle-25/2022/06/10/solar-flares-faqs/' },
     { label: 'NASA / Solar Corona', href: 'https://science.nasa.gov/wp-content/uploads/2024/02/part-2-nasa-science-and-eclipses.pdf' },
-    { label: message('catalog.sources.nasa-factsheet.source.nasa-physical-parameters'), href: 'https://science.nasa.gov/universe/glossary/' },
+    NASA_FACTSHEET,
     { label: message('catalog.sun.sun.source.nasa-sun-facts'), href: 'https://science.nasa.gov/sun/facts/' },
     { label: message('catalog.sun.sun.source.iau-nominal-solar-irradiance'), href: 'https://www.iau.org/static/resolutions/IAU2015_English.pdf' },
   ],

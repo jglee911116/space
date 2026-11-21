@@ -12,18 +12,5 @@ import { sirius } from './sirius';
 import { solarSystem } from './solar-system';
 import { trappist1 } from './trappist-1';
 
-export const systems = {
-  solar: solarSystem,
-  'alpha-centauri': alphaCentauri,
-  'barnard-star': barnardStar,
-  sirius: sirius,
-  'epsilon-eridani': epsilonEridani,
-  'ross-128': ross128,
-  procyon: procyon,
-  'trappist-1': trappist1,
-  'gliese-12': gliese12,
-  'lhs-1140': lhs1140,
-  '51-pegasi': pegasi51,
-  'kepler-16': kepler16,
-  'm31v-j00443610-4129194': m31EclipsingBinary,
-} satisfies Record<string, StarSystem>;
+// 첫 항목이 기본 항성계
+export const systems: readonly StarSystem[] = [solarSystem, alphaCentauri, barnardStar, sirius, epsilonEridani, ross128, procyon, trappist1, gliese12, lhs1140, pegasi51, kepler16, m31EclipsingBinary];

@@ -6,7 +6,6 @@ export const m87: Galaxy = {
   structure: { axis: 0.95, thickness: 0.81, core: 0.19 },
   name: message('catalog.m87.m87.name'),
   title: message('catalog.m87.m87.title'),
-  superclusterId: 'virgo',
   summary: message('catalog.m87.m87.summary'),
   distanceKpc: 16_560,
   skyPosition: { rightAscension: 187.70592, declination: 12.39112 },

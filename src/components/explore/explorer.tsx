@@ -8,7 +8,7 @@ import { CatalogSearch } from './catalog-search';
 import { LanguageSelect } from './language-select';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { galaxyAssociations, superclusters, observableUniverse, distantObjects, featuredObjects, galaxies, localGroup, milkyWay, systems as catalogSystems, type Galaxy, type StarSystem } from '@/constants/space';
+import { galaxyAssociations, superclusters, observableUniverse, distantObjects, featuredObjects, galaxies, localGroup, milkyWay, systems, type Galaxy, type StarSystem } from '@/constants/space';
 import { featuredGalaxyPosition } from './utils/nearby-positions';
 import { SITE_NAME_KEY } from '@/constants/site';
 import {
@@ -99,7 +99,7 @@ const UniverseScene = dynamic(() => import('./scenes/universe-scene'), {
 });
 
 type ExplorerView = Overview | 'galaxy' | 'neighborhood';
-const DEFAULT_SYSTEM_ID = catalogSystems.solar.id;
+const DEFAULT_SYSTEM_ID = systems[0].id;
 type HoveredBody = { id: string; x: number; y: number };
 
 function recordView(locale: Locale, target: Target, overview: ExplorerView, systemId: string, defaultSystemId: string, galaxyId: string) {
@@ -112,9 +112,6 @@ function recordView(locale: Locale, target: Target, overview: ExplorerView, syst
   return true;
 }
 
-// 카탈로그는 클라이언트 번들에 이미 있으므로 서버 props(RSC payload)로 다시 보내지 않는다.
-const systems: readonly StarSystem[] = Object.values(catalogSystems);
-
 export function Explorer() {
   const { t, catalogText, locale, number, measurement } = useLanguage();
   const pathname = withoutLocale(usePathname());
@@ -122,7 +119,7 @@ export function Explorer() {
   const universeView = pathname === UNIVERSE_PATH;
   const region = superclusters.find(({ id }) => pathname === superclusterPath(id));
   const cosmicView = universeView || !!region;
-  const association = viewParam === 'cluster' ? galaxyAssociations.find((item) => item.mapRegionId === region?.id && item.id === (clusterParam ?? 'virgo')) : undefined;
+  const association = viewParam === 'cluster' ? galaxyAssociations.find((item) => item.mapRegionId === region?.id && item.id === clusterParam) : undefined;
   const distantObject = universeView ? distantObjects.find(({ id }) => id === targetParam) : undefined;
   const [showCenterPolarization, setShowCenterPolarization] = useState(false);
   const [showCounterjet, setShowCounterjet] = useState(false);
@@ -135,7 +132,7 @@ export function Explorer() {
   const selectedSystem = galaxySystems.find((item) => item.id === systemParam);
   const externalGalaxy = !!pathGalaxy && pathGalaxy.id !== milkyWay.id;
   const extraView = cosmicView || groupView || (externalGalaxy && !selectedSystem);
-  const system = selectedSystem ?? catalogSystems.solar;
+  const system = selectedSystem ?? systems[0];
   const systemId = String(system.id);
   const galaxyObjects = useMemo(() => featuredObjects.filter((item) => !item.parentObjectId && (item.galaxyId ?? milkyWay.id) === activeGalaxy.id), [activeGalaxy.id]);
   const objectMarkers = useMemo(

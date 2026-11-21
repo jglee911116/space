@@ -24,10 +24,9 @@ export const milkyWay: HostGalaxy = {
   neighborhood: {
     name: message('catalog.milky-way.neighborhood.name'),
     summary: message('catalog.milky-way.neighborhood.summary'),
-    source: { label: message('catalog.milky-way.milky-way.source.nasa-stars-near-the-sun'), href: 'https://science.nasa.gov/sun/facts/' },
+    source: { label: message('catalog.sources.nasa-stars-near-the-sun'), href: 'https://science.nasa.gov/sun/facts/' },
   },
   notes: [message('catalog.milky-way.milky-way.notes'), message('catalog.milky-way.milky-way.diskNote')],
-  orbitSource: { label: message('catalog.milky-way.milky-way.source.nasa-the-sun-s-galactic-orbit'), href: 'https://science.nasa.gov/sun/facts/' },
   demoYearsPerSecond: 10_000_000,
   center: {
     id: 'sgr-a',

@@ -20,8 +20,8 @@ pnpm build
 - 천체 데이터 단일 소스: `src/constants/space/` — 순수 값만(three 등 렌더링 의존성·계산 함수 금지, 계산은 `components/explore/utils/`). 포함 관계: **항성계·은하 속 천체 ⊂ 은하 ⊂ 국부은하군·은하군 ⊂ 초은하단 ⊂ 관측 가능한 우주**.
   - `types.ts` — 모든 데이터 타입. `units.ts` — 단위 상수·환산(`KM_PER_KPC`, `LIGHT_YEARS_PER_KPC`, `KPC_PER_MLY` 등, 파일마다 다시 정의하지 않는다).
   - `star-systems/<계>/` — `star-systems/index.ts` 의 `systems` 에 등록, **첫 항목이 기본 계**. `bodies` 는 **부모가 자식보다 먼저**, `validate` 가 순서·parent·orbit 누락을 검사. 다른 은하의 계는 `galaxyId`.
-  - `featured-objects.ts` — 은하 속 성운·잔해·블랙홀(`galaxyId` 없으면 우리은하, 확대해 들어가는 하위 천체는 `parentObjectId`).
-  - `galaxies/` — 은하마다 파일, `galaxies/index.ts` 의 `galaxies` 가 은하 경로 전체 목록. `milky-way.ts` 만 `HostGalaxy`(기준 항성계 `systemId`, 이웃 지도, 은하 중심).
+  - `featured-objects/` — 종류별 파일(nebulae·stars·star-clusters·compact-objects), 순서는 `index.ts`. 은하 속 성운·잔해·블랙홀(`galaxyId` 없으면 우리은하, 확대해 들어가는 하위 천체는 `parentObjectId`).
+  - `galaxies/` — 은하마다 파일, 은하 경로 전체 목록 `galaxies` 는 `index.ts` 가 국부은하군·`nearbyShowcase`·은하군 구성원을 합쳐 만든다. `milky-way.ts` 만 `HostGalaxy`(기준 항성계 `systemId`, 이웃 지도, 은하 중심).
   - `local-group.ts` — 국부은하군 소속 은하(첫 항목이 기준 은하, `dwarfs` 는 왜소은하). `galaxy-associations.ts` — 초은하단 지도 위 은하군·은하단(`mapRegionId`). `superclusters.ts` — **안쪽 → 바깥 순서**(줌 전환이 배열 위치를 따른다, id 로 분기하지 않는다). `observable-universe.ts` — 원거리 천체.
   - 바깥에서는 `index.ts` 로만 가져온다(`units` 제외). 계층 간 id 참조·중복 id·문구 키·검색 경로는 `components/explore/utils/validate-catalog.ts` 가 빌드 시(`[locale]/layout.tsx` 의 generateStaticParams) 검사한다 — 데이터 폴더는 components 를 import 하지 않는다.
   - 대상마다 다른 UI 문구·형태는 데이터에 둔다(`overviewLabel`, `wideOverview.label`, `outerRegion`, `summary`, `title`, `notes`, `diskTilt`, `embeddedCluster` 등). 모델 형태도 필드로: 은하 `structure`·`ramPressureTail`·`diskObservation.blendProcedural`, 은하 속 천체 `clusterModel`·`stellarWind`·`thermalSurface`·`accretionDisk`·`modelCameraDistance`, 천체 `stellar.prominences`·`surfaceEffect`·`surfaceMap.hidden`·`silhouette`·`rockySurface`, 항성계 `home`.

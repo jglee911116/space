@@ -24,7 +24,7 @@ export const procyon: StarSystem = {
   name: message('catalog.procyon.procyon.name'),
   neighborhood: { distanceLightYears: 11.46, rightAscension: 114.8255, declination: 5.225, source: POSITION },
   overviewDistance: 620,
-  overviewLabel: message('catalog.alpha-centauri.alpha-centauri.overviewLabel'),
+  overviewLabel: message('navigation.viewBinary'),
   summary: message('catalog.procyon.procyon.summary'),
   bodies: [
     {
@@ -60,7 +60,7 @@ export const procyon: StarSystem = {
       orbit: orbit(1.478, 89.23),
       mass: message('catalog.procyon.procyon-b.mass'),
       stellar: {
-        evolutionaryStage: message('catalog.procyon.procyon-b.evolutionaryStage'),
+        evolutionaryStage: message('catalog.stellar-stage.whiteDwarf'),
         spectralType: 'DQZ',
         temperatureK: 7740,
         luminosityWatts: 0.00049 * SOLAR_LUMINOSITY_W,

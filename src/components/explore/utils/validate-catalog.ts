@@ -1,5 +1,6 @@
 import { readExplorerQuery } from './paths';
 import { createSearchCatalog } from './catalog-search';
+import { regionMarkers } from './cluster-markers';
 import { languages } from '@/i18n/messages';
 import { distantObjects, featuredObjects, galaxies, galaxyAssociations, localGroup, milkyWay, observableUniverse, superclusters, systems } from '@/constants/space';
 
@@ -18,9 +19,11 @@ function checkRelationships() {
   requireValue(objectIds.size === featuredObjects.length, 'duplicate featured object id');
 
   requireValue(galaxyIds.size === galaxies.length, 'duplicate galaxy id');
-  checkReference(`${milkyWay.id}.systemId`, milkyWay.systemId, new Set(Object.keys(systems)));
+  const systemIds = new Set(systems.map(({ id }) => id));
+  requireValue(systemIds.size === systems.length, 'duplicate system id');
+  checkReference(`${milkyWay.id}.systemId`, milkyWay.systemId, systemIds);
 
-  for (const system of Object.values(systems)) {
+  for (const system of systems) {
     checkReference(`${system.id}.galaxyId`, system.galaxyId, galaxyIds);
 
     // Orbit calculations visit bodies in catalog order and expect each parent to be available first.
@@ -46,10 +49,9 @@ function checkRelationships() {
     checkReference(`${object.id}.galaxyId`, object.galaxyId, galaxyIds);
     checkReference(`${object.id}.parentObjectId`, object.parentObjectId, objectIds);
   }
-  for (const { id, markers } of superclusters) {
-    for (const [index, marker] of markers.entries()) {
-      checkReference(`${id}.markers[${index}].galaxyId`, marker.galaxyId, galaxyIds);
-    }
+  for (const galaxy of localGroup.galaxies) requireValue(galaxies.includes(galaxy), `${galaxy.id}: local group galaxy missing from galaxies`);
+  for (const { id, members } of galaxyAssociations) {
+    for (const member of members) requireValue(member.superclusterId === undefined, `${id}.${member.id}: association members must not set superclusterId`);
   }
 }
 
@@ -111,14 +113,14 @@ export function validateCatalog() {
   for (const group of galaxyAssociations) {
     const region = superclusters.find(({ id }) => id === group.mapRegionId);
     requireValue(
-      region?.markers.some(({ clusterId }) => clusterId === group.id),
+      region && regionMarkers(region).some(({ clusterId }) => clusterId === group.id),
       `${group.id}: no marker in its parent map`,
     );
     requireValue(group.gridRadiusMly > 0 && group.members.length > 1 && group.members.every((member) => member.skyPosition && member.distanceKpc > 0), `${group.id}: invalid scale or members`);
   }
   checkText({ galaxyAssociations, galaxies, systems, featuredObjects, distantObjects, superclusters, localGroup, observableUniverse }, 'data');
 
-  const search = createSearchCatalog(Object.values(systems));
+  const search = createSearchCatalog(systems);
   requireValue(new Set(search.map(({ path }) => path)).size === search.length, 'duplicate search destinations');
   for (const { path } of search) {
     const url = new URL(path, 'https://catalog.invalid');
@@ -128,7 +130,7 @@ export function validateCatalog() {
       const galaxy = galaxies.find((item) => item.id === id);
       requireValue(galaxy, `bad search destination ${path}`);
       if (systemId) {
-        const system = Object.values(systems).find((item) => item.id === systemId && (item.galaxyId ?? milkyWay.id) === id);
+        const system = systems.find((item) => item.id === systemId && (item.galaxyId ?? milkyWay.id) === id);
         requireValue(system && (!target || system.bodies.some((body) => body.id === target)), `bad system destination ${path}`);
         requireValue((view !== 'oort' || system.oortCloud) && (view !== 'outer' || system.outerRegion), `bad system view ${path}`);
       } else if (view === 'object') {

@@ -1,9 +1,9 @@
 import { whirlpoolMembers, whirlpoolSource } from './galaxies/nearby-showcase';
 import { message } from '@/i18n/messages';
 import { fornaxMembers, hydraMembers, hydraSurvey, leoMembers, m81Members } from './galaxies/nearby-groups';
-import { virgoGalaxies } from './galaxies/virgo-members';
+import { virgoGalaxies, virgoSource } from './galaxies/virgo-members';
 import { normaMembers, normaStudy, normaSurvey } from './galaxies/norma-members';
-import { ngc3109Members, ngc3109Study } from './galaxies/local-dwarfs';
+import { ngc3109Members, ngc3109Study } from './galaxies/ngc-3109-members';
 import type { GalaxyAssociation } from './types';
 
 export const galaxyAssociations: readonly GalaxyAssociation[] = [
@@ -30,7 +30,7 @@ export const galaxyAssociations: readonly GalaxyAssociation[] = [
     volumeMembers: true,
     sources: [ngc3109Study],
   },
-  { id: 'virgo', mapRegionId: 'virgo', name: message('catalog.superclusters.virgo-cluster.name'), members: virgoGalaxies, gridRadiusMly: 6, sources: [] },
+  { id: 'virgo', mapRegionId: 'virgo', name: message('catalog.superclusters.virgo-cluster.name'), members: virgoGalaxies, gridRadiusMly: 6, sources: [virgoSource] },
   {
     id: 'm81-group',
     mapRegionId: 'virgo',

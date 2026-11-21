@@ -2,7 +2,7 @@ import { message } from '@/i18n/messages';
 import type { Body, OrbitElements, StarSystem } from '../../types';
 import { DAYS_PER_YEAR, SOLAR_LUMINOSITY_W, SOLAR_RADIUS_KM } from '../../units';
 
-const NASA = { label: message('catalog.milky-way.milky-way.source.nasa-stars-near-the-sun'), href: 'https://science.nasa.gov/sun/facts/' };
+const NASA = { label: message('catalog.sources.nasa-stars-near-the-sun'), href: 'https://science.nasa.gov/sun/facts/' };
 const BINARY_ORBIT = { label: message('catalog.alpha-centauri.binary-orbit.source.akeson-et-al-a-b-binary-orbit'), href: 'https://doi.org/10.3847/1538-3881/abfaff' };
 const SPECTRA = { label: message('catalog.alpha-centauri.spectra.source.kervella-et-al-spectral-types-and-stellar'), href: 'https://doi.org/10.1051/0004-6361/201629505' };
 const WIDE_ORBIT = { label: message('catalog.alpha-centauri.wide-orbit.source.kervella-et-al-proxima-orbit'), href: 'https://doi.org/10.1051/0004-6361/201629930' };
@@ -123,8 +123,8 @@ export const alphaCentauri: StarSystem = {
     source: { label: message('catalog.alpha-centauri.alpha-centauri.source.nasa-direction-of-alpha-centauri'), href: 'https://science.nasa.gov/asset/webb/alpha-centauri-3-panel-dss-hubble-webb/' },
   },
   overviewDistance: 950,
-  overviewLabel: message('catalog.alpha-centauri.alpha-centauri.overviewLabel'),
-  wideOverview: { distance: 480_000, label: message('catalog.alpha-centauri.alpha-centauri.source.view-proxima-s-orbit') },
+  overviewLabel: message('navigation.viewBinary'),
+  wideOverview: { distance: 480_000, label: message('catalog.alpha-centauri.alpha-centauri.wideOverviewLabel') },
   galacticPath: {
     radialAmplitudeKpc: 0.84,
     periodYears: 240_000_000,

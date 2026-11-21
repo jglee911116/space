@@ -85,7 +85,7 @@ export type Body = {
     };
   };
   /** 은하 장면의 기준 항성 공전. color 는 궤도선·범례 색. */
-  galacticOrbit?: { radiusKpc: number; periodYears: number; color: string };
+  galacticOrbit?: { radiusKpc: number; periodYears: number; color: string; source: Source };
   note?: CatalogText;
   sources: readonly Source[];
 };
@@ -133,6 +133,7 @@ export type Galaxy = {
   distanceKpc: number;
   skyPosition?: { rightAscension: number; declination: number };
   parentGalaxyId?: string;
+  /** 은하군(galaxy-associations)에 속하지 않은 은하만 — 초은하단 지도에 따로 표시하고 그 지도로 나간다. */
   superclusterId?: string;
   morphology?: 'barred-spiral' | 'open-spiral' | 'barred-irregular' | 'irregular' | 'compact-elliptical' | 'dwarf-elliptical' | 'giant-elliptical' | 'dust-lane-elliptical';
   modelRadiusKpc: number;
@@ -173,7 +174,6 @@ export type HostGalaxy = Galaxy & {
   neighborhood: { name: CatalogText; summary: CatalogText; source: Source };
   /** 은하 장면 상세 패널에서 summary 앞에 놓는 문단. */
   notes: readonly CatalogText[];
-  orbitSource: Source;
   demoYearsPerSecond: number;
   center: { id: string; name: CatalogText; distanceLightYears: number; massSolar: number; shadowDiameterMicroarcseconds: number; observationMaps?: { intensity: string; polarization: string }; sources: readonly Source[] };
 };
@@ -276,16 +276,6 @@ export type GalaxyAssociation = {
   sources: readonly Source[];
 };
 
-export type ClusterMarker = {
-  clusterId?: string;
-  galaxyId?: string;
-  name: CatalogText;
-  distanceMly: number;
-  rightAscension: number;
-  declination: number;
-  color: string;
-};
-
 export type Supercluster = {
   id: string;
   name: CatalogText;
@@ -294,7 +284,6 @@ export type Supercluster = {
   zoomOutMly: number;
   zoomInMly: number;
   summary: CatalogText;
-  markers: readonly ClusterMarker[];
   sources: readonly Source[];
 };
 

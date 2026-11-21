@@ -17,6 +17,11 @@ const SEDNA_SIZE: Source = {
   label: message('catalog.trans-neptunian.sedna-size.source.sedna-size-estimate'),
   href: 'https://www.research.unipd.it/retrieve/db914215-82a6-4901-b5f5-e15994cea67e/unpaywall-bitstream-1137866867.pdf',
 };
+// New Horizons 300 m 전역 모자이크(명왕성·카론)
+const newHorizonsMosaic = (id: string): Source => ({
+  label: 'NASA/JHUAPL/SwRI/USGS · New Horizons 300 m mosaic',
+  href: `https://astrogeology.usgs.gov/search/map/${id}_new_horizons_lorri_mvic_global_mosaic_300m`,
+});
 const ARROKOTH_FACTS: Source = { label: message('catalog.trans-neptunian.arrokoth-facts.source.nasa-arrokoth'), href: 'https://science.nasa.gov/solar-system/kuiper-belt/arrokoth-2014-mu69/facts/' };
 
 const NEW_HORIZONS_MOONS: Source = { label: message('catalog.trans-neptunian.new-horizons-moons.source.new-horizons-moon-observations'), href: 'https://arxiv.org/abs/1604.05366' };
@@ -43,7 +48,7 @@ function orbit([axisAu, eccentricity, inclination, node, perihelion, meanAnomaly
   };
 }
 
-const note = message('catalog.trans-neptunian.note.text');
+const note = message('catalog.trans-neptunian.body-note.text');
 const smallBodyNote = message('catalog.trans-neptunian.small-body-note.text');
 
 export const transNeptunianBodies: Body[] = [
@@ -60,8 +65,9 @@ export const transNeptunianBodies: Body[] = [
     appearance: 'pluto',
     colors: ['#583a31', '#aa806a', '#f5e1bd'],
     orbit: orbit([39.5712615, 0.2494485, 17.235653, 110.03994, 115.178666, 14.143655, 90921.851], J2000),
-    note: note,
-    sources: [PLUTO_FACTS, HORIZONS],
+    note: message('catalog.trans-neptunian.new-horizons.surface'),
+    surfaceMap: { file: '/textures/star-systems/solar/dwarf-planets/pluto/pluto-new-horizons.jpg' },
+    sources: [PLUTO_FACTS, HORIZONS, newHorizonsMosaic('pluto'), { label: 'NASA/JHUAPL/SwRI · Pluto color map', href: 'https://science.nasa.gov/resource/pluto-global-color-map/' }],
   },
   {
     id: 'haumea',
@@ -75,7 +81,7 @@ export const transNeptunianBodies: Body[] = [
     displayRadius: 0.145,
     appearance: 'rock',
     colors: ['#5a6c77', '#99b4bc', '#edf4e9'],
-    rockySurface: [11, 0.70, 0.45, 0.06],
+    rockySurface: [11, 0.7, 0.45, 0.06],
     orbit: orbit([43.0602902365, 0.1944430149, 28.2084739304, 121.7860561329, 240.6905472509, 223.2104118812, 103208.1173403618]),
     shape: [1161 / 797.5, 513 / 797.5, 852 / 797.5],
     rings: [{ inner: 2252 / 797.5, outer: 2322 / 797.5, color: '#bcc9cc', opacity: 0.75 }],
@@ -95,7 +101,7 @@ export const transNeptunianBodies: Body[] = [
     displayRadius: 0.13,
     appearance: 'rock',
     colors: ['#754133', '#a96c59', '#e9b293'],
-    rockySurface: [23, 0.53, 0.72, 0.10],
+    rockySurface: [23, 0.53, 0.72, 0.1],
     orbit: orbit([45.570933173, 0.1588889954, 29.0278560374, 79.2948338209, 297.0922733397, 169.9379962048, 112364.8068762869]),
     note: note,
     sources: [DWARF_PHYSICAL, SBDB],
@@ -112,7 +118,7 @@ export const transNeptunianBodies: Body[] = [
     displayRadius: 0.185,
     appearance: 'rock',
     colors: ['#576978', '#becfd2', '#f3f7f2'],
-    rockySurface: [37, 0.92, 0.20, 0.03],
+    rockySurface: [37, 0.92, 0.2, 0.03],
     orbit: orbit([67.9339468785, 0.4382385348, 43.9258279472, 36.0047704442, 150.794923584, 211.774434275, 204516.6629430732]),
     note: note,
     sources: [ERIS_SPIN, SBDB],
@@ -209,7 +215,8 @@ export const transNeptunianBodies: Body[] = [
       { offset: [0.53, 0.12, 0], shape: [0.45, 0.35, 0.42] },
     ],
     note: message('catalog.trans-neptunian.arrokoth.note'),
-    sources: [ARROKOTH_FACTS, SBDB],
+    shapeModel: '/models/star-systems/solar/small-bodies/arrokoth/arrokoth-nasa.glb',
+    sources: [ARROKOTH_FACTS, SBDB, { label: 'NASA · Observed 3D model', href: 'https://science.nasa.gov/resource/arrokoth-3d-model/' }],
   },
 ];
 
@@ -238,43 +245,91 @@ const plutoMoonSources = [JPL_SATELLITE_PHYSICAL, JPL_SATELLITE_ELEMENTS, NEW_HO
 const haumeaMoonSources = [HAUMEA_MOONS, HIIAKA_SPIN];
 
 export const transNeptunianMoons: Body[] = [
+  {
+    ...outerMoon(
+      { id: 'charon', name: message('catalog.trans-neptunian.charon.name'), parent: 'pluto', radiusKm: 606, spinDays: 6.387222, displayRadius: 0.09 },
+      [19600, 0, 0, 0, 0, 304.1, 6.387222],
+      [JPL_SATELLITE_PHYSICAL, JPL_SATELLITE_ELEMENTS, PLUTO_FACTS, newHorizonsMosaic('charon')],
+    ),
+    note: message('catalog.trans-neptunian.new-horizons.surface'),
+    surfaceMap: { file: '/textures/star-systems/solar/moons/charon/charon-new-horizons.jpg' },
+  },
   outerMoon(
-    { id: 'charon', name: message('catalog.trans-neptunian.charon.name'), parent: 'pluto', radiusKm: 606, spinDays: 6.387222, displayRadius: 0.09 },
-    [19600, 0, 0, 0, 0, 304.1, 6.387222],
-    [JPL_SATELLITE_PHYSICAL, JPL_SATELLITE_ELEMENTS, PLUTO_FACTS],
-  ),
-  outerMoon(
-    { id: 'styx', name: message('catalog.trans-neptunian.styx.name'), parent: 'pluto', radiusKm: 5.2, spinDays: 3.24, displayRadius: 0.025, shape: [1.43, 0.71, 0.8], rockySurface: [83, 0.48, 0.76, 0.49], silhouette: 'irregular' },
+    {
+      id: 'styx',
+      name: message('catalog.trans-neptunian.styx.name'),
+      parent: 'pluto',
+      radiusKm: 5.2,
+      spinDays: 3.24,
+      displayRadius: 0.025,
+      shape: [1.43, 0.71, 0.8],
+      rockySurface: [83, 0.48, 0.76, 0.49],
+      silhouette: 'irregular',
+    },
     [43200, 0.025, 0, 0, 322.5, 358.1, 20.16],
     plutoMoonSources,
     'parent-equator',
     85,
   ),
   outerMoon(
-    { id: 'nix', name: message('catalog.trans-neptunian.nix.name'), parent: 'pluto', radiusKm: 18, spinDays: 1.829, displayRadius: 0.032, shape: [1.29, 0.85, 0.9], rockySurface: [89, 0.70, 0.61, 0.83], silhouette: 'irregular' },
+    {
+      id: 'nix',
+      name: message('catalog.trans-neptunian.nix.name'),
+      parent: 'pluto',
+      radiusKm: 18,
+      spinDays: 1.829,
+      displayRadius: 0.032,
+      shape: [1.29, 0.85, 0.9],
+      rockySurface: [89, 0.7, 0.61, 0.83],
+      silhouette: 'irregular',
+    },
     [49300, 0.015, 0, 0, 31.4, 338.2, 24.85],
     plutoMoonSources,
     'parent-equator',
     85,
   ),
   outerMoon(
-    { id: 'kerberos', name: message('catalog.trans-neptunian.kerberos.name'), parent: 'pluto', radiusKm: 6, spinDays: 5.31, displayRadius: 0.026, shape: [1.56, 0.74, 0.82], rockySurface: [97, 0.60, 0.63, 0.32], silhouette: 'lobed' },
+    {
+      id: 'kerberos',
+      name: message('catalog.trans-neptunian.kerberos.name'),
+      parent: 'pluto',
+      radiusKm: 6,
+      spinDays: 5.31,
+      displayRadius: 0.026,
+      shape: [1.56, 0.74, 0.82],
+      rockySurface: [97, 0.6, 0.63, 0.32],
+      silhouette: 'lobed',
+    },
     [58300, 0.01, 0.4, 314.3, 32.1, 276.1, 32.17],
     plutoMoonSources,
     'parent-equator',
     85,
   ),
   outerMoon(
-    { id: 'hydra', name: message('catalog.trans-neptunian.hydra.name'), parent: 'pluto', radiusKm: 18.5, spinDays: 0.4295, displayRadius: 0.033, shape: [1.55, 0.6, 1.07], rockySurface: [101, 0.73, 0.72, 0.72], silhouette: 'irregular' },
+    {
+      id: 'hydra',
+      name: message('catalog.trans-neptunian.hydra.name'),
+      parent: 'pluto',
+      radiusKm: 18.5,
+      spinDays: 0.4295,
+      displayRadius: 0.033,
+      shape: [1.55, 0.6, 1.07],
+      rockySurface: [101, 0.73, 0.72, 0.72],
+      silhouette: 'irregular',
+    },
     [65200, 0.009, 0.3, 114.3, 139.3, 335, 38.2],
     plutoMoonSources,
     'parent-equator',
     85,
   ),
   // Haumea's satellites use inclinations relative to its equator and illustrative initial phases.
-  outerMoon({ id: 'namaka', name: message('catalog.trans-neptunian.namaka.name'), parent: 'haumea', radiusKm: 75, displayRadius: 0.035, rockySurface: [103, 0.40, 0.52, 0.25] }, [25657, 0.249, 13, 0, 0, 40, 18.2783], haumeaMoonSources),
   outerMoon(
-    { id: 'hiiaka', name: message('catalog.trans-neptunian.hiiaka.name'), parent: 'haumea', radiusKm: 150, spinDays: 0.408, displayRadius: 0.045, rockySurface: [107, 0.62, 0.50, 0.25] },
+    { id: 'namaka', name: message('catalog.trans-neptunian.namaka.name'), parent: 'haumea', radiusKm: 75, displayRadius: 0.035, rockySurface: [103, 0.4, 0.52, 0.25] },
+    [25657, 0.249, 13, 0, 0, 40, 18.2783],
+    haumeaMoonSources,
+  ),
+  outerMoon(
+    { id: 'hiiaka', name: message('catalog.trans-neptunian.hiiaka.name'), parent: 'haumea', radiusKm: 150, spinDays: 0.408, displayRadius: 0.045, rockySurface: [107, 0.62, 0.5, 0.25] },
     [49880, 0.0513, 2, 0, 0, 145, 49.462],
     haumeaMoonSources,
   ),

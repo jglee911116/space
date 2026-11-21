@@ -14,7 +14,7 @@ export const betaPictoris: FeaturedObject = {
   declination: -51.0665,
   extentLightYears: 0.028,
   color: '#e3ad82',
-  observationImage: { file: '/textures/nebulae/circumstellar/beta-pictoris/webb.jpg', shape: 'debris-disk' },
+  observationImage: { file: '/textures/stars/beta-pictoris/webb.jpg', shape: 'debris-disk' },
   sources: [
     { label: 'NASA, ESA, CSA, STScI & the Webb MIRI team', href: 'https://esawebb.org/images/weic2401a/' },
     { label: 'Rebollido et al. · Debris disks and the Cat’s Tail', href: 'https://ntrs.nasa.gov/citations/20240006933' },
@@ -87,5 +87,93 @@ export const uyScuti: FeaturedObject = {
   sources: [
     { label: message('catalog.featured-objects.uy-scuti.source.vlti-radius-and-distance-estimates'), href: 'https://doi.org/10.1051/0004-6361/201220920' },
     { label: message('catalog.featured-objects.uy-scuti.source.gcvs-representative-variability-period'), href: 'https://www.kusastro.kyoto-u.ac.jp/vsnet/gcvs2/SCTUY.html' },
+  ],
+};
+
+export const wr124: FeaturedObject = {
+  id: 'wr-124',
+  name: message('catalog.featured-objects.wr-124.name'),
+  designation: 'WR 124 · M1-67 · Hen 2-427',
+  aliases: ['WR124', 'Wolf-Rayet 124', '볼프 레이에 124'],
+  description: message('catalog.featured-objects.wr-124.description'),
+  kind: 'wolf-rayet',
+  observationStatus: 'observed',
+  distanceLightYears: 15000,
+  distanceAssumed: true,
+  rightAscension: 287.87867,
+  declination: 16.86061,
+  extentLightYears: 10,
+  color: '#ebb0cc',
+  observationImage: { file: '/textures/stars/wr-124/webb.jpg', shape: 'wolf-rayet-ejecta' },
+  sources: [
+    { label: 'NASA, ESA, CSA, STScI, Webb ERO Production Team · CC BY 4.0', href: 'https://esawebb.org/images/weic2307a/' },
+    { label: 'NASA Webb · WR 124 / M1-67', href: 'https://science.nasa.gov/asset/webb/wr-124-nircam-and-miri-composite-image/' },
+  ],
+};
+
+export const apep: FeaturedObject = {
+  id: 'apep',
+  name: message('catalog.featured-objects.apep.name'),
+  designation: 'Apep · 2XMM J160050.7−514245',
+  aliases: ['Apep', 'Wolf-Rayet Apep', '애펩', '볼프 레이에'],
+  description: message('catalog.featured-objects.apep.description'),
+  kind: 'wind-binary',
+  observationStatus: 'observed',
+  distanceLightYears: 7830,
+  distanceAssumed: true,
+  rightAscension: 240.21029,
+  declination: -51.71226,
+  extentLightYears: 4.6,
+  color: '#e79b68',
+  embeddedCluster: [
+    [-0.095, 0.025, 0],
+    [0.07, -0.022, 0.035],
+    [0.2, 0.28, -0.11],
+  ],
+  observationImage: { file: '/textures/stars/apep/webb.jpg', shape: 'dust-spiral' },
+  sources: [
+    { label: 'NASA, ESA, CSA, STScI, Y. Han (Caltech), R. White (Macquarie University), A. Pagan (STScI) · CC BY 4.0', href: 'https://esawebb.org/images/wolf-rayet-apep/' },
+    { label: 'Han et al. · Apep dust formation', href: 'https://doi.org/10.3847/1538-4357/ae12e5' },
+  ],
+};
+
+export const etaCarinae: FeaturedObject = {
+  id: 'eta-carinae',
+  name: message('catalog.featured-objects.eta-carinae.name'),
+  designation: 'η Carinae · Homunculus Nebula',
+  aliases: ['Eta Car', 'Homunculus', '호문쿨루스', '용골자리 에타'],
+  description: message('catalog.featured-objects.eta-carinae.description'),
+  kind: 'wind-binary',
+  observationStatus: 'observed',
+  distanceLightYears: 7500,
+  rightAscension: 161.265,
+  declination: -59.68443,
+  extentLightYears: 0.7,
+  color: '#e8a083',
+  observationImage: { file: '/textures/stars/eta-carinae/hubble.jpg', shape: 'homunculus', telescope: 'hubble' },
+  sources: [
+    { label: 'ESA/Hubble & NASA · CC BY 4.0', href: 'https://esahubble.org/images/potw1208a/' },
+    { label: 'NASA · Homunculus 3D model', href: 'https://science.nasa.gov/3d-resources/eta-carinae-homunculus-nebula/' },
+  ],
+};
+
+export const v838Monocerotis: FeaturedObject = {
+  id: 'v838-monocerotis',
+  name: message('catalog.featured-objects.v838-monocerotis.name'),
+  designation: 'V838 Monocerotis · V838 Mon',
+  aliases: ['V838 Mon', 'Light echo', '빛의 메아리', '외뿔소자리 V838'],
+  description: message('catalog.featured-objects.v838-monocerotis.description'),
+  kind: 'light-echo',
+  observationStatus: 'observed',
+  distanceLightYears: 19900,
+  rightAscension: 106.020093,
+  declination: -3.847402,
+  extentLightYears: 12,
+  color: '#bd987f',
+  observationImage: { file: '/textures/stars/v838-monocerotis/hubble.jpg', shape: 'light-echo', telescope: 'hubble' },
+  sources: [
+    { label: 'NASA, ESA & H. E. Bond (STScI) · ESA/Hubble', href: 'https://esahubble.org/images/heic0617c/' },
+    { label: 'NASA · Hubble light echo sequence', href: 'https://science.nasa.gov/asset/hubble/v838-mon-light-echo-unveiling/' },
+    { label: 'Sparks et al. · Light echo distance', href: 'https://doi.org/10.1088/0004-6256/135/2/605' },
   ],
 };

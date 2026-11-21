@@ -1,10 +1,28 @@
 import type { FeaturedObject } from '../types';
 import { pleiades, herculesCluster, omegaCentauri, tucanae47 } from './star-clusters';
-import { betaPictoris, betelgeuse, rigelA, uyScuti } from './stars';
+import { betaPictoris, betelgeuse, rigelA, uyScuti, wr124, apep, etaCarinae, v838Monocerotis } from './stars';
 import { j0740Pulsar, crabPulsar, rxJ1856, sgr1806, m87Star, velaPulsar, cygnusX1 } from './compact-objects';
-import { ringNebula, pillarsOfCreation, crabNebula, sn1987a, ngc604, orionNebula, horseheadNebula, tychoRemnant, helixNebula, sn1006 } from './nebulae/classic';
-import { webbNebulae } from './nebulae/webb';
-import { hubbleNebulae } from './nebulae/hubble';
+import {
+  ringNebula,
+  pillarsOfCreation,
+  crabNebula,
+  sn1987a,
+  ngc604,
+  orionNebula,
+  horseheadNebula,
+  tychoRemnant,
+  helixNebula,
+  sn1006,
+  ngc346,
+  hh30,
+  l1527Irs,
+  hh211,
+  cassiopeiaA,
+  ngc3132,
+  ngc7027,
+  ngc6302,
+  ngc6543,
+} from './nebulae';
 
 export const featuredObjects: readonly FeaturedObject[] = [
   pleiades,
@@ -29,8 +47,19 @@ export const featuredObjects: readonly FeaturedObject[] = [
   horseheadNebula,
   tychoRemnant,
   sn1006,
-  ...webbNebulae,
-  ...hubbleNebulae,
+  ngc346,
+  wr124,
+  apep,
+  hh30,
+  l1527Irs,
+  hh211,
+  cassiopeiaA,
+  ngc3132,
+  ngc7027,
+  ngc6302,
+  etaCarinae,
+  v838Monocerotis,
+  ngc6543,
   betaPictoris,
   velaPulsar,
   cygnusX1,

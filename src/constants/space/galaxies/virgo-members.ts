@@ -3,6 +3,10 @@ import { KPC_PER_MLY } from '../units';
 import type { Galaxy } from '../types';
 import { m87 } from './m87';
 
+export const virgoSource = {
+  label: message('catalog.superclusters.virgo-source.source.nasa-hubble-m87-and-the-virgo-cluster'),
+  href: 'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/messier-87/',
+};
 
 export const virgoGalaxies = [
   m87,
@@ -12,7 +16,6 @@ export const virgoGalaxies = [
     name: 'M84',
     title: 'M84 · NGC 4374',
     summary: message('catalog.virgo-galaxies.m84.summary'),
-    superclusterId: 'virgo',
     distanceKpc: 60 * KPC_PER_MLY,
     skyPosition: { rightAscension: 186.2656, declination: 12.887 },
     modelRadiusKpc: 23,
@@ -26,7 +29,6 @@ export const virgoGalaxies = [
     name: 'M86',
     title: 'M86 · NGC 4406',
     summary: message('catalog.virgo-galaxies.m86.summary'),
-    superclusterId: 'virgo',
     distanceKpc: 52 * KPC_PER_MLY,
     skyPosition: { rightAscension: 186.55, declination: 12.9464 },
     modelRadiusKpc: 30,
@@ -40,7 +42,6 @@ export const virgoGalaxies = [
     name: 'M49',
     title: 'M49 · NGC 4472',
     summary: message('catalog.virgo-galaxies.m49.summary'),
-    superclusterId: 'virgo',
     distanceKpc: 60 * KPC_PER_MLY,
     skyPosition: { rightAscension: 187.4417, declination: 7.9967 },
     modelRadiusKpc: 38,

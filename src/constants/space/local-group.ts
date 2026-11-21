@@ -1,7 +1,11 @@
 import { message } from '@/i18n/messages';
-import { andromeda, largeMagellanicCloud, messier110, messier32, milkyWay, smallMagellanicCloud, triangulum } from './galaxies';
-import type { LocalGroup } from './types';
+import { andromeda } from './galaxies/andromeda';
+import { messier110, messier32 } from './galaxies/andromeda-satellites';
 import { localDwarfs } from './galaxies/local-dwarfs';
+import { largeMagellanicCloud, smallMagellanicCloud } from './galaxies/magellanic-clouds';
+import { milkyWay } from './galaxies/milky-way';
+import { triangulum } from './galaxies/triangulum';
+import type { LocalGroup } from './types';
 
 export const localGroup: LocalGroup = {
   name: message('catalog.local-group.local-group.name'),

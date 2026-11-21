@@ -299,7 +299,7 @@ export function GalaxyDetails({ systems }: { systems: readonly StarSystem[] }) {
         {catalogText(milkyWay.summary)} {milkyWay.notes.map(catalogText).join(' ')}
         {modeled.length > 0 && ` ${t('details.modeledOrbits', [modeled.map(({ name }) => catalogText(name)).join(' · ')])}`}
       </ModelNotes>
-      <DetailSources sources={[...milkyWay.sources, milkyWay.orbitSource, ...systems.flatMap(({ galacticPath }) => (galacticPath ? [galacticPath.source] : []))]} />
+      <DetailSources sources={[...milkyWay.sources, ...systems.flatMap(({ bodies }) => bodies.flatMap(({ galacticOrbit }) => (galacticOrbit ? [galacticOrbit.source] : []))), ...systems.flatMap(({ galacticPath }) => (galacticPath ? [galacticPath.source] : []))]} />
     </section>
   );
 }
