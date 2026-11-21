@@ -40,6 +40,8 @@ export const surfaceFragment = /* glsl */ `
   uniform float surfaceShear;
   uniform vec3 surfaceDark;
   uniform vec3 surfaceHot;
+  uniform vec3 photosphere;
+  uniform float convectionPhase;
   varying vec3 surface;
   varying vec2 starUv;
   varying vec3 viewNormal;
@@ -61,6 +63,28 @@ export const surfaceFragment = /* glsl */ `
     float c = cos(angle);
     float s = sin(angle);
     p.xz = mat2(c, s, -s, c) * p.xz;
+    float center = max(dot(normalize(viewNormal), normalize(viewDirection)), 0.0);
+    if (photosphere.x > 0.0) {
+      if (photosphere.y == 0.0) {
+        vec3 color = mix(surfaceDark, surfaceHot, 0.28 + 0.72 * pow(center, 0.44));
+        gl_FragColor = vec4(color, 1.0);
+        return;
+      }
+      vec3 q = p + vec3(0.34, 0.19, -0.24) * photosphere.x;
+      float footprint = length(fwidth(p));
+      float scale = photosphere.y;
+      float cells = noise(q * scale + noise(q * 18.0) * 1.8);
+      float granular = mix(0.56, smoothstep(0.24, 0.73, cells), 1.0 - smoothstep(0.5, 1.6, footprint * scale));
+      float convection = noise(q * 13.0 + vec3(sin(convectionPhase * 22.0), 0.0, cos(convectionPhase * 22.0)) * 0.32);
+      float activity = noise(q * 5.0) * 0.75 + noise(q * 16.0) * 0.25;
+      float spots = smoothstep(0.65, 0.81, activity) * photosphere.z;
+      float faculae = (smoothstep(0.53, 0.67, activity) - smoothstep(0.67, 0.80, activity)) * (1.0 - center);
+      float plasma = 0.28 + 0.46 * granular + 0.26 * convection;
+      vec3 color = mix(surfaceDark, surfaceHot, plasma + faculae * 0.19);
+      color *= (1.0 - 0.78 * spots) * mix(0.53, 1.18, pow(center, 0.40));
+      gl_FragColor = vec4(color, 1.0);
+      return;
+    }
     float flow = noise(p * 9.0 + noise(p * 4.0) * 1.6);
     float footprint = length(fwidth(p));
     float fineWeight = 1.0 - smoothstep(0.5, 1.5, footprint * 214.0);
@@ -68,7 +92,6 @@ export const surfaceFragment = /* glsl */ `
     float granules = mix(0.5, noise(p * 105.0), coarseWeight) * 0.68
                    + mix(0.5, noise(p * 214.0), fineWeight) * 0.32;
     float plasma = smoothstep(0.18, 0.85, flow * 0.6 + granules * 0.4);
-    float center = max(dot(normalize(viewNormal), normalize(viewDirection)), 0.0);
     vec3 color = mix(surfaceDark, surfaceHot, plasma);
     color *= mix(0.57, 1.08, pow(center, 0.45));
     color += surfaceHot * vec3(0.31, 0.10, 0.03) * pow(1.0 - center, 6.0);
@@ -188,6 +211,8 @@ export const planetFragment = /* glsl */ `
   uniform float mapOffset;
   uniform bool fillMissingMap;
   uniform bool polarCaps;
+  uniform vec4 rockSurface;
+  uniform vec4 cloudBands;
 
   varying vec3 localPoint;
   varying vec2 surfaceUv;
@@ -256,6 +281,38 @@ export const planetFragment = /* glsl */ `
     return mix(ice, vec3(0.29, 0.098, 0.044), fractures * (0.46 + detail * 0.40));
   }
 
+  vec2 rockTerrain(vec3 p, float seed, float craterStrength) {
+    float terrain = 0.65 * noise(p * 4.4 + seed) + 0.25 * noise(p * 14.0 + seed)
+      + 0.10 * noise(p * 47.0 - seed);
+    float impacts = 0.0;
+    if (craterStrength > 0.30) {
+      for (int i = 0; i < 16; i++) {
+        float index = float(i);
+        vec3 key = vec3(seed, index, index + seed);
+        float latitude = 2.0 * hash(key) - 1.0;
+        float longitude = 6.2831853 * hash(key + 7.0);
+        float horizontal = sqrt(max(0.0, 1.0 - latitude * latitude));
+        vec3 center = vec3(horizontal * cos(longitude), latitude, horizontal * sin(longitude));
+        float radius = mix(0.065, 0.32, pow(hash(key + 14.0), 1.6));
+        float distance = length(p - center) / radius;
+        float floorDepth = 1.0 - smoothstep(0.35, 0.87, distance);
+        float raisedRim = 1.0 - smoothstep(0.03, 0.16, abs(distance - 0.9));
+        impacts += radius * (raisedRim * 0.39 - floorDepth);
+      }
+    }
+    return vec2(terrain, impacts * craterStrength);
+  }
+
+  vec3 reliefNormal(vec3 normal, vec3 point, float height) {
+    vec3 dx = dFdx(point);
+    vec3 dy = dFdy(point);
+    vec3 u = cross(dy, normal);
+    vec3 v = cross(normal, dx);
+    float determinant = dot(dx, u);
+    vec3 gradient = dFdx(height) * u + dFdy(height) * v;
+    return normalize(max(abs(determinant), 1e-12) * normal - sign(determinant) * gradient);
+  }
+
   void main() {
     vec3 p = normalize(localPoint);
     float flow = noise(p * 5.0);
@@ -265,11 +322,29 @@ export const planetFragment = /* glsl */ `
     float bands = 0.5 + 0.29 * sin(latitude * 39.0 + flow * 2.8)
                       + 0.14 * sin(latitude * 83.0 + detail * 2.1);
     vec3 color;
+    float relief = 0.0;
 
     vec3 mapped = hasSurfaceMap ? texture2D(surfaceMap, surfaceUv + vec2(mapOffset, 0.0)).rgb : vec3(0.0);
     float coverage = hasSurfaceMap ? (fillMissingMap ? smoothstep(0.003, 0.025, max(mapped.r, max(mapped.g, mapped.b))) : 1.0) : 0.0;
     if (coverage >= 1.0) {
       color = surfaceFeatures == 2 ? saturnClouds(p, mapped, detail) : mapped;
+    } else if (cloudBands.x > 0.0) {
+      vec3 weather = p * vec3(4.0, 15.0, 4.0) + cloudBands.x;
+      float shear = (noise(weather) - 0.5) * cloudBands.z;
+      float phase = p.y * cloudBands.y + shear;
+      float bandsDetail = sin(phase) * 0.29 + sin(phase * 2.39 + 1.4) * 0.12;
+      float filaments = noise(weather * vec3(4.0, 2.6, 4.0) + shear) - 0.5;
+      float pattern = 0.5 + cloudBands.w * (bandsDetail + filaments * 0.35);
+      color = mix(dark, middle, smoothstep(0.08, 0.59, pattern));
+      color = mix(color, light, smoothstep(0.48, 0.92, pattern));
+    } else if (rockSurface.x > 0.0) {
+      vec2 terrain = rockTerrain(p, rockSurface.x, rockSurface.w);
+      float contrast = rockSurface.z;
+      float brightTerrain = smoothstep(0.38, 0.69, terrain.x + 0.34 * (rockSurface.y - 0.5));
+      color = mix(middle, dark, contrast * (1.0 - smoothstep(0.24, 0.63, terrain.x)));
+      color = mix(color, light, 0.52 * brightTerrain + 0.38 * rockSurface.y);
+      color *= 1.0 + 0.48 * terrain.y + 0.22 * contrast * (grain - 0.5);
+      relief = contrast * 0.041 * (terrain.x - 0.5) + 0.19 * terrain.y;
     } else if (style == 1) {
       float elevation = noise(p * 3.5 + 8.0) * 0.73 + detail * 0.27;
       float land = smoothstep(0.52, 0.56, elevation);
@@ -303,8 +378,16 @@ export const planetFragment = /* glsl */ `
     if (coverage < 1.0) color = mix(color, mapped, coverage);
 
     vec3 normal = normalize(viewNormal);
-    float sun = max(dot(normal, normalize(mat3(viewMatrix) * lightOffset - viewOffset)), 0.0);
-    float rim = pow(1.0 - max(dot(normal, normalize(-viewPoint)), 0.0), 4.0);
+    vec3 lightDirection = normalize(mat3(viewMatrix) * lightOffset - viewOffset);
+    vec3 viewDirection = normalize(-viewPoint);
+    if (rockSurface.x > 0.0) {
+      vec3 roughNormal = reliefNormal(normal, viewPoint, relief * length(viewOffset));
+      float reliefVisibility = smoothstep(0.08, 0.48, dot(normal, viewDirection)) *
+        smoothstep(-0.05, 0.31, dot(normal, lightDirection));
+      normal = normalize(mix(normal, roughNormal, reliefVisibility));
+    }
+    float sun = max(dot(normal, lightDirection), 0.0);
+    float rim = pow(1.0 - max(dot(normal, viewDirection), 0.0), 4.0);
     color *= 0.22 + 0.78 * pow(sun, 0.65);
     if (style != 2) color += light * rim * (0.05 + 0.13 * sun);
     gl_FragColor = vec4(color, 1.0);

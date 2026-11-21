@@ -6,11 +6,14 @@ import { Line, OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, type ComponentRef } from 'react';
 import { AdditiveBlending, Box3, MathUtils, Vector3 } from 'three';
+import { LANIAKEA_REGION_ID, VIRGO_REGION_ID } from '@/constants/space/superclusters';
 import { observableUniverse, distantObjects, galaxies, type DistantObject, superclusters, type Supercluster } from '@/constants/space';
 import { cosmologicalDistances } from '../utils/cosmology';
 import type { GalaxyAssociation } from '@/constants/space/galaxy-associations';
 import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
 import { AccretionModel } from '../three/accretion-model';
+import { NebulaVolume } from '../three/nebula-volume';
+import { useSurfaceMap } from '../three/use-surface-map';
 import { CosmicMapMarkers, type CosmicMapMarker } from '../three/cosmic-map-markers';
 import { CanvasBoundary } from '../three/canvas-boundary';
 import { GalacticLabelLayer, GalacticMarker } from '../three/galactic-marker';
@@ -82,7 +85,8 @@ function MapMarker({
 
 function UniverseMap({ focus, entry, region, association, reportDistance, onStepIn, onStepOut, onSelectDistantObject, onSelectGalaxy, onSelectCluster }: Props) {
   const { t } = useLanguage();
-  const previousRegion = region === superclusters[0] ? undefined : region ? superclusters[0] : superclusters[1];
+  const previousRegionId = region?.id === VIRGO_REGION_ID ? undefined : region ? VIRGO_REGION_ID : LANIAKEA_REGION_ID;
+  const previousRegion = superclusters.find(({ id }) => id === previousRegionId);
   const innerName = previousRegion?.name ?? t('navigation.localGroup');
   const entryLimit = previousRegion?.zoomInMly ?? LOCAL_GROUP_ENTRY_MILLION_LIGHT_YEARS;
   const gridRadius = association?.gridRadiusMly ?? region?.gridRadiusMly ?? RADIUS;
@@ -121,31 +125,34 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
     if (!association) result.push({ position: ORIGIN, color: '#ffd195', style: 'cluster' });
     if (!region) {
       for (const object of landmarks) {
-        const style = object.kind === 'early-galaxy' ? 'irregular' : object.visibleJet ? 'jet' : 'quasar';
+        const style = object.kind === 'ring-galaxy' ? 'ring' : object.kind === 'early-galaxy' ? 'irregular' : object.visibleJet ? 'jet' : 'quasar';
         result.push({ position: object.position, color: object.color, style });
       }
     }
     return result;
   }, [association, markers, region]);
   const mapCenter = useMemo(() => (association ? new Box3().setFromPoints(markers.map(({ position }) => position)).getCenter(new Vector3()) : ORIGIN), [association, markers]);
+  const focusedLandmark = !region && !association ? landmarks.find(({ id }) => id === focus) : undefined;
+  const orbitTarget = focusedLandmark?.position ?? mapCenter;
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const initialDistance = useRef(0);
   const direction = useMemo(() => new Vector3(), []);
   const camera = useThree((state) => state.camera);
   const { width, height } = useThree((state) => state.size);
   const preset = gridRadius * 2.65 * Math.max(1, height / Math.max(width, 1));
+  const landmarkReturnDistance = preset * 0.38;
   const outerLimit = association ? Math.max(gridRadius * 4, preset * 1.3) : region ? Math.max(region.zoomOutMly, preset * 1.15) : undefined;
   useLayoutEffect(() => {
     const orbit = controls.current;
     if (!orbit) return;
     const distance = entry
       ? Math.min(outerLimit ? outerLimit * 0.94 : RADIUS * 4, Math.max(entryLimit * 1.12, (entry.distanceAu * KM_PER_AU) / KM_PER_MAP_UNIT))
-      : Math.min(preset, outerLimit ? outerLimit * 0.94 : Infinity);
+      : focusedLandmark ? landmarkReturnDistance : Math.min(preset, outerLimit ? outerLimit * 0.94 : Infinity);
     const cameraDirection = association ? new Vector3(-0.72, 0.48, 0.5).normalize() : entry ? new Vector3(...entry.direction) : VIEW;
-    orbit.target.copy(mapCenter);
-    camera.position.copy(mapCenter).addScaledVector(cameraDirection, distance);
+    orbit.target.copy(orbitTarget);
+    camera.position.copy(orbitTarget).addScaledVector(cameraDirection, distance);
     orbit.update();
-  }, [camera, association, entry, entryLimit, mapCenter, outerLimit, preset]);
+  }, [camera, association, entry, entryLimit, focusedLandmark, landmarkReturnDistance, orbitTarget, outerLimit, preset]);
   const grid = useMemo(
     () =>
       Array.from({ length: 129 }, (_, index) => {
@@ -211,9 +218,8 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
         ))}
       <OrbitControls
         ref={controls}
-        target={mapCenter}
+        target={orbitTarget}
         enablePan={false}
-        zoomToCursor
         minDistance={association ? gridRadius * 0.06 : entryLimit * 0.55}
         maxDistance={outerLimit ? outerLimit * 1.16 : RADIUS * Math.max(7, (3 * height) / Math.max(width, 1))}
         onStart={() => {
@@ -228,6 +234,7 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
             direction: direction.subVectors(orbit.object.position, orbit.target).normalize().toArray(),
           };
           if (outerLimit && radius > initialDistance.current && radius >= outerLimit) onStepOut(handoff);
+          else if (focusedLandmark && radius < initialDistance.current && radius <= landmarkReturnDistance * 0.50) onSelectDistantObject(focusedLandmark.id);
           else if (!association && radius < initialDistance.current && radius <= entryLimit && orbit.target.length() < entryLimit * 2) onStepIn(handoff);
         }}
       />
@@ -235,10 +242,13 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
   );
 }
 
-function EarlyGalaxyModel({ color, onExit }: { color: string; onExit: () => void }) {
+function DistantGalaxyModel({ object, onExit }: { object: Exclude<DistantObject, { kind: 'quasar' }>; onExit: () => void }) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const initialDistance = useRef(0);
+  const ringGalaxy = object.kind === 'ring-galaxy';
+  const texture = useSurfaceMap(ringGalaxy ? object.observationImage : undefined);
   const stars = useMemo(() => {
+    if (ringGalaxy) return undefined;
     const count = 4000;
     const positions = new Float32Array(count * 3);
     const goldenAngle = Math.PI * (3 - Math.sqrt(5));
@@ -250,20 +260,21 @@ function EarlyGalaxyModel({ color, onExit }: { color: string; onExit: () => void
       positions.set([horizontal * Math.cos(angle), radius * height * 0.58, horizontal * Math.sin(angle) * 0.76], i * 3);
     }
     return positions;
-  }, []);
+  }, [ringGalaxy]);
 
   return (
     <>
-      <points rotation={[0.14, 0.28, -0.24]}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[stars, 3]} />
-        </bufferGeometry>
-        <pointsMaterial color={color} size={0.043} transparent opacity={0.38} depthWrite={false} blending={AdditiveBlending} />
-      </points>
+      {stars ? (
+        <points rotation={[0.14, 0.28, -0.24]}>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[stars, 3]} />
+          </bufferGeometry>
+          <pointsMaterial color={object.color} size={0.043} transparent opacity={0.38} depthWrite={false} blending={AdditiveBlending} />
+        </points>
+      ) : <NebulaVolume texture={texture} radius={5.6} shape="cartwheel" />}
       <OrbitControls
         ref={controls}
         enablePan={false}
-        zoomToCursor
         minDistance={3.8}
         maxDistance={30}
         onStart={() => {
@@ -284,7 +295,9 @@ export default function UniverseScene(props: Props) {
   const exit = () => {
     if (object) onExitDistantObject(object.id);
   };
-  const position: [number, number, number] = object ? [5, 5.6, 13] : [0, 0, RADIUS * 2.65];
+  const position: [number, number, number] = object?.kind === 'ring-galaxy'
+    ? [1.7, 1.0, 14.6]
+    : object ? [5, 5.6, 13] : [0, 0, RADIUS * 2.65];
   return (
     <CanvasBoundary>
       <Canvas
@@ -294,8 +307,8 @@ export default function UniverseScene(props: Props) {
       >
         {object?.kind === 'quasar' ? (
           <AccretionModel object={object} showCounterjet={props.showCounterjet} onExit={exit} />
-        ) : object?.kind === 'early-galaxy' ? (
-          <EarlyGalaxyModel color={object.color} onExit={exit} />
+        ) : object ? (
+          <DistantGalaxyModel object={object} onExit={exit} />
         ) : (
           <GalacticLabelLayer>
             <UniverseMap {...props} />

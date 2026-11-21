@@ -19,6 +19,7 @@ const star: Body = {
     temperatureK: 5146,
     luminosityWatts: 10 ** -0.47067 * SOLAR_LUMINOSITY_W,
     emissionColor: '#ff995a',
+    photosphere: { seed: 97, granuleScale: 149, activeRegions: 0.55 },
   },
   sources: [ARCHIVE],
 };
@@ -40,6 +41,7 @@ export const epsilonEridani: StarSystem = {
       tilt: 0,
       colors: ['#3c3028', '#bd8a61', '#eed0a3'],
       appearance: 'bands',
+      cloudBands: [7, 28, 2.7, 0.92],
       orbit: { axisAu: 3.53, eccentricity: 0.06, inclination: 0, ascendingNode: 0, perihelionLongitude: 0, meanLongitude: 35, periodDays: 2680 },
       mass: message('catalog.epsilon-eridani.epsilon-eridani-b.mass'),
       note: message('catalog.epsilon-eridani.epsilon-eridani-b.note'),

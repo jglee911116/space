@@ -4,12 +4,13 @@ import { Message, useLanguage } from '@/i18n/language';
 import dynamic from 'next/dynamic';
 import { withLocale, withoutLocale } from '@/i18n/routing';
 import { galaxyAssociations } from '@/constants/space/galaxy-associations';
+import { LANIAKEA_REGION_ID, VIRGO_REGION_ID } from '@/constants/space/superclusters';
 import type { Locale } from '@/i18n/messages';
 import { CatalogSearch } from './catalog-search';
 import { LanguageSelect } from './language-select';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { superclusters, observableUniverse, distantObjects, featuredObjects, galaxies, localGroup, milkyWay, type Galaxy, type StarSystem } from '@/constants/space';
+import { superclusters, observableUniverse, distantObjects, featuredObjects, galaxies, localGroup, milkyWay, systems as catalogSystems, type Galaxy, type StarSystem } from '@/constants/space';
 import { featuredGalaxyPosition } from './utils/nearby-positions';
 import { SITE_NAME_KEY } from '@/constants/site';
 import {
@@ -30,10 +31,11 @@ import {
 } from './details';
 import { isNearbySystem } from './utils/nearby-positions';
 import { distanceScale } from './utils/distance-scale';
-import { associationPath, distantObjectPath, featuredObjectPath, galaxyPath, HOME_PATH, LOCAL_GROUP_PATH, localGroupPath, superclusterPath, systemPath, UNIVERSE_PATH } from './utils/paths';
+import { galaxyFocusPath, readExplorerQuery, universeFocusPath, updateSystemLocation, associationPath, distantObjectPath, featuredObjectPath, galaxyPath, HOME_PATH, LOCAL_GROUP_PATH, localGroupPath, superclusterPath, systemPath, UNIVERSE_PATH } from './utils/paths';
 import { elapsedSimulationDays, REALTIME_DAYS_PER_SECOND } from './utils/orbit';
 import type { Overview, Target } from './scenes/system-scene';
-import type { ZoomHandoff, ZoomScale } from './utils/zoom';
+import { AU_PER_KPC } from '@/constants/space/units';
+import { featuredOverviewDistanceKpc, type ZoomHandoff, type ZoomScale } from './utils/zoom';
 import styles from './explore.module.scss';
 
 const SystemScene = memo(
@@ -97,23 +99,14 @@ const UniverseScene = dynamic(() => import('./scenes/universe-scene'), {
 });
 
 type ExplorerView = Overview | 'galaxy' | 'neighborhood';
+const DEFAULT_SYSTEM_ID = catalogSystems.solar.id;
 type HoveredBody = { id: string; x: number; y: number };
 
 function recordView(locale: Locale, target: Target, overview: ExplorerView, systemId: string, defaultSystemId: string, galaxyId: string) {
   const url = new URL(window.location.href);
   const path = withLocale(overview === 'neighborhood' ? HOME_PATH : galaxyPath(galaxyId), locale);
   const systemParam = overview === 'neighborhood' || (systemId === defaultSystemId && (overview || target)) ? null : systemId;
-  if (url.pathname === path && url.searchParams.get('target') === target && url.searchParams.get('view') === overview && url.searchParams.get('system') === systemParam) return false;
-
-  url.pathname = path;
-  url.searchParams.delete('focus');
-  if (systemParam) url.searchParams.set('system', systemParam);
-  else url.searchParams.delete('system');
-
-  if (target) url.searchParams.set('target', target);
-  else url.searchParams.delete('target');
-  if (overview) url.searchParams.set('view', overview);
-  else url.searchParams.delete('view');
+  if (!updateSystemLocation(url, path, systemParam, target, overview)) return false;
 
   window.history.pushState(null, '', url);
   return true;
@@ -122,30 +115,28 @@ function recordView(locale: Locale, target: Target, overview: ExplorerView, syst
 export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const { t, catalogText, locale, number, measurement } = useLanguage();
   const pathname = withoutLocale(usePathname());
-  const searchParams = useSearchParams();
+  const { system: systemParam, target: targetParam, view: viewParam, focus, galaxy: galaxyParam, cluster: clusterParam } = readExplorerQuery(useSearchParams());
   const universeView = pathname === UNIVERSE_PATH;
   const region = superclusters.find(({ id }) => pathname === superclusterPath(id));
   const cosmicView = universeView || !!region;
-  const association = searchParams.get('view') === 'cluster' ? galaxyAssociations.find((item) => item.mapRegionId === region?.id && item.id === (searchParams.get('cluster') ?? 'virgo')) : undefined;
-  const distantObject = universeView ? distantObjects.find(({ id }) => id === searchParams.get('target')) : undefined;
+  const association = viewParam === 'cluster' ? galaxyAssociations.find((item) => item.mapRegionId === region?.id && item.id === (clusterParam ?? 'virgo')) : undefined;
+  const distantObject = universeView ? distantObjects.find(({ id }) => id === targetParam) : undefined;
   const [showCenterPolarization, setShowCenterPolarization] = useState(false);
   const [showCounterjet, setShowCounterjet] = useState(false);
   const groupView = pathname === LOCAL_GROUP_PATH;
   const pathGalaxy = galaxies.find(({ id }) => pathname === galaxyPath(id));
-  const activeGalaxy = pathGalaxy ?? (groupView ? localGroup.galaxies.find(({ id }) => searchParams.get('galaxy') === id) : undefined) ?? localGroup.galaxies[0];
+  const activeGalaxy = pathGalaxy ?? (groupView ? localGroup.galaxies.find(({ id }) => galaxyParam === id) : undefined) ?? milkyWay;
   const [spaceEntry, setSpaceEntry] = useState<ZoomHandoff>();
-  const systemParam = searchParams.get('system');
   const galaxySystems = useMemo(() => systems.filter((item) => (item.galaxyId ?? milkyWay.id) === activeGalaxy.id), [activeGalaxy.id, systems]);
   const systemMarkers = useMemo(() => galaxySystems.flatMap((item) => (item.galaxyMarkerKpc ? [{ id: item.id, name: item.name, position: item.galaxyMarkerKpc }] : [])), [galaxySystems]);
   const selectedSystem = galaxySystems.find((item) => item.id === systemParam);
   const externalGalaxy = !!pathGalaxy && pathGalaxy.id !== milkyWay.id;
   const extraView = cosmicView || groupView || (externalGalaxy && !selectedSystem);
-  const system = selectedSystem ?? galaxySystems[0] ?? systems[0];
-  const targetParam = searchParams.get('target');
-  const viewParam = searchParams.get('view');
+  const system = selectedSystem ?? catalogSystems.solar;
+  const systemId = String(system.id);
   const galaxyObjects = useMemo(() => featuredObjects.filter((item) => (item.galaxyId ?? milkyWay.id) === activeGalaxy.id), [activeGalaxy.id]);
   const objectMarkers = useMemo(
-    () => galaxyObjects.map((item) => ({ id: item.id, name: item.name, color: item.color, position: featuredGalaxyPosition(item, activeGalaxy) })),
+    () => galaxyObjects.map((object) => ({ object, position: featuredGalaxyPosition(object, activeGalaxy) })),
     [activeGalaxy, galaxyObjects],
   );
   const featuredObject = !cosmicView && !groupView && viewParam === 'object' ? galaxyObjects.find(({ id }) => id === targetParam) : undefined;
@@ -165,6 +156,9 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
     (wheelView ? wheelView.scene === 'galaxy' : viewParam === 'galaxy' || targetParam === milkyWay.center.id || (!!pathGalaxy && !systemParam && !targetParam && !viewParam));
   const focusGalacticCenter = galaxyView && targetParam === milkyWay.center.id;
   const focusBlackHole = focusGalacticCenter && (centerZoom?.close ?? true);
+  const viewingM87Jet = featuredObject?.id === 'm87-star' || (extraView && activeGalaxy.id === 'm87' && focus === 'm87-star');
+  const featuredShape = featuredObject?.observationImage?.shape;
+  const animatedFeaturedVolume = featuredShape === 'bipolar-jet' || featuredShape === 'shocked-shell' || featuredShape === 'dust-spiral' || featuredShape === 'edge-on-disk';
   const heading = region
     ? association
       ? association.name
@@ -198,6 +192,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
       ? outerBodies
       : system.bodies.filter((other) => other.parent === null || (other.parent === root.id && !other.region) || (isMultiStar(system) && other.kind === 'planet'));
   const simulationDaysRef = useRef(0);
+  const m87PlaybackTime = useRef(0);
   const distanceBar = useRef<HTMLDivElement>(null);
   const reportDistance = useCallback(
     (kmPerPixel: number) => {
@@ -216,10 +211,13 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const [daysPerSecond, setDaysPerSecond] = useState(REALTIME_DAYS_PER_SECOND);
   useEffect(() => {
     if (paused) return;
+    const m87Rate = Math.max(0.18, 1 + 0.32 * Math.log10(daysPerSecond / REALTIME_DAYS_PER_SECOND));
     let previous = performance.now();
     let frame: number;
     const tick = (now: number) => {
-      simulationDaysRef.current += elapsedSimulationDays(Math.max(0, now - previous) / 1000, daysPerSecond);
+      const seconds = Math.max(0, now - previous) / 1000;
+      simulationDaysRef.current += elapsedSimulationDays(seconds, daysPerSecond);
+      m87PlaybackTime.current += Math.min(seconds, 0.1) * m87Rate;
       previous = now;
       frame = requestAnimationFrame(tick);
     };
@@ -257,14 +255,14 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   }, []);
 
   const navigateTo = useCallback(
-    (next: Target, nextOverview: ExplorerView = null, nextSystem = system.id) => {
+    (next: Target, nextOverview: ExplorerView = null, nextSystem = systemId) => {
       setHovered(null);
       setWheelView(null);
       setCenterZoom(null);
       setSpaceEntry(undefined);
-      if (!recordView(locale, next, nextOverview, nextSystem, systems[0].id, systems.find((item) => item.id === nextSystem)?.galaxyId ?? milkyWay.id)) setRecenter((revision) => revision + 1);
+      if (!recordView(locale, next, nextOverview, nextSystem, DEFAULT_SYSTEM_ID, systems.find((item) => item.id === nextSystem)?.galaxyId ?? milkyWay.id)) setRecenter((revision) => revision + 1);
     },
-    [locale, system.id, systems],
+    [locale, systemId, systems],
   );
 
   const navigateSpace = useCallback(
@@ -283,7 +281,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   );
   const enterUniverse = useCallback((entry?: ZoomHandoff) => navigateSpace(UNIVERSE_PATH, entry), [navigateSpace]);
   const selectDistantObject = useCallback((id: string) => navigateSpace(distantObjectPath(id)), [navigateSpace]);
-  const exitDistantObject = useCallback((id: string) => navigateSpace(`${UNIVERSE_PATH}?focus=${encodeURIComponent(id)}`), [navigateSpace]);
+  const exitDistantObject = useCallback((id: string) => navigateSpace(universeFocusPath(id)), [navigateSpace]);
 
   const containingAssociation = galaxyAssociations.find(({ members }) => members.some(({ id }) => id === activeGalaxy.id));
   const groupFocusId = containingAssociation || activeGalaxy.superclusterId ? milkyWay.id : activeGalaxy.id;
@@ -298,20 +296,20 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const enterRegion = useCallback((id: string, entry?: ZoomHandoff) => navigateSpace(superclusterPath(id), entry), [navigateSpace]);
   const zoomInCosmic = useCallback(
     (entry?: ZoomHandoff) => {
-      if (region === superclusters[0]) enterLocalGroup(entry);
-      else enterRegion(region ? superclusters[0].id : superclusters[1].id, entry);
+      if (region?.id === VIRGO_REGION_ID) enterLocalGroup(entry);
+      else enterRegion(region ? VIRGO_REGION_ID : LANIAKEA_REGION_ID, entry);
     },
     [enterLocalGroup, enterRegion, region],
   );
   const zoomOutCosmic = useCallback(
     (entry: ZoomHandoff) => {
       if (association) enterRegion(association.mapRegionId);
-      else if (region === superclusters[0]) enterRegion(superclusters[1].id, entry);
+      else if (region?.id === VIRGO_REGION_ID) enterRegion(LANIAKEA_REGION_ID, entry);
       else enterUniverse(entry);
     },
     [association, enterRegion, enterUniverse, region],
   );
-  const leaveLocalGroup = useCallback((entry: ZoomHandoff) => enterRegion(superclusters[0].id, entry), [enterRegion]);
+  const leaveLocalGroup = useCallback((entry: ZoomHandoff) => enterRegion(VIRGO_REGION_ID, entry), [enterRegion]);
 
   const enterExternalGalaxy = useCallback((item: Galaxy, entry?: ZoomHandoff) => navigateSpace(galaxyPath(item.id), entry), [navigateSpace]);
 
@@ -327,16 +325,18 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
 
   const enterMarkedSystem = useCallback((id: string, entry?: ZoomHandoff) => navigateSpace(systemPath(activeGalaxy.id, id), entry), [activeGalaxy.id, navigateSpace]);
   const returnToExternalGalaxy = useCallback(
-    (entry: ZoomHandoff) => navigateSpace(`${galaxyPath(activeGalaxy.id)}?focus=${encodeURIComponent(system.id)}`, entry),
-    [activeGalaxy.id, navigateSpace, system.id],
+    (entry: ZoomHandoff) => navigateSpace(galaxyFocusPath(activeGalaxy.id, systemId), entry),
+    [activeGalaxy.id, navigateSpace, systemId],
   );
 
   const selectFeaturedObject = useCallback((id: string) => navigateSpace(featuredObjectPath(activeGalaxy.id, id)), [activeGalaxy.id, navigateSpace]);
   const parentObjectId = featuredObject?.parentObjectId;
-  const leaveFeaturedObject = useCallback(() => {
+  const featuredObjectId = featuredObject?.id;
+  const featuredReturnDistanceAu = featuredObject ? featuredOverviewDistanceKpc(featuredObject) * AU_PER_KPC : 0;
+  const leaveFeaturedObject = (direction: ZoomHandoff['direction']) => {
     if (parentObjectId) selectFeaturedObject(parentObjectId);
-    else navigateSpace(galaxyPath(activeGalaxy.id));
-  }, [activeGalaxy.id, navigateSpace, parentObjectId, selectFeaturedObject]);
+    else if (featuredObjectId) navigateSpace(galaxyFocusPath(activeGalaxy.id, featuredObjectId), { direction, distanceAu: featuredReturnDistanceAu });
+  };
 
   const selectSystem = useCallback((id: string) => navigateTo(null, null, id), [navigateTo]);
 
@@ -344,7 +344,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
     setCenterZoom({ close, entry });
   }, []);
 
-  const selectGalacticCenter = useCallback(() => navigateSpace(`${galaxyPath(milkyWay.id)}?target=${milkyWay.center.id}`), [navigateSpace]);
+  const selectGalacticCenter = useCallback(() => navigateSpace(systemPath(milkyWay.id, undefined, milkyWay.center.id)), [navigateSpace]);
   const openStarSystem = useCallback((item: StarSystem) => navigateSpace(systemPath(item.galaxyId ?? milkyWay.id, item.id, item.bodies[0].id)), [navigateSpace]);
   const focusNearbySystem = useCallback((item: StarSystem) => navigateTo(item.bodies[0].id, 'galaxy', item.id), [navigateTo]);
 
@@ -361,7 +361,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
       <div className={styles.viewport} onPointerLeave={() => setHovered(null)} onPointerCancel={() => setHovered(null)} onWheelCapture={() => setHovered(null)}>
         {cosmicView ? (
           <UniverseScene
-            key={`${distantObject ? `object:${distantObject.id}` : `map:${pathname}:${association?.id ?? ''}:${searchParams.get('focus') ?? ''}`}:${recenter}`}
+            key={`${distantObject ? `object:${distantObject.id}` : `map:${pathname}:${association?.id ?? ''}:${focus ?? ''}`}:${recenter}`}
             object={distantObject}
             region={region}
             association={association}
@@ -369,7 +369,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             onStepIn={zoomInCosmic}
             onStepOut={zoomOutCosmic}
             showCounterjet={showCounterjet}
-            focus={searchParams.get('focus') ?? undefined}
+            focus={focus ?? undefined}
             entry={spaceEntry}
             reportDistance={reportDistance}
             onSelectGalaxy={selectCatalogGalaxy}
@@ -382,6 +382,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             object={featuredObject}
             reportDistance={reportDistance}
             simulationDaysRef={simulationDaysRef}
+            m87PlaybackTime={m87PlaybackTime}
             daysPerSecond={daysPerSecond}
             paused={paused}
             onSelectObject={selectFeaturedObject}
@@ -399,8 +400,9 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             onExitGroup={leaveLocalGroup}
             systemMarkers={systemMarkers}
             objectMarkers={objectMarkers}
+            m87PlaybackTime={m87PlaybackTime}
             onSelectObject={selectFeaturedObject}
-            focusedSystemId={searchParams.get('focus') ?? undefined}
+            focusId={focus ?? undefined}
             onSelectSystem={enterMarkedSystem}
           />
         ) : neighborhoodView ? (
@@ -413,6 +415,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             systems={galaxySystems}
             onSelectSystem={openStarSystem}
             onSelectObject={selectFeaturedObject}
+            focusedObjectId={focus ?? undefined}
             entry={wheelView?.entry}
             onZoomIn={enterSolarSystem}
             onZoomOut={enterLocalGroup}
@@ -424,6 +427,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             onCenterZoom={zoomGalacticCenter}
             simulationDaysRef={simulationDaysRef}
             paused={paused}
+            daysPerSecond={daysPerSecond}
             demo={galacticDemo}
             onSelectCenter={selectGalacticCenter}
             recenter={recenter}
@@ -628,7 +632,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
               {galacticDemo && <p className={styles.hint}>{t('playback.galacticDemoSpeed', [measurement(milkyWay.demoYearsPerSecond, 1e4, 0)])}</p>}
             </>
           )}
-          {(distantObject || cosmicView || extraView || neighborhoodView || (featuredObject && !featuredObject.spinSeconds && !featuredObject.variabilityDays && !featuredObject.expansionPerYear)) && (
+          {!viewingM87Jet && !animatedFeaturedVolume && (distantObject || cosmicView || extraView || neighborhoodView || (featuredObject && !featuredObject.spinSeconds && !featuredObject.variabilityDays && !featuredObject.expansionPerYear)) && (
             <p className={styles.hint}>{t('playback.fixedLayout')}</p>
           )}
           {!focusBlackHole && !distantObject && (!featuredObject || (featuredObject.extentLightYears > 0 && featuredObject.kind !== 'black-hole')) && (

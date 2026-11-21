@@ -43,7 +43,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
     {
       name: milkyWay.center.name,
       context: milkyWay.name,
-      path: `${galaxyPath(milkyWay.id)}?target=${milkyWay.center.id}`,
+      path: systemPath(milkyWay.id, undefined, milkyWay.center.id),
       kind: 'details.supermassiveBlackHole',
       aliases: ['Sgr A*', milkyWay.center.id],
     },
@@ -76,7 +76,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
       ({ id, name, kind, aliases = [] }): Entry => ({
         name,
         path: distantObjectPath(id),
-        kind: kind === 'quasar' ? 'details.quasar' : 'details.earlyGalaxy',
+        kind: kind === 'quasar' ? 'details.quasar' : kind === 'ring-galaxy' ? 'details.ringGalaxy' : 'details.earlyGalaxy',
         aliases: [id, ...aliases],
       }),
     ),
@@ -104,7 +104,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
       entries.push({
         name: { key: 'navigation.oortCloud', values: [] },
         context: system.name,
-        path: `${systemPath(galaxyId, system.id)}&view=oort`,
+        path: systemPath(galaxyId, system.id, undefined, 'oort'),
         kind: 'search.region',
         aliases: ['Oort'],
       });
@@ -113,7 +113,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
       entries.push({
         name: system.outerRegion.beltName,
         context: system.name,
-        path: `${systemPath(galaxyId, system.id)}&view=outer`,
+        path: systemPath(galaxyId, system.id, undefined, 'outer'),
         kind: 'search.region',
         aliases: [],
       });

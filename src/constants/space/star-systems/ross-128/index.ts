@@ -14,7 +14,7 @@ const star: Body = {
   tilt: 0,
   colors: ['#721c17', '#ed7549', '#ffab85'],
   mass: message('catalog.ross-128.ross-128-star.mass'),
-  stellar: { evolutionaryStage: message('catalog.stellar-stage.mainSequence'), spectralType: 'M4 V', temperatureK: 3192, luminosityWatts: 0.00362 * SOLAR_LUMINOSITY_W, emissionColor: '#ff663d' },
+  stellar: { evolutionaryStage: message('catalog.stellar-stage.mainSequence'), spectralType: 'M4 V', temperatureK: 3192, luminosityWatts: 0.00362 * SOLAR_LUMINOSITY_W, emissionColor: '#ff663d', photosphere: { seed: 103, granuleScale: 133, activeRegions: 0.20 } },
   sources: [ARCHIVE, DISCOVERY],
 };
 
@@ -34,6 +34,7 @@ export const ross128: StarSystem = {
       displayRadius: 0.025,
       tilt: 0,
       colors: ['#332821', '#967b64', '#d3b394'],
+      rockySurface: [271, 0.14, 0.62, 0.54],
       orbit: { axisAu: 0.0496, eccentricity: 0.116, inclination: 0, ascendingNode: 0, perihelionLongitude: 0, meanLongitude: 44, periodDays: 9.8658 },
       mass: message('catalog.ross-128.ross-128-b.mass'),
       note: message('catalog.ross-128.ross-128-b.note'),

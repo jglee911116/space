@@ -1,5 +1,8 @@
 import { message } from '@/i18n/messages';
 import type { FeaturedObject } from './types';
+import { webbNebulae } from './webb-nebulae';
+
+export const CRAB_NEBULA_WEBB_IMAGE = '/textures/galaxies/milky-way/objects/crab-nebula/webb.jpg';
 
 export const featuredObjects: readonly FeaturedObject[] = [
   {
@@ -123,7 +126,7 @@ export const featuredObjects: readonly FeaturedObject[] = [
     declination: 22.0145,
     extentLightYears: 6,
     color: '#70cddd',
-    observationImage: { file: '/textures/galaxies/milky-way/objects/crab-nebula/webb.jpg', shape: 'crab' },
+    observationImage: { file: CRAB_NEBULA_WEBB_IMAGE, shape: 'crab' },
     sources: [
       { label: 'NASA, ESA, CSA, STScI, T. Temim (Princeton University) · CC BY 4.0', href: 'https://esawebb.org/images/weic2326a/' },
       { label: message('catalog.featured-objects.crab-nebula.source.nasa-crab-nebula-observations'), href: 'https://science.nasa.gov/asset/hubble/crab-nebula-2/' },
@@ -149,6 +152,7 @@ export const featuredObjects: readonly FeaturedObject[] = [
     color: '#a4d8ff',
     sources: [
       { label: message('catalog.featured-objects.crab-pulsar.source.nasa-nicer-rotation-period'), href: 'https://heasarc.gsfc.nasa.gov/docs/nicer/science_nuggets/20200402.html' },
+      { label: message('catalog.featured-objects.crab-pulsar.source.webb-wisps'), href: 'https://science.nasa.gov/asset/webb/crab-nebula-nircam-and-miri-image/' },
       { label: message('catalog.featured-objects.crab-pulsar.source.crab-pulsar-emission-model-assumed-radius'), href: 'https://doi.org/10.1017/S002237781600043Xa' },
     ],
   },
@@ -251,6 +255,8 @@ export const featuredObjects: readonly FeaturedObject[] = [
         href: 'https://eventhorizontelescope.org/press-release-april-10-2019-astronomers-capture-first-image-black-hole',
       },
       { label: message('catalog.featured-objects.m87-star.source.nasa-hubble-m87-jet'), href: 'https://science.nasa.gov/asset/hubble/optical-jet-in-galaxy-m87/' },
+      { label: message('catalog.featured-objects.m87-star.source.vlba-helical-jet'), href: 'https://academic.oup.com/mnras/article/526/4/5949/7303302' },
+      { label: message('catalog.featured-objects.m87-star.source.jwst-counterjet'), href: 'https://doi.org/10.1051/0004-6361/202556577' },
     ],
   },
   {
@@ -320,4 +326,5 @@ export const featuredObjects: readonly FeaturedObject[] = [
       { label: message('catalog.featured-objects.orion-nebula.source.nasa-hubble-orion-nebula-and-trapezium'), href: 'https://science.nasa.gov/asset/hubble/orion-nebula/' },
     ],
   },
+  ...webbNebulae,
 ];

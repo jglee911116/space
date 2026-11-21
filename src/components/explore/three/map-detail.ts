@@ -1,4 +1,21 @@
-import type { Camera, Points, Vector3 } from 'three';
+import { MathUtils, type Camera, type OrthographicCamera, type PerspectiveCamera, type Points, type Vector3 } from 'three';
+
+export const PREVIEW_HIDDEN_PX = 5;
+export const PREVIEW_OPAQUE_PX = 18;
+
+export function projectedPreviewDiameter(diameter: number, depth: number, camera: PerspectiveCamera | OrthographicCamera, viewportHeight: number) {
+  if (depth <= camera.near || depth >= camera.far) return 0;
+  const perspectiveDepth = 'isPerspectiveCamera' in camera ? depth : 1;
+  return diameter * camera.projectionMatrix.elements[5] * viewportHeight / (2 * perspectiveDepth);
+}
+
+export function previewOpacity(pixels: number) {
+  return MathUtils.smoothstep(pixels, PREVIEW_HIDDEN_PX, PREVIEW_OPAQUE_PX);
+}
+
+export function previewVisibility(diameter: number, depth: number, camera: PerspectiveCamera | OrthographicCamera, viewportHeight: number) {
+  return previewOpacity(projectedPreviewDiameter(diameter, depth, camera, viewportHeight));
+}
 
 type Bounds = { left: number; right: number; top: number; bottom: number };
 

@@ -40,6 +40,7 @@ type Marker = {
   width: number;
   priority: number;
   labelOffset: number;
+  modelRadius?: number;
   wideLabelSpacing?: RefObject<number>;
   localOpacity?: RefObject<number>;
   guide?: RefObject<Object3D | null>;
@@ -84,7 +85,9 @@ export function GalacticLabelLayer({ children }: { children: ReactNode }) {
       if (depth <= camera.near || depth > camera.far) continue;
       projected.applyMatrix4(camera.projectionMatrix);
       const centerX = (projected.x + 1) * width * 0.5;
-      const offset = marker.labelOffset * (marker.wideLabelSpacing?.current ?? 1);
+      const baseOffset = marker.labelOffset * (marker.wideLabelSpacing?.current ?? 1);
+      const modelRadiusPx = marker.modelRadius ? marker.modelRadius * camera.projectionMatrix.elements[5] * height / (2 * depth) : 0;
+      const offset = modelRadiusPx > 14 ? Math.sign(baseOffset || 1) * Math.max(Math.abs(baseOffset), (modelRadiusPx + 16) / 30) : baseOffset;
       const centerY = (1 - projected.y) * height * 0.5 - offset * 30;
       bounds.left = centerX - marker.width * 0.25;
       bounds.right = centerX + marker.width * 0.25;
@@ -127,6 +130,7 @@ export function GalacticMarker({
   onHover,
   localOpacity,
   labelOffset = 0,
+  modelRadius,
   wideLabelSpacing,
   priority = 0,
   guide,
@@ -138,6 +142,7 @@ export function GalacticMarker({
   localOpacity?: RefObject<number>;
   guide?: RefObject<Object3D | null>;
   labelOffset?: number;
+  modelRadius?: number;
   wideLabelSpacing?: RefObject<number>;
   priority?: number;
 }) {
@@ -164,6 +169,7 @@ export function GalacticMarker({
       localOpacity,
       guide,
       labelOffset,
+      modelRadius,
       wideLabelSpacing,
       hovered: false,
       bounds: { left: 0, right: 0, top: 0, bottom: 0 },
@@ -184,7 +190,7 @@ export function GalacticMarker({
       material.map = null;
       texture?.dispose();
     };
-  }, [layer, label, color, priority, localOpacity, guide, labelOffset, wideLabelSpacing]);
+  }, [layer, label, color, priority, localOpacity, guide, labelOffset, modelRadius, wideLabelSpacing]);
 
   return (
     <sprite
@@ -194,7 +200,6 @@ export function GalacticMarker({
         if (this.visible) Sprite.prototype.raycast.call(this, raycaster, intersections);
       }}
       center={[0.5, 0.5]}
-      renderOrder={2}
       onPointerOver={(event) => {
         if (!sprite.current?.visible || !onHover || !registered.current) return;
         registered.current.hovered = true;
@@ -211,7 +216,7 @@ export function GalacticMarker({
         if (event.delta <= 4) onSelect();
       }}
     >
-      <spriteMaterial transparent depthTest={false} depthWrite={false} />
+      <spriteMaterial transparent depthWrite={false} />
     </sprite>
   );
 }

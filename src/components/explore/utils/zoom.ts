@@ -1,5 +1,5 @@
-import type { StarSystem } from '@/constants/space';
-import { AU_PER_KPC } from '@/constants/space/units';
+import type { FeaturedObject, StarSystem } from '@/constants/space';
+import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
 import { UNITS_PER_AU } from './orbit';
 
 export type ZoomScale = 'system' | 'outer' | 'distant' | 'oort';
@@ -50,7 +50,13 @@ export const GALACTIC_CENTER_ENTRY_KPC = 0.09;
 export const GALACTIC_CENTER_RETURN_KPC = 0.16;
 // The black-hole shader is a visual model, so its camera distance has no physical unit.
 export const BLACK_HOLE_EXIT_DISTANCE = 12;
-export const BLACK_HOLE_ENTRY_DISTANCE = 8;
+export const ACCRETION_MODEL_DIAMETER = 12;
+export const ACCRETION_MODEL_EINSTEIN_RADIUS = 1.57;
+export const ACCRETION_MODEL_EXIT_DISTANCE = 25;
+
+export function featuredOverviewDistanceKpc(object: FeaturedObject) {
+  return Math.max(0.018, (object.extentLightYears * 5 * KM_PER_LIGHT_YEAR) / (AU_PER_KPC * KM_PER_AU));
+}
 
 export const EXTERNAL_SYSTEM_ENTRY_KPC = 0.14;
 export const EXTERNAL_SYSTEM_RETURN_KPC = 0.25;

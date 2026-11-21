@@ -15,6 +15,23 @@ export const observableUniverse: ObservableUniverse = {
 
 export const distantObjects: readonly DistantObject[] = [
   {
+    id: 'cartwheel-galaxy',
+    kind: 'ring-galaxy',
+    observationStatus: 'observed',
+    name: message('catalog.observable-universe.cartwheel-galaxy.name'),
+    aliases: ['Cartwheel Galaxy', 'ESO 350-40', 'PGC 2248', '수레바퀴은하'],
+    redshift: 0.030187,
+    rightAscension: 9.44295,
+    declination: -33.71286,
+    color: '#ffc075',
+    observationImage: '/textures/galaxies/cartwheel-galaxy/webb.jpg',
+    summary: message('catalog.observable-universe.cartwheel-galaxy.summary'),
+    sources: [
+      { label: 'NASA, ESA, CSA, STScI · CC BY 4.0', href: 'https://esawebb.org/images/weic2211a/' },
+      { label: 'Hosseinzadeh et al. · JWST Cartwheel imaging and redshift', href: 'https://real.mtak.hu/174910/1/Hosseinzadeh_2023_ApJL_942_L18.pdf' },
+    ],
+  },
+  {
     id: '3c-273',
     kind: 'quasar',
     observationStatus: 'observed',

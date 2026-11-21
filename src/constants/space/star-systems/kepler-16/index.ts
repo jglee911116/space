@@ -4,6 +4,7 @@ import { SOLAR_RADIUS_KM, SOLAR_LUMINOSITY_W } from '../../units';
 
 const ARCHIVE = { label: 'NASA Exoplanet Archive · Kepler-16', href: 'https://exoplanetarchive.ipac.caltech.edu/overview/Kepler-16' };
 const DOYLE = { label: message('catalog.kepler-16.doyle.source.doyle-et-al-binary-and-planetary-orbits'), href: 'https://doi.org/10.1126/science.1210923' };
+const SECONDARY_MODEL = { label: 'Haghighipour & Kaltenegger · Kepler-16 B stellar model', href: 'https://doi.org/10.1088/0004-637X/777/2/166' };
 const SOURCES = [ARCHIVE, DOYLE];
 
 function orbit(companionMass: number, angle: number): OrbitElements {
@@ -43,6 +44,7 @@ export const kepler16: StarSystem = {
         temperatureK: 4450,
         luminosityWatts: 0.149 * SOLAR_LUMINOSITY_W,
         emissionColor: '#ffa85a',
+        photosphere: { seed: 151, granuleScale: 144, activeRegions: 0.42 },
       },
       sources: SOURCES,
     },
@@ -57,8 +59,16 @@ export const kepler16: StarSystem = {
       colors: ['#701b18', '#ff8a56', '#ff926b'],
       orbit: orbit(0.6897, 263.464),
       mass: message('catalog.kepler-16.kepler-16-secondary.mass'),
+      stellar: {
+        evolutionaryStage: message('catalog.stellar-stage.mainSequence'),
+        spectralType: 'M V',
+        temperatureK: 3311,
+        luminosityWatts: 0.0057 * SOLAR_LUMINOSITY_W,
+        emissionColor: '#ff704c',
+        photosphere: { seed: 157, granuleScale: 116, activeRegions: 0.33 },
+      },
       note: message('catalog.kepler-16.kepler-16-secondary.note'),
-      sources: SOURCES,
+      sources: [...SOURCES, SECONDARY_MODEL],
     },
     {
       id: 'kepler-16-b',
@@ -70,6 +80,7 @@ export const kepler16: StarSystem = {
       tilt: 0,
       colors: ['#453c3d', '#a29582', '#e3ccaa'],
       appearance: 'bands',
+      cloudBands: [37, 45, 1.6, 0.66],
       orbit: { axisAu: 0.7048, eccentricity: 0.0069, inclination: 0, ascendingNode: 0, perihelionLongitude: 318, meanLongitude: 120, periodDays: 228.776 },
       mass: message('catalog.kepler-16.kepler-16-b.mass'),
       note: message('catalog.kepler-16.kepler-16-b.note'),

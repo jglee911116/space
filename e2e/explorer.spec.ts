@@ -20,7 +20,16 @@ test('검색 결과와 언어 전환은 선택한 천체를 유지한다', async
   await page.goto(milkyWay);
   await search(page, 'PSR B0531+21', /게 펄서/);
   await expect(details(page).getByRole('heading', { name: '게 펄서' })).toBeVisible();
-  await page.getByRole('combobox', { name: '언어' }).selectOption('en');
+  const language = page.getByRole('button', { name: '언어 한국어' });
+  const choices = page.getByRole('group', { name: '언어', exact: true });
+  await language.focus();
+  await page.keyboard.press('Enter');
+  await expect(choices.getByRole('button', { name: '한국어' })).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');
+  await expect(choices).toBeHidden();
+  await expect(language).toBeFocused();
+  await language.click();
+  await choices.getByRole('button', { name: 'English' }).click();
   await expect(page).toHaveURL(/\/en\/galaxies\/milky-way\?view=object&target=crab-pulsar$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(details(page).getByRole('heading', { name: 'Crab Pulsar' })).toBeVisible();
@@ -167,6 +176,52 @@ test('세레스를 검색하고 Dawn 지도를 로드한다', async ({ page }) =
   await waitForRenderedMap(page);
 });
 
+test('새 Webb 천체 네 개를 검색하고 관측 텍스처와 3D 모형을 로드한다', async ({ page }) => {
+  const shaderErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) shaderErrors.push(message.text());
+  });
+  await page.goto(milkyWay);
+  for (const [id, query, name] of [
+    ['l1527-irs', 'LDN 1527', '원시별 L1527 IRS'],
+    ['hh-211', 'HH211', '헤르빅–아로 211'],
+    ['cassiopeia-a', 'CasA', '카시오페이아 A'],
+    ['ngc-3132', 'C74', '남쪽고리성운'],
+  ]) {
+    const image = page.waitForResponse((response) => response.url().endsWith(`/objects/${id}/webb.jpg`) && response.ok());
+    await search(page, query, new RegExp(name));
+    await image;
+    await expect(page).toHaveURL(new RegExp(`view=object&target=${id}$`));
+    await expect(details(page).getByRole('heading', { name, exact: true })).toBeVisible();
+    await waitForRenderedMap(page);
+  }
+  expect(shaderErrors).toEqual([]);
+});
+
+test('아펩, HH 30, 수레바퀴 은하를 검색해 각자의 Webb 3D 장면을 연다', async ({ page }) => {
+  const shaderErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) shaderErrors.push(message.text());
+  });
+
+  await page.goto(milkyWay);
+  for (const [id, query, name] of [
+    ['apep', 'Apep', '아펩'],
+    ['hh-30', 'HH30', '헤르빅–아로 30'],
+    ['cartwheel-galaxy', 'ESO 350-40', '수레바퀴 은하'],
+  ]) {
+    const image = page.waitForResponse((response) => response.url().endsWith(`/${id}/webb.jpg`) && response.ok());
+    await search(page, query, new RegExp(name));
+    await image;
+    const destination = id === 'cartwheel-galaxy' ? '/ko/universe?target=' : `${milkyWay}?view=object&target=`;
+    await expect(page).toHaveURL((url) => url.pathname + url.search === destination + id);
+    await expect(details(page).getByRole('heading', { name, exact: true })).toBeVisible();
+    await expect(page.locator('main canvas')).toBeVisible();
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  }
+  expect(shaderErrors).toEqual([]);
+});
+
 test('타이탄의 대기와 관측 지표를 전환한다', async ({ page }) => {
   await page.goto(`${milkyWay}?system=solar&target=titan`);
   await waitForRenderedMap(page);
@@ -203,4 +258,134 @@ test('궁수자리 A*에서 EHT 기본 영상과 편광 영상을 전환한다',
   await expect(details(page)).toContainText('2017년 전파 관측');
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   expect(shaderErrors).toEqual([]);
+});
+
+test('궁수자리 A* 편광 영상 로드 실패 후 다시 켜면 재시도한다', async ({ page }) => {
+  const polarizationPath = '**/sgr-a/eht-polarized-2024.jpg';
+  await page.route(polarizationPath, (route) => route.abort('failed'), { times: 1 });
+  await page.goto(`${milkyWay}?target=sgr-a`);
+
+  const toggle = details(page).getByRole('checkbox', { name: '편광 보기' });
+  const failed = page.waitForEvent('requestfailed', (request) => request.url().endsWith('/sgr-a/eht-polarized-2024.jpg'));
+  await toggle.check();
+  await failed;
+
+  await toggle.uncheck();
+  const loaded = page.waitForResponse((response) => response.url().endsWith('/sgr-a/eht-polarized-2024.jpg') && response.ok());
+  await toggle.check();
+  await loaded;
+});
+
+test('M87*와 퀘이사의 중력렌즈 장면을 렌더링한다', async ({ page }) => {
+  const shaderErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) {
+      shaderErrors.push(message.text());
+    }
+  });
+
+  for (const path of ['/ko/galaxies/m87?view=object&target=m87-star', '/ko/universe?target=3c-273']) {
+    await page.goto(path);
+    await expect(details(page)).toContainText('중력렌즈');
+    await expect(page.locator('main canvas')).toBeVisible();
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  }
+  expect(shaderErrors).toEqual([]);
+});
+
+test('궁수자리 A* 강착 흐름을 일시정지하고 다시 재생한다', async ({ page }) => {
+  const intensity = page.waitForResponse((response) => response.url().endsWith('/sgr-a/eht-2022.jpg') && response.ok());
+  await page.goto(`${milkyWay}?target=sgr-a`);
+  await intensity;
+  await expect(page.locator('main canvas')).toBeVisible();
+
+  const clip = { x: 500, y: 200, width: 400, height: 180 };
+  const frame = () => page.screenshot({ clip });
+  await page.getByRole('button', { name: '시뮬레이션 일시정지' }).click();
+  await expect(page.getByRole('button', { name: '시뮬레이션 재생' })).toBeVisible();
+  const pausedFrame = await frame();
+  expect((await frame()).equals(pausedFrame)).toBe(true);
+
+  await page.getByRole('button', { name: '시뮬레이션 재생' }).click();
+  await expect.poll(async () => (await frame()).equals(pausedFrame)).toBe(false);
+});
+
+test('M87* 강착원반과 제트가 은하 지도로 축소해도 재생된다', async ({ page }) => {
+  await page.goto('/ko/galaxies/m87?view=object&target=m87-star');
+  await expect(page.locator('main canvas')).toBeVisible();
+  await expect(page.getByText('이 화면은 고정된 관측 배치를 표시합니다.')).toBeHidden();
+  await page.getByRole('button', { name: '시뮬레이션 일시정지' }).click();
+  await expect(page.getByRole('button', { name: '시뮬레이션 재생' })).toBeVisible();
+
+  const clip = { x: 575, y: 397, width: 95, height: 86 };
+  const frame = () => page.screenshot({ clip });
+  const stableFrame = async (capture: () => Promise<Buffer>) => {
+    let previous = await capture();
+    await expect.poll(async () => {
+      const current = await capture();
+      const stable = current.equals(previous);
+      previous = current;
+      return stable;
+    }).toBe(true);
+    return previous;
+  };
+  const pausedFrame = await stableFrame(frame);
+
+  await page.getByRole('button', { name: '시뮬레이션 재생' }).click();
+  await expect.poll(async () => (await frame()).equals(pausedFrame)).toBe(false);
+
+  await page.getByRole('button', { name: '시뮬레이션 일시정지' }).click();
+  await page.mouse.move(720, 450);
+  await expect.poll(async () => {
+    await page.mouse.wheel(0, 560);
+    return new URL(page.url()).search;
+  }, { intervals: [120], timeout: 12_000 }).toBe('?focus=m87-star');
+  await waitForRenderedMap(page);
+  await expect(page.getByText('이 화면은 고정된 관측 배치를 표시합니다.')).toBeHidden();
+  const jetFrame = () => page.screenshot({ clip: { x: 714, y: 250, width: 105, height: 100 } });
+  const pausedDisk = await stableFrame(frame);
+  const pausedJet = await stableFrame(jetFrame);
+
+  await page.getByRole('button', { name: '시뮬레이션 재생' }).click();
+  await expect.poll(async () => (await frame()).equals(pausedDisk)).toBe(false);
+  await expect.poll(async () => (await jetFrame()).equals(pausedJet)).toBe(false);
+});
+
+test('커서가 화면 중심에서 벗어나도 궁수자리 A*를 축소한 뒤 다시 확대한다', async ({ page }) => {
+  await page.goto(`${milkyWay}?target=sgr-a`);
+  await expect(details(page)).toContainText('편광 보기');
+  await expect(page.locator('main canvas')).toBeVisible();
+  await page.mouse.move(300, 260);
+
+  await expect.poll(async () => {
+    await page.mouse.wheel(0, 500);
+    return details(page).getByText('편광 보기').isVisible();
+  }).toBe(false);
+  await expect(page).toHaveURL(/target=sgr-a$/);
+  await expect(page.locator('main canvas')).toBeVisible();
+
+  await expect.poll(async () => {
+    await page.mouse.wheel(0, -500);
+    return details(page).getByText('편광 보기').isVisible();
+  }).toBe(true);
+});
+
+test('성운과 외부 은하의 블랙홀을 축소해도 은하 지도에서 같은 천체에 초점을 둔다', async ({ page }) => {
+  for (const [galaxy, id] of [[milkyWay, 'orion-nebula'], ['/ko/galaxies/m87', 'm87-star']]) {
+    const objectUrl = `${galaxy}?view=object&target=${id}`;
+    await page.goto(objectUrl);
+    await expect(page.locator('main canvas')).toBeVisible();
+    await page.mouse.move(720, 450);
+
+    await expect.poll(async () => {
+      await page.mouse.wheel(0, 560);
+      return new URL(page.url()).search;
+    }, { intervals: [120], timeout: 12_000 }).toBe(`?focus=${id}`);
+    await waitForRenderedMap(page);
+
+    await expect.poll(async () => {
+      await page.mouse.wheel(0, -560);
+      return new URL(page.url()).search;
+    }, { intervals: [120], timeout: 12_000 }).toBe(`?view=object&target=${id}`);
+  }
 });

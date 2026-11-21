@@ -1,6 +1,8 @@
-import { useMemo } from 'react';
-import { AdditiveBlending, BackSide, Color, Vector2, type Texture } from 'three';
+import { useFrame } from '@react-three/fiber';
+import { useMemo, useRef } from 'react';
+import { AdditiveBlending, BackSide, Color, Vector2, Vector3, type Mesh, type ShaderMaterial, type Texture } from 'three';
 import type { Galaxy } from '@/constants/space';
+import { previewVisibility } from './map-detail';
 
 const vertex = /* glsl */ `
   varying vec3 boxPoint;
@@ -25,6 +27,7 @@ const fragment = /* glsl */ `
   uniform float pitch;
   uniform int shape;
   uniform bool barred;
+  uniform float visibility;
 
   void main() {
     vec3 ray = normalize(boxPoint - eye);
@@ -76,13 +79,16 @@ const fragment = /* glsl */ `
     }
     vec3 coreColor = mix(tint, vec3(1.0, 0.77, 0.49), 0.65);
     float alpha = disk * 0.65 + core * 0.48;
-    gl_FragColor = vec4((diskColor * disk * 0.65 + coreColor * core * 0.48) / max(alpha, 0.001), min(alpha, 0.83));
+    gl_FragColor = vec4((diskColor * disk * 0.65 + coreColor * core * 0.48) / max(alpha, 0.001), min(alpha, 0.83) * visibility);
     #include <colorspace_fragment>
   }
 `;
 
 export function GalaxyPreview({ galaxy, texture }: { galaxy: Galaxy; texture?: Texture }) {
   const { diskObservation, morphology, modelRadiusKpc } = galaxy;
+  const mesh = useRef<Mesh>(null);
+  const material = useRef<ShaderMaterial>(null);
+  const position = useMemo(() => new Vector3(), []);
   const uniforms = useMemo(() => {
     const rotation = diskObservation?.rotation ?? 0;
     const shape = morphology?.includes('elliptical') ? 2 : morphology?.includes('irregular') ? 1 : 0;
@@ -96,13 +102,22 @@ export function GalaxyPreview({ galaxy, texture }: { galaxy: Galaxy; texture?: T
       pitch: { value: morphology === 'open-spiral' ? 1.65 : 2.5 },
       shape: { value: shape },
       barred: { value: morphology === 'barred-spiral' },
+      visibility: { value: 0 },
     };
   }, [diskObservation, galaxy.color, morphology, texture]);
 
+  useFrame(({ camera, size }) => {
+    if (!mesh.current || !material.current) return;
+    mesh.current.getWorldPosition(position).applyMatrix4(camera.matrixWorldInverse);
+    const visibility = previewVisibility(modelRadiusKpc * 2, -position.z, camera, size.height);
+    mesh.current.visible = visibility > 0;
+    material.current.uniforms.visibility.value = visibility;
+  });
+
   return (
-    <mesh scale={modelRadiusKpc} raycast={() => {}}>
+    <mesh ref={mesh} scale={modelRadiusKpc} raycast={() => {}}>
       <boxGeometry args={[2, 1.68, 2]} />
-      <shaderMaterial uniforms={uniforms} vertexShader={vertex} fragmentShader={fragment} side={BackSide} transparent depthWrite={false} blending={AdditiveBlending} />
+      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={vertex} fragmentShader={fragment} side={BackSide} transparent depthWrite={false} blending={AdditiveBlending} />
     </mesh>
   );
 }

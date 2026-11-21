@@ -54,6 +54,8 @@ export type Body = {
   surfaceMap?: { file: string; longitudeOffset?: number; fillMissing?: boolean };
   surfaceFeatures?: 'jupiter' | 'saturn' | 'mars' | 'neptune' | 'io' | 'europa';
   polarCaps?: boolean;
+  rockySurface?: readonly [seed: number, brightDeposits: number, contrast: number, craters: number];
+  cloudBands?: readonly [seed: number, frequency: number, turbulence: number, contrast: number];
   /** 카메라 초점 거리 = displayRadius × focusScale (기본 6.75). */
   focusScale?: number;
   mass?: CatalogText;
@@ -64,7 +66,14 @@ export type Body = {
     temperatureK: number;
     luminosityWatts: number;
     emissionColor: string;
+    glowStrength?: number;
     poleSpinDays?: number;
+    photosphere?: {
+      seed: number;
+      granuleScale: number; // Zero selects a smooth photosphere.
+      activeRegions: number;
+      flarePreview?: boolean;
+    };
   };
   /** 은하 장면의 기준 항성 공전. color 는 궤도선·범례 색. */
   galacticOrbit?: { radiusKpc: number; periodYears: number; color: string };
@@ -159,6 +168,7 @@ export type FeaturedObject = {
     | 'supernova-remnant'
     | 'ring-remnant'
     | 'star-forming-region'
+    | 'wind-binary'
     | 'open-cluster'
     | 'globular-cluster'
     | 'planetary-nebula'
@@ -177,7 +187,7 @@ export type FeaturedObject = {
   radiusKm?: number;
   spinSeconds?: number;
   variabilityDays?: number;
-  observationImage?: { file: string; shape: 'crab' | 'ring' | 'pillars' | 'ejecta' | 'nursery' };
+  observationImage?: { file: string; shape: 'crab' | 'ring' | 'pillars' | 'ejecta' | 'nursery' | 'hourglass' | 'bipolar-jet' | 'shocked-shell' | 'southern-ring' | 'dust-spiral' | 'edge-on-disk' };
   photosphere?: { dark: string; bright: string; cellScale: number };
   expansionPerYear?: number;
   blackHoleMassSolar?: number;
@@ -228,4 +238,8 @@ type DistantObjectFields = {
   sources: readonly Source[];
 };
 
-export type DistantObject = DistantObjectFields & ({ kind: 'quasar'; visibleJet: boolean; blackHoleMassSolar?: number } | { kind: 'early-galaxy'; ultravioletHalfLightRadiusParsecs: number });
+export type DistantObject = DistantObjectFields & (
+  | { kind: 'quasar'; visibleJet: boolean; blackHoleMassSolar?: number }
+  | { kind: 'early-galaxy'; ultravioletHalfLightRadiusParsecs: number }
+  | { kind: 'ring-galaxy'; observationImage: string }
+);

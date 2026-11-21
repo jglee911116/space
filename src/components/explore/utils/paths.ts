@@ -2,12 +2,47 @@
 export const HOME_PATH = '/';
 export const LOCAL_GROUP_PATH = '/local-group';
 
+type ExplorerQuery = Partial<Record<'system' | 'target' | 'view' | 'focus' | 'galaxy' | 'cluster', string | null>>;
+
+export function readExplorerQuery(params: Pick<URLSearchParams, 'get'>) {
+  return {
+    system: params.get('system'),
+    target: params.get('target'),
+    view: params.get('view'),
+    focus: params.get('focus'),
+    galaxy: params.get('galaxy'),
+    cluster: params.get('cluster'),
+  };
+}
+
+function setExplorerQuery(params: URLSearchParams, query: ExplorerQuery) {
+  for (const [key, value] of Object.entries(query)) {
+    if (value) params.set(key, value);
+    else params.delete(key);
+  }
+}
+
+function withQuery(path: string, query: ExplorerQuery) {
+  const params = new URLSearchParams();
+  setExplorerQuery(params, query);
+  return params.size ? `${path}?${params}` : path;
+}
+
+export function updateSystemLocation(url: URL, pathname: string, system: string | null, target: string | null, view: string | null) {
+  const current = readExplorerQuery(url.searchParams);
+  if (url.pathname === pathname && current.system === system && current.target === target && current.view === view) return false;
+
+  url.pathname = pathname;
+  setExplorerQuery(url.searchParams, { focus: null, system, target, view });
+  return true;
+}
+
 export function galaxyPath(id: string) {
   return `/galaxies/${id}`;
 }
 
 export function localGroupPath(focusGalaxyId: string) {
-  return `${LOCAL_GROUP_PATH}?galaxy=${focusGalaxyId}`;
+  return withQuery(LOCAL_GROUP_PATH, { galaxy: focusGalaxyId });
 }
 
 export const UNIVERSE_PATH = '/universe';
@@ -16,20 +51,26 @@ export function superclusterPath(id: string) {
   return `/superclusters/${id}`;
 }
 
-export function systemPath(galaxyId: string, systemId: string, target?: string) {
-  const query = new URLSearchParams({ system: systemId });
-  if (target) query.set('target', target);
-  return `${galaxyPath(galaxyId)}?${query}`;
+export function systemPath(galaxyId: string, system?: string, target?: string, view?: 'oort' | 'outer') {
+  return withQuery(galaxyPath(galaxyId), { system, target, view });
+}
+
+export function galaxyFocusPath(galaxyId: string, focus: string) {
+  return withQuery(galaxyPath(galaxyId), { focus });
 }
 
 export function featuredObjectPath(galaxyId: string, id: string) {
-  return `${galaxyPath(galaxyId)}?view=object&target=${encodeURIComponent(id)}`;
+  return withQuery(galaxyPath(galaxyId), { view: 'object', target: id });
 }
 
 export function distantObjectPath(id: string) {
-  return `${UNIVERSE_PATH}?target=${encodeURIComponent(id)}`;
+  return withQuery(UNIVERSE_PATH, { target: id });
+}
+
+export function universeFocusPath(focus: string) {
+  return withQuery(UNIVERSE_PATH, { focus });
 }
 
 export function associationPath(regionId: string, associationId: string) {
-  return `${superclusterPath(regionId)}?view=cluster&cluster=${encodeURIComponent(associationId)}`;
+  return withQuery(superclusterPath(regionId), { view: 'cluster', cluster: associationId });
 }

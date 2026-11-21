@@ -7,6 +7,7 @@ const BINARY_ORBIT = { label: message('catalog.alpha-centauri.binary-orbit.sourc
 const SPECTRA = { label: message('catalog.alpha-centauri.spectra.source.kervella-et-al-spectral-types-and-stellar'), href: 'https://doi.org/10.1051/0004-6361/201629505' };
 const WIDE_ORBIT = { label: message('catalog.alpha-centauri.wide-orbit.source.kervella-et-al-proxima-orbit'), href: 'https://doi.org/10.1051/0004-6361/201629930' };
 const PROXIMA_PROPERTIES = { label: message('catalog.alpha-centauri.proxima-properties.source.ribas-et-al-proxima-radiation'), href: 'https://doi.org/10.1051/0004-6361/201730582' };
+const PROXIMA_FLARES = { label: 'MacGregor et al. · Proxima Centauri flare', href: 'https://doi.org/10.3847/2041-8213/abf14c' };
 const PLANET_ARCHIVE = { label: message('catalog.alpha-centauri.planet-archive.source.nasa-exoplanet-archive-alpha-centauri'), href: 'https://exoplanetarchive.ipac.caltech.edu/overview/alf%20Cen' };
 
 const MASS_A = 1.0788;
@@ -45,10 +46,10 @@ const bodies: readonly Body[] = [
     radiusKm: Math.round(1.2175 * SOLAR_RADIUS_KM),
     tilt: 0,
     displayRadius: 1.2175,
-    colors: ['#a34815', '#ffcf87', '#ffe7ad'],
+    colors: ['#c77c3c', '#fff1d6', '#fff2d8'],
     orbit: binaryOrbit(MASS_B, 231.519 + 180),
     mass: message('catalog.alpha-centauri.alpha-centauri-a.mass'),
-    stellar: { evolutionaryStage: message('catalog.stellar-stage.mainSequence'), spectralType: 'G2 V', temperatureK: 5795, luminosityWatts: 1.521 * SOLAR_LUMINOSITY_W, emissionColor: '#ffbc73' },
+    stellar: { evolutionaryStage: message('catalog.stellar-stage.mainSequence'), spectralType: 'G2 V', temperatureK: 5795, luminosityWatts: 1.521 * SOLAR_LUMINOSITY_W, emissionColor: '#ffddac', photosphere: { seed: 13, granuleScale: 138, activeRegions: 0.24 } },
     note: message('catalog.alpha-centauri.alpha-centauri-a.note'),
     sources: [NASA, BINARY_ORBIT, SPECTRA],
   },
@@ -60,10 +61,10 @@ const bodies: readonly Body[] = [
     radiusKm: Math.round(0.8591 * SOLAR_RADIUS_KM),
     tilt: 0,
     displayRadius: 0.8591,
-    colors: ['#96240a', '#ff923b', '#ffc176'],
+    colors: ['#a35327', '#ffce91', '#ffdaa3'],
     orbit: binaryOrbit(MASS_A, 231.519),
     mass: message('catalog.alpha-centauri.alpha-centauri-b.mass'),
-    stellar: { evolutionaryStage: message('catalog.stellar-stage.mainSequence'), spectralType: 'K1 V', temperatureK: 5231, luminosityWatts: 0.503 * SOLAR_LUMINOSITY_W, emissionColor: '#ff983e' },
+    stellar: { evolutionaryStage: message('catalog.stellar-stage.mainSequence'), spectralType: 'K1 V', temperatureK: 5231, luminosityWatts: 0.503 * SOLAR_LUMINOSITY_W, emissionColor: '#ffaf64', photosphere: { seed: 31, granuleScale: 170, activeRegions: 0.38 } },
     note: message('catalog.alpha-centauri.alpha-centauri-b.note'),
     sources: [NASA, BINARY_ORBIT, SPECTRA],
   },
@@ -75,12 +76,12 @@ const bodies: readonly Body[] = [
     radiusKm: Math.round(0.146 * SOLAR_RADIUS_KM),
     tilt: 0,
     displayRadius: 0.146,
-    colors: ['#650d10', '#e54b28', '#ff8254'],
+    colors: ['#631810', '#ff985f', '#ff9c68'],
     orbit: stellarOrbit(8700, 0.5, 107.6, 126, 72.3, 547_000, 2000 + 283_000),
     mass: message('catalog.alpha-centauri.proxima-centauri.mass'),
-    stellar: { evolutionaryStage: message('catalog.stellar-stage.mainSequence'), spectralType: 'M5.5 V', temperatureK: 2980, luminosityWatts: 5.8e23, emissionColor: '#ff5836' },
+    stellar: { evolutionaryStage: message('catalog.stellar-stage.mainSequence'), spectralType: 'M5.5 V', temperatureK: 2980, luminosityWatts: 5.8e23, emissionColor: '#ff5836', photosphere: { seed: 57, granuleScale: 105, activeRegions: 0.86, flarePreview: true } },
     note: message('catalog.alpha-centauri.proxima-centauri.note'),
-    sources: [NASA, WIDE_ORBIT, PROXIMA_PROPERTIES, SPECTRA],
+    sources: [NASA, WIDE_ORBIT, PROXIMA_PROPERTIES, SPECTRA, PROXIMA_FLARES],
   },
   {
     id: 'proxima-b',
@@ -90,6 +91,7 @@ const bodies: readonly Body[] = [
     tilt: 0,
     displayRadius: 0.04,
     colors: ['#302624', '#99705b', '#dfb393'],
+    rockySurface: [139, 0.19, 0.82, 0.55],
     orbit: planetOrbit(0.04856, 11.2, 48),
     mass: message('catalog.alpha-centauri.proxima-b.mass'),
     note: planetNote,
@@ -102,7 +104,8 @@ const bodies: readonly Body[] = [
     parent: 'proxima-centauri',
     tilt: 0,
     displayRadius: 0.026,
-    colors: ['#382625', '#8f594a', '#d89471'],
+    colors: ['#292529', '#726363', '#b6a69c'],
+    rockySurface: [173, 0.05, 0.90, 0.86],
     orbit: planetOrbit(0.02881, 5.12, 220),
     mass: message('catalog.alpha-centauri.proxima-d.mass'),
     note: planetNote,

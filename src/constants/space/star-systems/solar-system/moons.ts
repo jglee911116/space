@@ -173,6 +173,8 @@ export const moons: Body[] = [
       appearance: 'craters',
       colors: ['#32343d', '#656976', '#9195a4'],
       shape: [1.08, 0.9, 1.03],
+      note: message('catalog.moons.proteus.surface'),
+      sources: [{ label: 'NASA · Proteus', href: 'https://science.nasa.gov/neptune/moons/proteus/' }],
     },
     [117700, 0.001, 357.2, 297.4, 0.6, 355.5, 1.1229],
     equator,

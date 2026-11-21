@@ -22,14 +22,18 @@ export function withSolarSurfaceMap(body: Body): Body {
   if (id === 'moon') {
     return { ...body, surfaceMap: { file: `${textureRoot}/moon/moon-lroc.jpg` }, sources: [...sources, { label: 'NASA SVS / LROC · Ernie Wright', href: 'https://svs.gsfc.nasa.gov/4720/' }] };
   }
-  if (id === 'pluto') {
-    return { ...body, surfaceMap: { file: `${textureRoot}/pluto/pluto-new-horizons.jpg`, fillMissing: true }, sources: [...sources, { label: 'NASA/JHUAPL/SwRI · New Horizons', href: 'https://science.nasa.gov/resource/pluto-global-color-map/' }] };
-  }
-  if (id === 'charon') {
-    return { ...body, surfaceMap: { file: `${textureRoot}/charon/charon-new-horizons.jpg`, fillMissing: true }, sources: [...sources, {
-      label: 'NASA/JHUAPL/SwRI/USGS · New Horizons',
-      href: 'https://astrogeology.usgs.gov/search/map/charon_new_horizons_lorri_mvic_global_mosaic_300m',
-    }] };
+  if (id === 'pluto' || id === 'charon') {
+    const mosaic = {
+      label: 'NASA/JHUAPL/SwRI/USGS · New Horizons 300 m mosaic',
+      href: `https://astrogeology.usgs.gov/search/map/${id}_new_horizons_lorri_mvic_global_mosaic_300m`,
+    };
+    const colorMap = { label: 'NASA/JHUAPL/SwRI · Pluto color map', href: 'https://science.nasa.gov/resource/pluto-global-color-map/' };
+    return {
+      ...body,
+      note: message('catalog.trans-neptunian.new-horizons.surface'),
+      surfaceMap: { file: `${textureRoot}/${id}/${id}-new-horizons.jpg` },
+      sources: [...sources, mosaic, ...(id === 'pluto' ? [colorMap] : [])],
+    };
   }
   if (id === 'phobos' || id === 'deimos' || id === 'arrokoth') {
     const href = id === 'arrokoth'

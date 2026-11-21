@@ -9,6 +9,7 @@ import { featuredObjects, type FeaturedObject } from '@/constants/space';
 import { DAYS_PER_YEAR, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
 import styles from '../explore.module.scss';
 import { AccretionModel } from '../three/accretion-model';
+import { CrabPulsarWind } from '../three/crab-pulsar-wind';
 import { CanvasBoundary } from '../three/canvas-boundary';
 import { surfaceVertex, supergiantFragment } from '../three/shaders';
 import { NebulaVolume } from '../three/nebula-volume';
@@ -225,10 +226,12 @@ function childObject(object: FeaturedObject) {
   return featuredObjects.find(({ parentObjectId }) => parentObjectId === object.id);
 }
 
-function Scene({ object, reportDistance, simulationDaysRef, onLeave, placeChildButton }: Props & { placeChildButton: PlaceChildButton }) {
+function Scene({ object, reportDistance, simulationDaysRef, paused, daysPerSecond, onLeave, placeChildButton }: Props & { placeChildButton: PlaceChildButton }) {
   const center = useMemo(() => new Vector3(), []);
   const scale = object.kind === 'pillars' || object.kind === 'supernova-remnant' ? 1 : object.extentLightYears / 6;
+  const backgroundScale = Math.max(1, scale);
   const image = object.observationImage;
+  const southernRing = image?.shape === 'southern-ring';
   const texture = useSurfaceMap(image?.file);
   const uniforms = useMemo(() => ({ particleScale: { value: scale }, expansion: { value: 0 }, particleOpacity: { value: texture ? 0.29 : 1 } }), [scale, texture]);
   const particles = useMemo(() => nebulaParticles(object), [object]);
@@ -248,9 +251,9 @@ function Scene({ object, reportDistance, simulationDaysRef, onLeave, placeChildB
   });
   return (
     <>
-      <Stars radius={46 * scale} depth={23 * scale} count={1800} factor={3} saturation={0} fade speed={0} />
-      {texture && image && <NebulaVolume texture={texture} radius={object.extentLightYears * (image.shape === 'crab' ? 0.71 : 0.61)} shape={image.shape} />}
-      <points scale={scale} visible={!texture || image?.shape === 'crab' || image?.shape === 'ejecta'}>
+      <Stars radius={46 * backgroundScale} depth={23 * backgroundScale} count={1800} factor={3} saturation={0} fade speed={0} />
+      {image && <NebulaVolume texture={texture} radius={object.extentLightYears * (image.shape === 'crab' ? 0.71 : 0.61)} shape={image.shape} paused={paused} daysPerSecond={daysPerSecond} />}
+      <points scale={scale} visible={!image || image.shape === 'crab' || image.shape === 'ejecta'}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[particles.positions, 3]} />
           <bufferAttribute attach="attributes-color" args={[particles.colors, 3]} />
@@ -268,7 +271,25 @@ function Scene({ object, reportDistance, simulationDaysRef, onLeave, placeChildB
           <StellarGlow radius={scale * 0.024} color="#c1ddff" />
         </group>
       ))}
-      {(object.kind === 'supernova-remnant' || object.kind === 'planetary-nebula') && (
+      {southernRing && (
+        <>
+          <group position={[scale * 0.14, scale * 0.07, -scale * 0.06]}>
+            <mesh>
+              <sphereGeometry args={[scale * 0.054, 16, 12]} />
+              <meshBasicMaterial color="#fff7dd" />
+            </mesh>
+            <StellarGlow radius={scale * 0.054} color="#ffe5b3" />
+          </group>
+          <group position={[-scale * 0.18, -scale * 0.05, scale * 0.08]}>
+            <mesh>
+              <sphereGeometry args={[scale * 0.034, 16, 12]} />
+              <meshBasicMaterial color="#e1efff" />
+            </mesh>
+            <StellarGlow radius={scale * 0.062} color="#fca876" strength={0.68} />
+          </group>
+        </>
+      )}
+      {(image?.shape === 'crab' || image?.shape === 'ejecta' || (!southernRing && object.kind === 'planetary-nebula')) && (
         <>
           <mesh>
             <sphereGeometry args={[object.kind === 'planetary-nebula' ? scale * 0.047 : 0.036, 16, 12]} />
@@ -279,7 +300,6 @@ function Scene({ object, reportDistance, simulationDaysRef, onLeave, placeChildB
       )}
       <OrbitControls
         ref={controls}
-        zoomToCursor
         enablePan={false}
         minDistance={object.extentLightYears * 0.23}
         maxDistance={limit * 1.2}
@@ -288,8 +308,10 @@ function Scene({ object, reportDistance, simulationDaysRef, onLeave, placeChildB
           start.current = controls.current?.getDistance() ?? 0;
         }}
         onEnd={() => {
-          const distance = controls.current?.getDistance() ?? 0;
-          if (distance >= limit && distance > start.current) onLeave();
+          const orbit = controls.current;
+          if (!orbit) return;
+          const distance = orbit.getDistance();
+          if (distance >= limit && distance > start.current) onLeave(orbit.object.position.clone().sub(orbit.target).normalize().toArray());
         }}
       />
     </>
@@ -300,10 +322,11 @@ type Props = {
   object: FeaturedObject;
   reportDistance: ReportDistanceScale;
   simulationDaysRef: RefObject<number>;
+  m87PlaybackTime: RefObject<number>;
   daysPerSecond: number;
   paused: boolean;
   onSelectObject: (id: string) => void;
-  onLeave: () => void;
+  onLeave: (direction: [number, number, number]) => void;
 };
 
 function MagnetarField({ color }: { color: string }) {
@@ -334,6 +357,7 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
   const surface = useRef<ShaderMaterial>(null);
   const brightness = useRef(1);
   const { photosphere } = object;
+  const crabPulsar = object.id === 'crab-pulsar';
   const surfaceUniforms = useMemo(
     () =>
       photosphere && {
@@ -360,12 +384,18 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
   return (
     <>
       <Stars radius={46} depth={23} count={1500} factor={3} saturation={0} fade speed={0} />
-      <mesh>
-        <sphereGeometry args={[1, 64, 40]} />
-        {surfaceUniforms ? <shaderMaterial ref={surface} uniforms={surfaceUniforms} vertexShader={surfaceVertex} fragmentShader={supergiantFragment} /> : <meshBasicMaterial color={object.color} />}
-      </mesh>
-      <StellarGlow radius={1} color={object.color} strength={photosphere ? 1.15 : 0.65} brightness={brightness} paused={paused || !photosphere} />
-      {spinPeriod && (
+      {crabPulsar ? (
+        <CrabPulsarWind paused={paused} daysPerSecond={daysPerSecond} />
+      ) : (
+        <>
+          <mesh>
+            <sphereGeometry args={[1, 64, 40]} />
+            {surfaceUniforms ? <shaderMaterial ref={surface} uniforms={surfaceUniforms} vertexShader={surfaceVertex} fragmentShader={supergiantFragment} /> : <meshBasicMaterial color={object.color} />}
+          </mesh>
+          <StellarGlow radius={1} color={object.color} strength={photosphere ? 1.15 : 0.65} brightness={brightness} paused={paused || !photosphere} />
+        </>
+      )}
+      {spinPeriod && !crabPulsar && (
         <>
           <group ref={beams}>
             <group rotation-z={tilt}>
@@ -390,7 +420,6 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
       )}
       <OrbitControls
         ref={controls}
-        zoomToCursor
         enablePan={false}
         minDistance={2.5}
         maxDistance={16}
@@ -398,8 +427,10 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
           start.current = controls.current?.getDistance() ?? 0;
         }}
         onEnd={() => {
-          const distance = controls.current?.getDistance() ?? 0;
-          if (distance >= 13 && distance > start.current) onLeave();
+          const orbit = controls.current;
+          if (!orbit) return;
+          const distance = orbit.getDistance();
+          if (distance >= 13 && distance > start.current) onLeave(orbit.object.position.clone().sub(orbit.target).normalize().toArray());
         }}
       />
     </>
@@ -411,7 +442,7 @@ export default function FeaturedObjectScene(props: Props) {
   const { object } = props;
   const blackHole = object.kind === 'black-hole';
   const stellar = object.kind === 'pulsar' || object.kind === 'neutron-star' || object.kind === 'magnetar' || object.kind === 'supergiant';
-  const distance = object.extentLightYears * 1.75;
+  const distance = object.extentLightYears * (object.observationImage?.shape === 'hourglass' ? 2.15 : 1.75);
   // drei <Html> 은 React 19 StrictMode 에서 내부 root 가 언마운트돼 비므로, 캔버스 밖 DOM 버튼을 매 프레임 투영 위치로 옮긴다.
   const childButton = useRef<HTMLButtonElement>(null);
   const child = blackHole || stellar ? undefined : childObject(object);
@@ -425,16 +456,20 @@ export default function FeaturedObjectScene(props: Props) {
     <CanvasBoundary>
       <Canvas
         camera={{
-          position: blackHole ? [5, 5.6, 13] : stellar ? [0, 1.5, object.photosphere ? 5.7 : 8] : [distance * 0.023, distance * 0.063, distance],
+          position: blackHole ? [5, 5.6, 13] : object.id === 'crab-pulsar' ? [0, 4.5, 8] : stellar ? [0, 1.5, object.photosphere ? 5.7 : 8] : [distance * 0.023, distance * 0.063, distance],
           fov: 45,
-          near: 0.05,
+          near: stellar || blackHole ? 0.05 : Math.min(0.05, object.extentLightYears * 0.015),
           far: Math.max(170, object.extentLightYears * 32),
         }}
         dpr={[1, 1.5]}
         aria-label={t('canvas.namedObjectModel', [catalogText(object.name)])}
       >
         {blackHole ? (
-          <AccretionModel object={{ color: object.color, visibleJet: true }} onExit={props.onLeave} />
+          <AccretionModel
+            object={{ color: object.color, visibleJet: true }}
+            onExit={props.onLeave}
+            helicalJetTime={object.id === 'm87-star' ? props.m87PlaybackTime : undefined}
+          />
         ) : stellar ? (
           <StellarModel {...props} />
         ) : (

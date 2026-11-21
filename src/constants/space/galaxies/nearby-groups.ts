@@ -30,7 +30,7 @@ export const m81Members = [
     skyPosition: { rightAscension: 148.96846, declination: 69.6797 },
     modelRadiusKpc: 8,
     morphology: 'barred-irregular',
-    diskTilt: 0.25,
+    diskTilt: -0.36,
     color: '#f5aa85',
     sources: [{ label: 'NASA Hubble · M82', href: 'https://science.nasa.gov/asset/hubble/disk-of-m82/' }, m81Study],
   },

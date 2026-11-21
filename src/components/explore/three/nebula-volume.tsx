@@ -1,13 +1,22 @@
-import { useMemo } from 'react';
-import { BackSide, type Texture } from 'three';
+import { useFrame } from '@react-three/fiber';
+import { useMemo, useRef } from 'react';
+import { BackSide, Vector3, type Mesh, type ShaderMaterial, type Texture } from 'three';
+import { previewVisibility } from './map-detail';
+import { REALTIME_DAYS_PER_SECOND } from '../utils/orbit';
+import { apepDustDensity, bipolarJetDensity, cartwheelDensity, edgeOnDiskDensity, hourglassDensity, shockedShellDensity, southernRingDensity } from './webb-nebula-density';
 import { spatialNoise } from './shaders';
 
 const vertex = /* glsl */ `
   varying vec3 boxPoint;
+  varying vec3 localEye;
+  varying float viewZ;
 
   void main() {
     boxPoint = position;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    localEye = (inverse(modelMatrix) * vec4(cameraPosition, 1.0)).xyz;
+    vec4 view = modelViewMatrix * vec4(position, 1.0);
+    viewZ = view.z;
+    gl_Position = projectionMatrix * view;
   }
 `;
 
@@ -21,7 +30,7 @@ const crabDensity = /* glsl */ `
     float mass = noise(p * 4.4 + vec3(2.0, -3.0, 7.0));
     vec3 warp = p + 0.12 * vec3(mass - 0.5, sin(p.z * 5.0 + p.x * 3.0), cos(p.y * 5.0 - p.x * 4.0));
     vec2 uv = 0.5 + vec2(warp.x + warp.z * 0.23, warp.y - warp.z * 0.13) * 0.46;
-    vec3 mapped = texture2D(observation, clamp(uv, 0.002, 0.998)).rgb;
+    vec3 mapped = observe(uv, 0.0, vec3(0.15, 0.27, 0.43));
     float brightness = dot(mapped, vec3(0.2126, 0.7152, 0.0722));
     float shellDistance = shape - 0.70 - 0.16 * (mass - 0.5);
     float shell = exp(-18.0 * shellDistance * shellDistance);
@@ -51,7 +60,7 @@ const ringDensity = /* glsl */ `
     float halo = 0.23 * exp(-118.0 * outer * outer) * (1.0 - smoothstep(0.19, 0.53, axial));
     float inner = 1.0 - smoothstep(0.38, 1.0, length(q / vec3(0.31, 0.28, 0.78)));
     vec2 uv = 0.5 + (p.xy + vec2(q.z * 0.14, -q.z * 0.11) + 0.07 * vec2(knots - 0.5, noise(q * 9.0) - 0.5)) * 0.48;
-    vec3 image = texture2D(observation, clamp(uv, 0.002, 0.998), 1.6).rgb;
+    vec3 image = observe(uv, 1.6, vec3(0.09, 0.31, 0.42));
     float detail = noise(q * 27.0);
     vec3 base = mix(vec3(0.023, 0.43, 0.52), vec3(0.85, 0.31, 0.18), smoothstep(-0.02, 0.16, surface));
     vec3 color = mix(base, image * 1.35, 0.44);
@@ -80,10 +89,11 @@ const pillarsDensity = /* glsl */ `
     float turbulence = noise(p * vec3(26.0, 15.0, 23.0));
     float clumps = noise(p * 9.0);
     vec2 uv = 0.5 + (p.xy + vec2(p.z * 0.18, -p.z * 0.12) + vec2(turbulence - 0.5, clumps - 0.5) * 0.10) * 0.49;
-    vec3 image = texture2D(observation, clamp(uv, 0.002, 0.998), 1.8).rgb;
+    vec3 image = observe(uv, 1.8, vec3(0.45, 0.21, 0.09));
     float rim = (1.0 - smoothstep(0.12, 0.81, pillars)) * (0.4 + 0.6 * turbulence);
     vec3 dust = mix(vec3(0.24, 0.077, 0.035), vec3(0.88, 0.43, 0.16), rim);
-    vec3 color = mix(dust, image * 1.25, 0.32 + 0.16 * clumps);
+    float light = 0.72 + 0.28 * smoothstep(-0.55, 0.60, p.z - 0.4 * p.x);
+    vec3 color = mix(dust, image * 1.25, 0.23 + 0.19 * clumps) * light;
     return vec4(color, (pillars * 13.5 + base * 3.2) * (0.28 + 0.90 * turbulence + 0.31 * clumps));
   }
 `;
@@ -103,7 +113,7 @@ const ejectaDensity = /* glsl */ `
     float outer = ringBand(q + vec3(0.10, 0.0, 0.0), 0.54, 0.43, 0.063)
                 + ringBand(q - vec3(0.08, 0.0, 0.0), 0.54, -0.43, 0.063);
     float core = 1.0 - smoothstep(0.13, 1.0, length(q / vec3(0.25, 0.24, 0.23)));
-    vec3 image = texture2D(observation, clamp(0.5 + p.xy * 0.49, 0.002, 0.998), 2.0).rgb;
+    vec3 image = observe(0.5 + p.xy * 0.49, 2.0, vec3(0.63, 0.28, 0.09));
     vec3 line = mix(vec3(0.75, 0.22, 0.08), vec3(1.0, 0.67, 0.31), knots);
     vec3 color = mix(line, image * 1.55, clamp(brightRing * 0.42 + core * 0.48, 0.0, 0.72));
     return vec4(color, brightRing * (8.0 + 17.0 * knots) + outer * (2.2 + knots * 2.2) + core * 1.7);
@@ -117,7 +127,7 @@ const stellarNurseryDensity = /* glsl */ `
     float mass = noise(p * 4.2);
     vec3 warp = p + vec3(noise(p * 5.0 + 9.0), mass, noise(p * 5.0 + 15.0)) * 0.20 - 0.10;
     vec2 uv = 0.5 + warp.xy * 0.49 + warp.z * vec2(0.18, -0.11);
-    vec3 image = texture2D(observation, clamp(uv, 0.002, 0.998), 1.8).rgb;
+    vec3 image = observe(uv, 1.8, vec3(0.32, 0.18, 0.33));
     float clumps = smoothstep(0.29, 0.73, noise(warp * vec3(10.0, 14.0, 12.0)));
     float envelope = (1.0 - smoothstep(0.61, 1.03, shape)) * smoothstep(0.18, 0.77, mass);
     float cavity = smoothstep(0.14, 0.68, length((warp - vec3(0.17, 0.05, 0.08)) * vec3(1.2, 1.0, 1.36)));
@@ -127,64 +137,123 @@ const stellarNurseryDensity = /* glsl */ `
   }
 `;
 
-const densityByShape = { crab: crabDensity, ring: ringDensity, pillars: pillarsDensity, ejecta: ejectaDensity, nursery: stellarNurseryDensity };
+const densityByShape = {
+  crab: crabDensity,
+  ring: ringDensity,
+  pillars: pillarsDensity,
+  ejecta: ejectaDensity,
+  nursery: stellarNurseryDensity,
+  hourglass: hourglassDensity,
+  'bipolar-jet': bipolarJetDensity,
+  'shocked-shell': shockedShellDensity,
+  'southern-ring': southernRingDensity,
+  'dust-spiral': apepDustDensity,
+  'edge-on-disk': edgeOnDiskDensity,
+  cartwheel: cartwheelDensity,
+};
 export type NebulaVolumeShape = keyof typeof densityByShape;
 
-function fragment(shape: NebulaVolumeShape) {
+function fragment(shape: NebulaVolumeShape, preview: boolean) {
   return /* glsl */ `
   varying vec3 boxPoint;
+  varying vec3 localEye;
+  varying float viewZ;
   uniform sampler2D observation;
-  uniform float radius;
+  uniform bool mapped;
+  uniform float visibility;
+  uniform float motion;
+  uniform mat4 projectionMatrix;
 
   ${spatialNoise}
+  vec3 observe(vec2 uv, float bias, vec3 fallback) {
+    return mapped ? texture2D(observation, clamp(uv, 0.002, 0.998), bias).rgb : fallback;
+  }
+
   ${shape === 'crab' ? '#define CRAB_VOLUME' : ''}
   ${densityByShape[shape]}
 
   void main() {
-    vec3 eye = cameraPosition / radius;
-    vec3 direction = normalize(boxPoint - eye);
+    vec3 eye = localEye;
+    float rayLength = length(boxPoint - eye);
+    vec3 direction = (boxPoint - eye) / rayLength;
     vec3 inverseDirection = 1.0 / (direction + vec3(0.000001));
-    vec3 a = (-1.0 - eye) * inverseDirection;
-    vec3 b = ( 1.0 - eye) * inverseDirection;
+    vec3 bounds = ${shape === 'cartwheel' ? 'vec3(1.0, 1.0, 0.30)' : 'vec3(1.0)'};
+    vec3 a = (-bounds - eye) * inverseDirection;
+    vec3 b = ( bounds - eye) * inverseDirection;
     vec3 entry = min(a, b);
     vec3 exit = max(a, b);
     float start = max(0.0, max(entry.x, max(entry.y, entry.z)));
     float end = min(exit.x, min(exit.y, exit.z));
     if (end <= start) discard;
 
-    const int steps = 44;
+    const int steps = ${preview ? 28 : 44};
     float stepSize = (end - start) / float(steps);
     vec3 accumulated = vec3(0.0);
     float transmission = 1.0;
+    float frontDepth = end;
     float sampleOffset = 0.5;
     #ifndef CRAB_VOLUME
       // Stagger samples across pixels to avoid visible slices at grazing angles.
       sampleOffset = 0.17 + 0.66 * fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
     #endif
     for (int i = 0; i < steps; ++i) {
-      vec3 p = eye + direction * (start + (float(i) + sampleOffset) * stepSize);
+      float sampleDistance = start + (float(i) + sampleOffset) * stepSize;
+      vec3 p = eye + direction * sampleDistance;
       vec4 samplePoint = density(p);
       float alpha = 1.0 - exp(-stepSize * samplePoint.a);
       accumulated += transmission * alpha * samplePoint.rgb;
       transmission *= 1.0 - alpha;
+      if (frontDepth == end && transmission < 0.96) frontDepth = sampleDistance;
       if (transmission < 0.02) break;
     }
 
     float opacity = 1.0 - transmission;
-    gl_FragColor = vec4(accumulated / max(opacity, 0.001), opacity);
+    if (opacity * visibility < 0.003) discard;
+    // Depth-test against the first visible gas, rather than the box's far face.
+    vec4 clip = projectionMatrix * vec4(0.0, 0.0, viewZ * frontDepth / rayLength, 1.0);
+    gl_FragDepth = clamp(0.5 + 0.5 * clip.z / clip.w, 0.0, 1.0);
+    gl_FragColor = vec4(accumulated / opacity, opacity * visibility);
     #include <colorspace_fragment>
   }
 `;
 }
 
-export function NebulaVolume({ texture, radius, shape }: { texture: Texture; radius: number; shape: NebulaVolumeShape }) {
-  const uniforms = useMemo(() => ({ observation: { value: texture }, radius: { value: radius } }), [texture, radius]);
+export function NebulaVolume({ texture, radius, shape, preview = false, paused = true, daysPerSecond = REALTIME_DAYS_PER_SECOND }: { texture?: Texture; radius: number; shape: NebulaVolumeShape; preview?: boolean; paused?: boolean; daysPerSecond?: number }) {
+  const mesh = useRef<Mesh>(null);
+  const material = useRef<ShaderMaterial>(null);
+  const position = useMemo(() => new Vector3(), []);
+  const motion = useRef(0);
+  const rate = Math.max(0.18, 1 + 0.32 * Math.log10(daysPerSecond / REALTIME_DAYS_PER_SECOND));
+  const uniforms = useMemo(() => ({
+    observation: { value: texture ?? null },
+    mapped: { value: texture !== undefined },
+    visibility: { value: 1 },
+    motion: { value: 0 },
+  }), [texture]);
 
-  const fragmentShader = useMemo(() => fragment(shape), [shape]);
+  useFrame(({ camera, size }, delta) => {
+    if (!mesh.current || !material.current) return;
+    if (!preview && (shape === 'bipolar-jet' || shape === 'shocked-shell' || shape === 'dust-spiral' || shape === 'edge-on-disk')) {
+      if (!paused) {
+        const elapsed = motion.current + Math.min(delta, 0.1) * rate;
+        if (shape === 'shocked-shell') motion.current = Math.min(elapsed, 18);
+        else if (shape === 'dust-spiral') motion.current = Math.min(elapsed, 16);
+        else motion.current = elapsed % (2 * Math.PI / 5);
+      }
+      material.current.uniforms.motion.value = motion.current;
+    }
+    if (!preview) return;
+    mesh.current.getWorldPosition(position).applyMatrix4(camera.matrixWorldInverse);
+    const visibility = previewVisibility(radius * 2, -position.z, camera, size.height);
+    mesh.current.visible = visibility > 0;
+    material.current.uniforms.visibility.value = visibility;
+  });
+
+  const fragmentShader = useMemo(() => fragment(shape, preview), [shape, preview]);
   return (
-    <mesh scale={radius} raycast={() => {}}>
+    <mesh ref={mesh} scale={radius} raycast={() => {}}>
       <boxGeometry args={[2, 2, 2]} />
-      <shaderMaterial uniforms={uniforms} vertexShader={vertex} fragmentShader={fragmentShader} transparent depthWrite={false} depthTest={false} side={BackSide} />
+      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={vertex} fragmentShader={fragmentShader} transparent depthWrite={false} side={BackSide} />
     </mesh>
   );
 }

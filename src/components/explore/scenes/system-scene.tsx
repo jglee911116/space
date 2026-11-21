@@ -14,6 +14,7 @@ import styles from '../explore.module.scss';
 import { IcePlumes } from '../three/ice-plumes';
 import { ObservedBodyModel } from '../three/observed-body-model';
 import { PlanetMaterial, PlanetRings } from '../three/planet-surface';
+import { PlanetGeometry } from '../three/outer-solar-surface';
 import { JUPITER_RED_SPOT_LATITUDE, surfaceFragment, surfaceVertex } from '../three/shaders';
 import { SolarProminences } from '../three/solar-prominences';
 import { StellarGlow } from '../three/stellar-glow';
@@ -92,6 +93,7 @@ function Star({
   events,
   onSelect,
   visible,
+  focused,
 }: {
   body: Body;
   days: RefObject<number>;
@@ -99,23 +101,28 @@ function Star({
   events: BodyEvents;
   onSelect: SceneProps['onSelect'];
   visible: RefObject<boolean>;
+  focused: boolean;
 }) {
   const surface = useRef<ShaderMaterial>(null);
   const activityDays = useRef(0.043);
   const previousDays = useRef(days.current);
   const texture = useSurfaceMap(body.surfaceMap?.file);
   const isSun = body.id === 'sun';
+  const photosphere = body.stellar?.photosphere;
+  const showFlares = isSun || (focused && photosphere?.flarePreview === true);
   const [uniforms] = useState(() => ({
     surfacePhase: { value: 0 },
     surfaceMap: { value: null },
     hasSurfaceMap: { value: false },
     surfaceShear: { value: 0 },
+    photosphere: { value: new Vector3(photosphere?.seed ?? 0, photosphere?.granuleScale ?? 0, photosphere?.activeRegions ?? 0) },
+    convectionPhase: { value: 0 },
     surfaceDark: { value: new Color(body.colors[0]).convertLinearToSRGB() },
     surfaceHot: { value: new Color(body.colors[1]).convertLinearToSRGB() },
   }));
   useFrame((_, delta) => {
     const time = days.current;
-    if (isSun && !paused && delta > 0) {
+    if ((isSun || (photosphere && photosphere.granuleScale > 0)) && !paused && delta > 0) {
       // Keep the activity preview legible across the orbital playback speeds.
       const rate = MathUtils.clamp((time - previousDays.current) / delta, 1 / 1440, 1 / 120);
       activityDays.current += rate * Math.min(delta, 0.1);
@@ -127,6 +134,7 @@ function Star({
     material.hasSurfaceMap.value = texture !== undefined;
     material.surfacePhase.value = rotationPhase(time, body.spinDays);
     material.surfaceShear.value = stellarTextureShear(time, body.spinDays, body.stellar?.poleSpinDays);
+    material.convectionPhase.value = activityDays.current;
   });
 
   return (
@@ -144,8 +152,8 @@ function Star({
         <sphereGeometry args={[body.displayRadius, 96, 64]} />
         <shaderMaterial ref={surface} uniforms={uniforms} vertexShader={surfaceVertex} fragmentShader={surfaceFragment} />
       </mesh>
-      <StellarGlow radius={body.displayRadius} color={body.stellar?.emissionColor ?? body.colors[2]} paused={paused} activityDays={isSun ? activityDays : undefined} />
-      {isSun && <SolarProminences radius={body.displayRadius} days={days} activityDays={activityDays} spinDays={body.spinDays} poleSpinDays={body.stellar?.poleSpinDays} />}
+      <StellarGlow radius={body.displayRadius} color={body.stellar?.emissionColor ?? body.colors[2]} strength={body.stellar?.glowStrength} paused={paused} activityDays={showFlares ? activityDays : undefined} />
+      {showFlares && <SolarProminences radius={body.displayRadius} days={days} activityDays={activityDays} spinDays={body.spinDays} poleSpinDays={body.stellar?.poleSpinDays} />}
     </>
   );
 }
@@ -374,7 +382,7 @@ function Scene({
             {body.kind === 'star' ? (
               <group quaternion={motions[body.id].orientation}>
                 <pointLight intensity={1.9} decay={0} />
-                <Star body={body} days={days} paused={paused} events={events} onSelect={onSelect} visible={systemVisible} />
+                <Star body={body} days={days} paused={paused} events={events} onSelect={onSelect} visible={systemVisible} focused={target === body.id} />
               </group>
             ) : (
               <group quaternion={motions[body.id].orientation}>
@@ -410,7 +418,7 @@ function Scene({
                         if (event.delta <= 4) onSelect(body.id);
                       }}
                     >
-                      <sphereGeometry args={[body.displayRadius, 56, 40]} />
+                      <PlanetGeometry radius={body.displayRadius} id={body.id} />
                       <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={body.id === 'titan' ? showTitanSurface && target === 'titan' : body.kind === 'planet' || body.id === target || body.id === satelliteParent || body.parent === satelliteParent}
                         showSurfaceMap={body.id !== 'titan' || (showTitanSurface && target === 'titan')} />
                     </mesh>
@@ -456,7 +464,6 @@ function Scene({
         ref={controls}
         target={initialTarget}
         enablePan={false}
-        zoomToCursor
         minDistance={(targetBody?.displayRadius ?? root.displayRadius) * (targetBody?.kind === 'star' || !targetBody ? 3.6 : 3.1)}
         maxDistance={Math.max(2600, farOverview * 2.65, oortRadius(system) * 8, onZoomOut ? systemHandoffDistanceAu(system, farOverview) * UNITS_PER_AU * 1.2 : 0)}
         zoomSpeed={2.25}

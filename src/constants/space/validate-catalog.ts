@@ -1,10 +1,56 @@
 import { galaxyAssociations } from './galaxy-associations';
+import { readExplorerQuery } from '@/components/explore/utils/paths';
 import { createSearchCatalog } from '@/components/explore/utils/catalog-search';
 import { languages } from '@/i18n/messages';
 import { distantObjects, featuredObjects, galaxies, localGroup, milkyWay, observableUniverse, superclusters, systems } from './index';
 
 function requireValue(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`Catalog: ${message}`);
+}
+
+function checkReference(field: string, id: string | undefined, knownIds: ReadonlySet<string>) {
+  requireValue(id === undefined || knownIds.has(id), `${field}: unknown ID ${id}`);
+}
+
+function checkRelationships() {
+  const galaxyIds = new Set(galaxies.map(({ id }) => id));
+  const regionIds = new Set(superclusters.map(({ id }) => id));
+  const objectIds = new Set(featuredObjects.map(({ id }) => id));
+
+  requireValue(galaxyIds.size === galaxies.length, 'duplicate galaxy id');
+  checkReference(`${milkyWay.id}.systemId`, milkyWay.systemId, new Set(Object.keys(systems)));
+
+  for (const system of Object.values(systems)) {
+    checkReference(`${system.id}.galaxyId`, system.galaxyId, galaxyIds);
+
+    // Orbit calculations visit bodies in catalog order and expect each parent to be available first.
+    const seen = new Set<string>();
+    for (const body of system.bodies) {
+      const location = `${system.id}.${body.id}`;
+      requireValue(!seen.has(body.id), `${location}: duplicate body id`);
+      if (body.parent === null) {
+        requireValue(body.kind === 'star' || (body.kind === 'planet' && body.orbit), `${location}: invalid root body`);
+      } else {
+        requireValue(seen.has(body.parent), `${location}: parent ${body.parent} is missing or listed later`);
+        requireValue(body.orbit, `${location}: missing orbit`);
+      }
+      seen.add(body.id);
+    }
+  }
+
+  for (const galaxy of galaxies) {
+    checkReference(`${galaxy.id}.parentGalaxyId`, galaxy.parentGalaxyId, galaxyIds);
+    checkReference(`${galaxy.id}.superclusterId`, galaxy.superclusterId, regionIds);
+  }
+  for (const object of featuredObjects) {
+    checkReference(`${object.id}.galaxyId`, object.galaxyId, galaxyIds);
+    checkReference(`${object.id}.parentObjectId`, object.parentObjectId, objectIds);
+  }
+  for (const { id, markers } of superclusters) {
+    for (const [index, marker] of markers.entries()) {
+      checkReference(`${id}.markers[${index}].galaxyId`, marker.galaxyId, galaxyIds);
+    }
+  }
 }
 
 function checkCoordinates(name: string, rightAscension: number, declination: number) {
@@ -34,6 +80,8 @@ function checkText(value: unknown, location: string) {
 }
 
 export function validateCatalog() {
+  checkRelationships();
+
   const dictionaries = Object.entries(languages);
   const reference = dictionaries[0][1].messages;
   const placeholders = (text: string) => [...new Set([...text.matchAll(/\{\d+\}/g)].map(([token]) => token))].sort().join(',');
@@ -59,7 +107,6 @@ export function validateCatalog() {
       `${object.id}: missing positive distance or redshift`,
     );
   }
-  requireValue(new Set(galaxies.map(({ id }) => id)).size === galaxies.length, 'duplicate galaxy id');
   requireValue(new Set(galaxyAssociations.map(({ id }) => id)).size === galaxyAssociations.length, 'duplicate association id');
   for (const group of galaxyAssociations) {
     const region = superclusters.find(({ id }) => id === group.mapRegionId);
@@ -76,9 +123,7 @@ export function validateCatalog() {
   for (const { path } of search) {
     const url = new URL(path, 'https://catalog.invalid');
     const [, segment, id] = url.pathname.split('/');
-    const target = url.searchParams.get('target');
-    const systemId = url.searchParams.get('system');
-    const view = url.searchParams.get('view');
+    const { target, system: systemId, view, cluster } = readExplorerQuery(url.searchParams);
     if (segment === 'galaxies') {
       const galaxy = galaxies.find((item) => item.id === id);
       requireValue(galaxy, `bad search destination ${path}`);
@@ -101,7 +146,7 @@ export function validateCatalog() {
       );
       if (view === 'cluster')
         requireValue(
-          galaxyAssociations.some((item) => item.id === url.searchParams.get('cluster') && item.mapRegionId === id),
+          galaxyAssociations.some((item) => item.id === cluster && item.mapRegionId === id),
           `bad association destination ${path}`,
         );
     } else if (segment === 'universe') {

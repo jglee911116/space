@@ -43,6 +43,14 @@ export const milkyWay: HostGalaxy = {
       { label: 'EHT Collaboration · 2022', href: 'https://www.eso.org/public/images/eso2208-eht-mwa/' },
       { label: 'EHT Collaboration · 2024', href: 'https://www.eso.org/public/images/eso2406a/' },
       {
+        label: message('catalog.milky-way.sgr-a.source.webb-flares'),
+        href: 'https://science.nasa.gov/asset/webb/infrared-flickers-and-flares-from-sagittarius-a/',
+      },
+      {
+        label: message('catalog.milky-way.sgr-a.source.webb-artist-concept'),
+        href: 'https://science.nasa.gov/asset/webb/flaring-disk-around-milky-ways-black-hole-artists-concept/',
+      },
+      {
         label: message('catalog.milky-way.sgr-a.source.nasa-galactic-center'),
         href: 'https://science.nasa.gov/mission/webb/science-overview/science-explainers/what-is-the-center-of-our-galaxy-like/',
       },

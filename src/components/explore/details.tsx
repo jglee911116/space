@@ -251,7 +251,7 @@ export function BlackHoleDetails({ showPolarization, onPolarizationChange }: { s
         {t('details.ehtPolarizationToggle')}
       </label>
       <ModelNotes>
-        {t(showPolarization ? 'details.ehtPolarizationImage' : 'details.ehtIntensityImage')} {t('details.blackHoleShadow')} {t('details.unscaledModel')}
+        {t(showPolarization ? 'details.ehtPolarizationImage' : 'details.ehtIntensityImage')} {t('details.blackHoleShadow')} {t('details.blackHoleFlow')} {t('details.blackHoleFlares')} {t('details.blackHoleLensing')} {t('details.unscaledModel')}
       </ModelNotes>
       <DetailSources sources={center.sources} />
     </DetailPanel>
@@ -432,6 +432,7 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
       {object.variabilityDays !== undefined && <p>{t('details.variabilityPeriod', [number(object.variabilityDays, 0)])}</p>}
       {object.expansionPerYear !== undefined && <p>{t('details.expansionModel', [t(object.kind === 'ring-remnant' ? 'details.centralEjecta' : 'details.nebula')])}</p>}
       <ModelNotes>
+        {object.kind === 'black-hole' && <>{t('details.blackHoleLensing')} </>}
         {t(
           object.kind === 'open-cluster' || object.kind === 'globular-cluster'
             ? 'details.clusterModelScale'
@@ -465,7 +466,7 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange }: 
         <ObservationRow status={object.observationStatus} />
         <div>
           <dt>{t('details.type')}</dt>
-          <dd>{object.kind === 'quasar' ? t('details.quasar') : t('details.earlyGalaxy')}</dd>
+          <dd>{t(object.kind === 'quasar' ? 'details.quasar' : object.kind === 'ring-galaxy' ? 'details.ringGalaxy' : 'details.earlyGalaxy')}</dd>
         </div>
         <div>
           <dt>{t('details.redshift')}</dt>
@@ -499,8 +500,9 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange }: 
           {t('details.showCounterjet')}
         </label>
       )}
+      {object.kind === 'ring-galaxy' && <p>{t('details.webbRingGalaxyModel')}</p>}
       <ModelNotes>
-        {object.kind === 'quasar' ? t('details.accretionModel') : t('details.galaxyModel')} {t('details.cosmicModelScale')}
+        {object.kind === 'quasar' ? t('details.accretionModel') : t('details.galaxyModel')} {object.kind === 'quasar' && <>{t('details.blackHoleLensing')} </>}{t('details.cosmicModelScale')}
       </ModelNotes>
       <DetailSources sources={[...object.sources, observableUniverse.sources[1]]} />
     </section>

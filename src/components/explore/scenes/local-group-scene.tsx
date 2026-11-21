@@ -4,9 +4,9 @@ import type { CatalogText } from '@/i18n/messages';
 import { useLanguage } from '@/i18n/language';
 import { Line, OrbitControls, Stars } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useLayoutEffect, useMemo, useRef, type ComponentRef } from 'react';
-import { Box3, Color, MathUtils, Quaternion, Vector3, type Group, type Points, type PointsMaterial } from 'three';
-import { localGroup, type Galaxy } from '@/constants/space';
+import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from 'react';
+import { Box3, MathUtils, Quaternion, Vector3, type Group, type Points, type PointsMaterial } from 'three';
+import { localGroup, type FeaturedObject, type Galaxy } from '@/constants/space';
 import { AU_PER_KPC, KM_PER_AU } from '@/constants/space/units';
 import { useCursorZoom } from '../three/use-cursor-zoom';
 import { CanvasBoundary } from '../three/canvas-boundary';
@@ -14,17 +14,22 @@ import { GalaxyObservationDisk } from '../three/galaxy-observation-disk';
 import { galaxyObservationPoints } from '../three/galaxy-observation-points';
 import { useSurfaceMap } from '../three/use-surface-map';
 import { GalaxyPreview } from '../three/galaxy-preview';
+import { galaxyParticles } from '../three/galaxy-structure';
+import { ProceduralGalaxy } from '../three/procedural-galaxy';
+import { FeaturedObjectPreview } from '../three/featured-object-preview';
+import { LensedStarfield } from '../three/black-hole-lensing';
 import { pointBudget, projectedDiameter, updatePointDetail } from '../three/map-detail';
 import { GalacticLabelLayer, GalacticMarker } from '../three/galactic-marker';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
-import { EXTERNAL_SYSTEM_ENTRY_KPC, EXTERNAL_SYSTEM_RETURN_KPC, GALAXY_ENTRY_KPC, GALAXY_EXIT_KPC, LOCAL_GROUP_EXIT_KPC, type ZoomHandoff } from '../utils/zoom';
+import { ACCRETION_MODEL_EINSTEIN_RADIUS, ACCRETION_MODEL_EXIT_DISTANCE, EXTERNAL_SYSTEM_ENTRY_KPC, EXTERNAL_SYSTEM_RETURN_KPC, GALAXY_ENTRY_KPC, GALAXY_EXIT_KPC, LOCAL_GROUP_EXIT_KPC, featuredOverviewDistanceKpc, type ZoomHandoff } from '../utils/zoom';
 
 type Props = {
   systemMarkers: readonly { id: string; name: CatalogText; position: readonly [number, number, number] }[];
-  objectMarkers: readonly { id: string; name: CatalogText; color: string; position: readonly [number, number, number] }[];
+  objectMarkers: readonly { object: FeaturedObject; position: readonly [number, number, number] }[];
+  m87PlaybackTime: RefObject<number>;
   onSelectObject: (id: string) => void;
   onSelectSystem: (id: string, entry?: ZoomHandoff) => void;
-  focusedSystemId?: string;
+  focusId?: string;
   overview: boolean;
   galaxy: Galaxy;
   entry?: ZoomHandoff;
@@ -51,75 +56,12 @@ const GROUP_CENTER = new Box3().setFromPoints(positions).getCenter(new Vector3()
 const VIEW = new Vector3(0, 0.48, 1).normalize();
 const CAMERA = { position: [0, 0, 115] as [number, number, number], fov: 45, near: 0.1, far: 10_000 };
 
-function model(galaxy: Galaxy, count: number) {
-  const positions = new Float32Array(count * 3);
-  const colors = new Float32Array(count * 3);
-  let seed = 119 + galaxy.modelRadiusKpc * 100;
-  function random() {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 2 ** 32;
-  }
-  const morphology = galaxy.morphology;
-  const irregular = morphology === 'irregular' || morphology === 'barred-irregular';
-  const openSpiral = morphology === 'open-spiral';
-  const barredSpiral = morphology === 'barred-spiral';
-  const compactElliptical = morphology === 'compact-elliptical';
-  const hasDustLane = morphology === 'dust-lane-elliptical';
-  const giantElliptical = morphology === 'giant-elliptical' || hasDustLane;
-  const elliptical = compactElliptical || giantElliptical || morphology === 'dwarf-elliptical';
-  const ellipsoidY = giantElliptical ? 0.82 : compactElliptical ? 0.75 : 0.5;
-  const ellipsoidZ = giantElliptical ? 0.87 : compactElliptical ? 0.85 : 0.59;
-  const ellipsoidConcentration = giantElliptical ? 1.35 : compactElliptical ? 1.85 : 0.95;
-  const bulgeColor = new Color('#ffe0a9');
-  const armColor = new Color('#8daeff');
-  const diskColor = new Color(galaxy.color);
-  const tint = new Color();
-  for (let i = 0; i < count; i++) {
-    if (elliptical) {
-      const r = galaxy.modelRadiusKpc * random() ** ellipsoidConcentration;
-      const angle = random() * Math.PI * 2;
-      const polar = random() * 2 - 1;
-      const plane = Math.sqrt(1 - polar * polar);
-      const index = i * 3;
-      const x = r * plane * Math.cos(angle);
-      const y = r * polar * ellipsoidY;
-      const z = r * plane * Math.sin(angle) * ellipsoidZ;
-      positions.set([x, y, z], index);
-      const inDustLane = hasDustLane && Math.abs(y - 0.18 * x) < galaxy.modelRadiusKpc * 0.055;
-      const shading = inDustLane ? 0.12 : 1;
-      tint
-        .copy(diskColor)
-        .lerp(bulgeColor, 0.28 * (1 - r / galaxy.modelRadiusKpc))
-        .multiplyScalar((0.14 + random() * 0.7) * shading);
-      tint.toArray(colors, index);
-      continue;
-    }
-    const compactCore = random() < (irregular ? 0.27 : openSpiral ? 0.06 : 0.18);
-    const arm = !irregular && !compactCore && random() < 0.63;
-    const size = galaxy.modelRadiusKpc;
-    const radial = compactCore ? (irregular ? 0.57 : 0.24) * random() ** 1.6 : irregular ? 0.96 * random() ** 0.8 : 0.12 + 0.88 * random() ** 1.45;
-    const r = size * radial;
-    const angle = arm ? (i % 2) * Math.PI + (openSpiral ? 1.65 : 2.5) * Math.log(r / 4) + (random() - 0.5) * 0.75 : random() * Math.PI * 2;
-    const brightness = 0.16 + 0.75 * random();
-    const dustLane = arm && Math.sin(12 * radial + 2 * angle) > 0.62;
-    const bar = (morphology === 'barred-irregular' || barredSpiral) && compactCore;
-    const asymmetry = irregular ? 0.78 + 0.2 * Math.sin(2 * angle) + 0.15 * Math.cos(3 * angle) : 1;
-    const x = r * Math.cos(angle) * asymmetry * (bar ? (barredSpiral ? 2.4 : 1.35) : 1);
-    const z = r * Math.sin(angle) * asymmetry * (bar ? 0.24 : irregular ? 0.67 : 1);
-    const thickness = irregular ? size * (morphology === 'irregular' ? 0.45 : 0.18) : compactCore ? size * 0.18 : size * 0.027;
-    positions.set([x, (random() - 0.5) * thickness * (1 - radial), z], i * 3);
-    tint.copy((compactCore && !irregular) || bar ? bulgeColor : arm ? armColor : diskColor).multiplyScalar(brightness * (dustLane ? 0.24 : 1));
-    tint.toArray(colors, i * 3);
-  }
-  return { positions, colors };
-}
-
 function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
   const observation = galaxy.diskObservation;
   const texture = useSurfaceMap(compact ? observation?.previewFile : observation?.file);
   const points = useMemo(() => {
     if (texture && observation) return galaxyObservationPoints(texture, observation, galaxy.modelRadiusKpc, compact ? 1400 : 12_000);
-    return model(galaxy, compact ? 1400 : 28_000);
+    return galaxyParticles(galaxy, compact ? 1400 : 24_000);
   }, [texture, observation, galaxy, compact]);
   const disk = useRef<Points>(null);
   const position = useMemo(() => new Vector3(), []);
@@ -132,7 +74,7 @@ function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
     }
 
     const diameter = projectedDiameter(pointCloud, position, camera, size.height, galaxy.modelRadiusKpc);
-    const opacity = MathUtils.smoothstep(diameter, 12, 52) * (texture ? 0.38 : 0.46);
+    const opacity = MathUtils.smoothstep(diameter, 12, 52) * (observation ? (texture ? 0.38 : 0.46) : 0.34);
     (pointCloud.material as PointsMaterial).opacity = opacity;
     pointCloud.visible = opacity > 0.005;
     const count = pointBudget(pointCloud.geometry.attributes.position.count, diameter);
@@ -140,7 +82,8 @@ function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
   });
   return (
     <group rotation-x={galaxy.diskTilt ?? 0}>
-      {compact && <GalaxyPreview galaxy={galaxy} texture={texture} />}
+      {!observation && <ProceduralGalaxy galaxy={galaxy} compact={compact} />}
+      {observation && compact && <GalaxyPreview galaxy={galaxy} texture={texture} />}
       {!compact && texture && observation && (
         <GalaxyObservationDisk texture={texture} radius={galaxy.modelRadiusKpc} center={observation.center} span={observation.span} rotation={observation.rotation} />
       )}
@@ -150,14 +93,14 @@ function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
             <bufferAttribute attach="attributes-position" args={[points.positions, 3]} />
             <bufferAttribute attach="attributes-color" args={[points.colors, 3]} />
           </bufferGeometry>
-          <pointsMaterial vertexColors size={compact ? 1.25 : 1.35} sizeAttenuation={false} transparent opacity={compact ? 0 : texture ? 0.45 : 0.82} depthWrite={false} />
+          <pointsMaterial vertexColors size={compact ? 1.25 : 1.2} sizeAttenuation={false} transparent opacity={compact ? 0 : 0.45} depthWrite={false} />
         </points>
       )}
     </group>
   );
 }
 
-function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitGalaxy, onExitGroup, systemMarkers, objectMarkers, onSelectObject, onSelectSystem, focusedSystemId }: Props) {
+function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitGalaxy, onExitGroup, systemMarkers, objectMarkers, m87PlaybackTime, onSelectObject, onSelectSystem, focusId }: Props) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const cursorZoomRef = useCursorZoom();
   const background = useRef<Group>(null);
@@ -165,7 +108,10 @@ function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitG
   const camera = useThree((state) => state.camera);
   const { width, height } = useThree((state) => state.size);
   const scratch = useMemo(() => ({ aim: new Vector3(), offset: new Vector3() }), []);
-  const focusedSystem = !overview ? (systemMarkers.find(({ id }) => id === focusedSystemId) ?? systemMarkers[0]) : undefined;
+  const focusedObject = !overview ? objectMarkers.find(({ object }) => object.id === focusId) : undefined;
+  const objectDistance = focusedObject ? featuredOverviewDistanceKpc(focusedObject.object) : 0;
+  const lensFade = useMemo(() => [objectDistance * 1.25, objectDistance * 6] as const, [objectDistance]);
+  const focusedSystem = !overview && !focusedObject ? (systemMarkers.find(({ id }) => id === focusId) ?? systemMarkers[0]) : undefined;
   const focusPosition = focusedSystem?.position;
   const galaxyPosition = galaxyPositions.get(galaxy.id) ?? origin;
   // Small galaxies should open at a scale where their structure is already visible.
@@ -179,14 +125,15 @@ function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitG
     const orbit = controls.current;
     if (!orbit) return;
     cursorZoomRef.current = false;
-    const returnFromSystem = entry && !overview && focusedSystemId && focusPosition;
-    const distance = returnFromSystem ? EXTERNAL_SYSTEM_RETURN_KPC : entry ? (overview ? entry.distanceAu / AU_PER_KPC : Math.min(defaultRadius, entry.distanceAu / AU_PER_KPC)) : defaultRadius;
+    const returnFromSystem = entry && !overview && focusId && focusPosition;
+    const distance = focusedObject ? (entry ? entry.distanceAu / AU_PER_KPC : objectDistance) : returnFromSystem ? EXTERNAL_SYSTEM_RETURN_KPC : entry ? (overview ? entry.distanceAu / AU_PER_KPC : Math.min(defaultRadius, entry.distanceAu / AU_PER_KPC)) : defaultRadius;
     orbit.target.copy(overview && !entry ? GROUP_CENTER : overview ? galaxyPosition : origin);
     if (returnFromSystem) orbit.target.set(...focusPosition);
+    if (focusedObject) orbit.target.set(...focusedObject.position);
     const direction = entry ? scratch.offset.set(...entry.direction) : VIEW;
     camera.position.copy(orbit.target).addScaledVector(direction, distance);
     orbit.update();
-  }, [camera, cursorZoomRef, defaultRadius, entry, focusPosition, focusedSystemId, galaxyPosition, overview, scratch]);
+  }, [camera, cursorZoomRef, defaultRadius, entry, focusId, focusPosition, focusedObject, galaxyPosition, objectDistance, overview, scratch]);
 
   useFrame(({ camera }) => {
     const orbit = controls.current;
@@ -205,7 +152,7 @@ function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitG
       orbit.target.copy(center);
       orbit.update();
     }
-    const near = MathUtils.clamp(radius * 0.002, 0.0002, 0.1);
+    const near = MathUtils.clamp(radius * 0.002, 0.00002, 0.1);
     if (camera.near !== near) {
       camera.near = near;
       camera.updateProjectionMatrix();
@@ -216,6 +163,13 @@ function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitG
 
   return (
     <>
+      {focusedObject?.object.id === 'm87-star' && (
+        <LensedStarfield
+          center={focusedObject.position}
+          einsteinRadius={objectDistance * ACCRETION_MODEL_EINSTEIN_RADIUS / ACCRETION_MODEL_EXIT_DISTANCE}
+          fadeRange={lensFade}
+        />
+      )}
       <group ref={background}>
         <Stars radius={60} depth={45} count={1400} factor={3.5} saturation={0} fade speed={0} />
       </group>
@@ -261,9 +215,12 @@ function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitG
                 )
               );
             })}
-          {objectMarkers.map((item) => (
-            <group key={item.id} position={[...item.position]}>
-              <GalacticMarker name={item.name} color={item.color} labelOffset={-0.8} onSelect={() => onSelectObject(item.id)} />
+          {objectMarkers.map(({ object, position }) => (
+            <group key={object.id} position={[...position]}>
+              {(object.extentLightYears > 0 || object.photosphere || object.id === focusId) && (
+                <FeaturedObjectPreview object={object} focused={object.id === focusId} playbackTime={object.id === 'm87-star' ? m87PlaybackTime : undefined} />
+              )}
+              <GalacticMarker name={object.name} color={object.color} labelOffset={-1.0} modelRadius={object.id === focusId ? objectDistance * 0.13 : undefined} priority={object.id === focusId ? 3 : 0} onSelect={() => onSelectObject(object.id)} />
             </group>
           ))}
           {systemMarkers.map((item) => (
@@ -276,8 +233,7 @@ function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitG
       <OrbitControls
         ref={controls}
         enablePan={false}
-        zoomToCursor
-        minDistance={overview ? entryDistance * 0.8 : focusedSystem ? EXTERNAL_SYSTEM_ENTRY_KPC * 0.7 : Math.min(8, galaxy.modelRadiusKpc * 0.9)}
+        minDistance={overview ? entryDistance * 0.8 : focusedObject ? objectDistance * 0.55 : focusedSystem ? EXTERNAL_SYSTEM_ENTRY_KPC * 0.7 : Math.min(8, galaxy.modelRadiusKpc * 0.9)}
         maxDistance={overview ? groupExit * 1.14 : Math.max(exitDistance * 1.4, defaultRadius)}
         zoomSpeed={3.1}
         onStart={() => {
@@ -292,6 +248,7 @@ function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitG
           if (overview && radius > start.current && radius >= groupExit) onExitGroup(handoff);
           else if (overview && radius < start.current && radius <= entryDistance) onEnterGalaxy(galaxy, handoff);
           else if (!overview && radius > start.current && radius >= exitDistance) onExitGalaxy(handoff);
+          else if (focusedObject && radius < start.current && radius <= objectDistance * 0.72) onSelectObject(focusedObject.object.id);
           else if (focusedSystem && radius < start.current && radius <= EXTERNAL_SYSTEM_ENTRY_KPC) onSelectSystem(focusedSystem.id, handoff);
         }}
       />

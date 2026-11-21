@@ -29,10 +29,11 @@ const virgoSource = {
   href: 'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/messier-87/',
 };
 
-// 안쪽 → 바깥 순서(처녀자리 ⊂ 라니아케아). 줌 전환이 이 순서를 따른다.
+export const VIRGO_REGION_ID = 'virgo';
+export const LANIAKEA_REGION_ID = 'laniakea';
 export const superclusters: readonly [Supercluster, Supercluster] = [
   {
-    id: 'virgo',
+    id: VIRGO_REGION_ID,
     name: message('catalog.superclusters.virgo.name'),
     spanMly: 110,
     gridRadiusMly: 60,
@@ -49,7 +50,7 @@ export const superclusters: readonly [Supercluster, Supercluster] = [
     ],
   },
   {
-    id: 'laniakea',
+    id: LANIAKEA_REGION_ID,
     name: message('catalog.superclusters.laniakea.name'),
     spanMly: 520,
     gridRadiusMly: 275,

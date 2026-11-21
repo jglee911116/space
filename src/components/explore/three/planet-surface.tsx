@@ -1,24 +1,26 @@
 import { useMemo } from 'react';
-import { Color, DoubleSide, type Vector3 } from 'three';
+import { Color, DoubleSide, Vector4, type Vector3 } from 'three';
 import type { Appearance, Body } from '@/constants/space';
 import { CraterSurface } from './crater-surface';
 import { planetFragment, planetVertex } from './shaders';
 import { useSurfaceMap } from './use-surface-map';
+import { outerSolarSurface } from './outer-solar-surface';
 
 const shaderStyle: Record<Exclude<Appearance, 'craters'>, number> = { clouds: 0, earth: 1, rock: 2, bands: 3, ice: 4, pluto: 5 };
 
 const surfaceFeatureStyle: Record<NonNullable<Body['surfaceFeatures']>, number> = { jupiter: 1, saturn: 2, mars: 3, neptune: 4, io: 5, europa: 6 };
 
 export function PlanetMaterial({ body, lightOffset, loadSurfaceMap, showSurfaceMap = true }: { body: Body; lightOffset: Vector3; loadSurfaceMap: boolean; showSurfaceMap?: boolean }) {
-  const { appearance = 'rock', colors, surfaceMap, surfaceFeatures, polarCaps = false, radiusKm } = body;
+  const { appearance = 'rock', colors, surfaceMap, surfaceFeatures, polarCaps = false, radiusKm, cloudBands } = body;
   const map = useSurfaceMap(surfaceMap?.file, loadSurfaceMap);
   const texture = showSurfaceMap ? map : undefined;
   const longitudeOffset = surfaceMap?.longitudeOffset ?? 0;
+  const terrain = body.rockySurface ?? outerSolarSurface(body.id);
 
   const fillMissing = surfaceMap?.fillMissing ?? false;
   const uniforms = useMemo(
     () =>
-      appearance === 'craters' && !texture
+      appearance === 'craters' && !texture && !terrain
         ? null
         : {
             dark: { value: new Color(colors[0]) },
@@ -32,8 +34,10 @@ export function PlanetMaterial({ body, lightOffset, loadSurfaceMap, showSurfaceM
             hasSurfaceMap: { value: texture !== undefined },
             mapOffset: { value: longitudeOffset },
             fillMissingMap: { value: fillMissing },
+            rockSurface: { value: new Vector4(terrain?.[0] ?? 0, terrain?.[1] ?? 0, terrain?.[2] ?? 0, terrain?.[3] ?? 0) },
+            cloudBands: { value: cloudBands ? new Vector4(...cloudBands) : new Vector4() },
           },
-    [appearance, colors, lightOffset, surfaceFeatures, polarCaps, texture, longitudeOffset, fillMissing],
+    [appearance, colors, lightOffset, surfaceFeatures, polarCaps, texture, longitudeOffset, fillMissing, terrain, cloudBands],
   );
 
   return uniforms ? <shaderMaterial vertexShader={planetVertex} fragmentShader={planetFragment} uniforms={uniforms} /> : <CraterSurface seed={Math.round(radiusKm ?? 1)} fallback={colors[1]} />;

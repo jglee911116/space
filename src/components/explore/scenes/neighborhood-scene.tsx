@@ -74,7 +74,7 @@ function Map({ markers, projectLabels, reportDistance }: { markers: ReturnType<t
   return (
     <>
       <PerspectiveCamera makeDefault fov={44} position={[center.x, center.y, center.z + distance]} />
-      <OrbitControls target={center} enablePan={false} zoomToCursor minDistance={radius * 2.6} maxDistance={radius * 16} />
+      <OrbitControls target={center} enablePan={false} minDistance={radius * 2.6} maxDistance={radius * 16} />
       <Stars radius={100} depth={50} count={1800} factor={6} saturation={0} fade speed={0} />
       {markers.map(({ system, distanceLightYears, position }) => (
         <group key={system.id}>

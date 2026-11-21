@@ -1,6 +1,10 @@
 import { useThree } from '@react-three/fiber';
 import { useMemo } from 'react';
 import { AdditiveBlending, Color, type Vector3 } from 'three';
+import { PREVIEW_HIDDEN_PX, PREVIEW_OPAQUE_PX } from './map-detail';
+
+// The map's nominal preview sizes were chosen for a 900 px viewport at 45°.
+const referenceFocalLength = 450 / Math.tan(Math.PI / 8);
 
 const styles = {
   spiral: { form: 0, size: 46 },
@@ -9,6 +13,7 @@ const styles = {
   quasar: { form: 3, size: 30 },
   jet: { form: 4, size: 51 },
   irregular: { form: 5, size: 42 },
+  ring: { form: 6, size: 49 },
 } as const;
 
 export type CosmicMapMarker = {
@@ -19,18 +24,20 @@ export type CosmicMapMarker = {
 
 const vertex = /* glsl */ `
   uniform float pixelRatio;
-  uniform float referenceDepth;
+  uniform float viewportHeight;
   attribute vec3 tint;
   attribute vec3 appearance;
   varying vec3 objectColor;
   varying vec2 objectStyle;
+  varying float visibility;
 
   void main() {
     vec4 view = modelViewMatrix * vec4(position, 1.0);
     objectColor = tint;
     objectStyle = appearance.xz;
-    float perspective = clamp(pow(referenceDepth / max(-view.z, 0.001), 0.21), 0.72, 1.23);
-    gl_PointSize = min(63.0, appearance.y * pixelRatio * perspective);
+    float diameter = appearance.y * projectionMatrix[1][1] * viewportHeight / (2.0 * max(-view.z, 0.001));
+    visibility = smoothstep(float(${PREVIEW_HIDDEN_PX}), float(${PREVIEW_OPAQUE_PX}), diameter);
+    gl_PointSize = min(63.0, diameter * pixelRatio);
     gl_Position = projectionMatrix * view;
   }
 `;
@@ -38,6 +45,7 @@ const vertex = /* glsl */ `
 const fragment = /* glsl */ `
   varying vec3 objectColor;
   varying vec2 objectStyle;
+  varying float visibility;
 
   float hash(vec2 seed) {
     vec3 p = fract(vec3(seed.xyx) * 0.1031);
@@ -56,7 +64,7 @@ const fragment = /* glsl */ `
     vec2 p = mat2(c, s, -s, c) * uv;
     float radius = length(p);
     float fade = 1.0 - smoothstep(0.66, 1.0, radius);
-    if (fade <= 0.0) discard;
+    if (fade <= 0.0 || visibility <= 0.0) discard;
 
     float form = objectStyle.x;
     float body = 0.0;
@@ -86,20 +94,25 @@ const fragment = /* glsl */ `
         float spread = 0.055 + 0.053 * abs(p.y);
         body += gaussian((p.x - 0.07 * p.y * abs(p.y)) / spread) * gaussian(p.y / 0.72) * 0.82;
       }
-    } else {
+    } else if (form < 5.5) {
       core = gaussian(length(p - vec2(0.09, 0.06)) / 0.22) * 0.67;
       body = gaussian(length((p + vec2(0.25, 0.12)) * vec2(1.18, 1.6)) / 0.53) * 0.43;
       body += gaussian(length(p - vec2(0.32, -0.14)) / 0.29) * 0.55;
+    } else {
+      float disk = length(p * vec2(1.0, 1.34));
+      core = gaussian(disk / 0.16) * 0.81;
+      body = 0.86 * gaussian((disk - 0.62) / 0.095) + 0.42 * gaussian((disk - 0.25) / 0.067);
     }
 
     vec3 color = mix(objectColor, vec3(1.0, 0.91, 0.83), core * 0.76);
-    gl_FragColor = vec4(color, min(1.0, body + core) * fade);
+    gl_FragColor = vec4(color, min(1.0, body + core) * fade * visibility);
     #include <colorspace_fragment>
   }
 `;
 
 export function CosmicMapMarkers({ markers, referenceDepth }: { markers: readonly CosmicMapMarker[]; referenceDepth: number }) {
   const dpr = useThree((state) => state.viewport.dpr);
+  const height = useThree((state) => state.size.height);
   const data = useMemo(() => {
     const positions = new Float32Array(markers.length * 3);
     const colors = new Float32Array(markers.length * 3);
@@ -109,11 +122,12 @@ export function CosmicMapMarkers({ markers, referenceDepth }: { markers: readonl
       const offset = index * 3;
       marker.position.toArray(positions, offset);
       tint.set(marker.color).toArray(colors, offset);
-      appearances.set([styles[marker.style].form, styles[marker.style].size, ((index * 0.618) % 1) * Math.PI - 0.6], offset);
+      const { form, size } = styles[marker.style];
+      appearances.set([form, size * referenceDepth / referenceFocalLength, ((index * 0.618) % 1) * Math.PI - 0.6], offset);
     });
     return { positions, colors, appearances };
-  }, [markers]);
-  const uniforms = useMemo(() => ({ pixelRatio: { value: dpr }, referenceDepth: { value: referenceDepth } }), [dpr, referenceDepth]);
+  }, [markers, referenceDepth]);
+  const uniforms = useMemo(() => ({ pixelRatio: { value: dpr }, viewportHeight: { value: height } }), [dpr, height]);
 
   return (
     <points frustumCulled={false} raycast={() => {}}>

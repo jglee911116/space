@@ -9,6 +9,7 @@ const SEPARATION_KM = 22.6 * SOLAR_RADIUS_KM;
 
 function component(id: string, name: CatalogText, mass: number, companionMass: number, radiusSolar: number, temperatureK: number, phase: number): Body {
   const radiusKm = radiusSolar * SOLAR_RADIUS_KM;
+  const hotter = temperatureK > 32_000;
   return {
     id,
     name,
@@ -18,13 +19,15 @@ function component(id: string, name: CatalogText, mass: number, companionMass: n
     radiusKm: Math.round(radiusKm),
     displayRadius: (radiusKm / KM_PER_AU) * 10,
     tilt: 0,
-    colors: ['#577dcd', '#d7e9ff', '#b5d6ff'],
+    colors: hotter ? ['#8db3ed', '#e4f0ff', '#b5d6ff'] : ['#91acd4', '#e9f0ff', '#c7dcff'],
     stellar: {
       evolutionaryStage: message('catalog.m31-eclipsing-binary.evolutionaryStage'),
       spectralType: message('catalog.m31-eclipsing-binary.spectralType'),
       temperatureK,
       luminosityWatts: radiusSolar ** 2 * (temperatureK / 5772) ** 4 * SOLAR_LUMINOSITY_W,
-      emissionColor: '#a8caff',
+      emissionColor: hotter ? '#a8caff' : '#b9d0fc',
+      glowStrength: hotter ? 1.12 : 0.84,
+      photosphere: { seed: hotter ? 163 : 167, granuleScale: 0, activeRegions: 0 },
     },
     orbit: {
       axisAu: (SEPARATION_KM / KM_PER_AU) * (companionMass / (PRIMARY_MASS + SECONDARY_MASS)),
