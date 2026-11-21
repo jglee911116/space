@@ -17,6 +17,7 @@ import { PleiadesCluster } from '../three/stellar/pleiades-cluster';
 import { MagnetarSurface } from '../three/stellar/magnetar-surface';
 import { useSurfaceMap } from '../three/shared/use-surface-map';
 import { StellarGlow } from '../three/stellar/stellar-glow';
+import { STELLAR_WIND_RADIUS } from '../three/stellar/stellar-wind-density';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { REALTIME_DAYS_PER_SECOND } from '../utils/orbit';
 
@@ -370,6 +371,8 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
           <StellarGlow radius={1} color={object.color} strength={photosphere ? 1.15 : 0.65} brightness={brightness} paused={paused || !photosphere} />
         </>
       )}
+      {object.id === 'betelgeuse' && <NebulaVolume radius={STELLAR_WIND_RADIUS} shape="betelgeuse-plume" paused={paused} daysPerSecond={daysPerSecond} />}
+      {object.id === 'rigel-a' && <NebulaVolume radius={STELLAR_WIND_RADIUS} shape="rigel-wind" paused={paused} daysPerSecond={daysPerSecond} />}
       {spinPeriod && (
         <>
           <group ref={beams}>
@@ -422,7 +425,7 @@ export default function FeaturedObjectScene(props: Props) {
     <CanvasBoundary>
       <Canvas
         camera={{
-          position: blackHole ? [5, 5.6, 13] : stellar ? [0, 1.5, object.photosphere ? 5.7 : 8] : [distance * 0.023, distance * (object.kind === 'x-ray-binary' ? 0.38 : 0.063), distance],
+          position: blackHole ? [5, 5.6, 13] : stellar ? [0, 1.5, object.id === 'betelgeuse' ? 7.5 : object.photosphere ? 5.7 : 8] : [distance * 0.023, distance * (object.kind === 'x-ray-binary' ? 0.38 : 0.063), distance],
           fov: 45,
           near: stellar || blackHole ? 0.05 : Math.min(0.05, object.extentLightYears * 0.015),
           far: Math.max(170, object.extentLightYears * 32),

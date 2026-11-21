@@ -37,7 +37,10 @@ export const betelgeuse: FeaturedObject = {
   radiusSolar: 764,
   radiusBasis: 'estimate',
   photosphere: { dark: '#662119', bright: '#ffcc8c', cellScale: 4 },
-  sources: [{ label: 'Joyce et al. · Betelgeuse', href: 'https://arxiv.org/abs/2006.09837' }],
+  sources: [
+    { label: 'Joyce et al. · Betelgeuse', href: 'https://arxiv.org/abs/2006.09837' },
+    { label: 'ESO / VLT · NACO and VISIR infrared observations', href: 'https://www.eso.org/public/images/eso1121a/' },
+  ],
 };
 
 export const rigelA: FeaturedObject = {

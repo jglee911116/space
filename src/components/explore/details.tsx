@@ -92,14 +92,19 @@ export function BodyTooltip({ body, x, y, distance }: { body: Body; x: number; y
       )}
       {body.orbit && <span>{t('details.orbitValue', [formatPeriod(body, t, number)])}</span>}
       <span>{t('details.rotationValue', [formatSpin(body, t, number, catalogText)])}</span>
-      {distance && (
-        <span className={styles.hoverDistance}>
-          <span>{t('details.hoverDistanceFrom', [catalogText(distance.origin.name)])}</span>
-          <strong>{t('details.hoverDistanceKm', [number(distance.au * KM_PER_AU, 0)])}</strong>
-          {distance.au >= 0.01 && <span>{number(distance.au, 3)} AU</span>}
-        </span>
-      )}
+      {distance && <BodyDistance origin={distance.origin} au={distance.au} />}
     </aside>
+  );
+}
+
+export function BodyDistance({ origin, au }: { origin: Body; au: number }) {
+  const { t, catalogText, number } = useLanguage();
+  return (
+    <span className={styles.hoverDistance}>
+      <span>{t('details.hoverDistanceFrom', [catalogText(origin.name)])}</span>
+      <strong>{t('details.hoverDistanceKm', [number(au * KM_PER_AU, 0)])}</strong>
+      {au >= 0.01 && <span>{number(au, 3)} AU</span>}
+    </span>
   );
 }
 

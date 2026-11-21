@@ -16,6 +16,23 @@ async function waitForRenderedMap(page: Page) {
   await expect(page.getByRole('group', { name: '화면 거리 축척' })).toContainText('화면 축척');
 }
 
+test('검색어 지우기 버튼은 팝업을 유지하고 검색창에 포커스를 돌려준다', async ({ page }) => {
+  await page.goto(milkyWay);
+  await page.getByRole('button', { name: '천체 검색' }).click();
+  const panel = page.getByRole('region', { name: '천체 검색' });
+  const input = panel.getByRole('searchbox');
+  const clear = panel.getByRole('button', { name: '검색어 지우기' });
+  await expect(clear).toHaveCount(0);
+  await input.fill('M42');
+  await clear.click();
+  await expect(input).toHaveValue('');
+  await expect(input).toBeFocused();
+  await expect(clear).toHaveCount(0);
+  await input.fill('M42');
+  await input.press('Enter');
+  await expect(page).toHaveURL(/target=orion-nebula$/);
+});
+
 test('검색 결과와 언어 전환은 선택한 천체를 유지한다', async ({ page }) => {
   await page.goto(milkyWay);
   await search(page, 'PSR B0531+21', /게성운/);
@@ -251,6 +268,10 @@ test('새 천체 다섯 개를 검색해 관측 자료와 3D 장면을 연다', 
 });
 
 test('선택한 태양계 천체에서 다른 천체의 라벨과 실제 중심 간 거리를 표시한다', async ({ page }) => {
+  const rootWarnings: string[] = [];
+  page.on('console', (message) => {
+    if (/synchronously unmount a root/i.test(message.text())) rootWarnings.push(message.text());
+  });
   await page.goto(`${milkyWay}?system=solar&target=earth`);
   const scene = page.getByLabel('회전하고 확대할 수 있는 태양계 3D 모델');
   const earth = scene.getByRole('button', { name: '지구', exact: true });
@@ -267,6 +288,57 @@ test('선택한 태양계 천체에서 다른 천체의 라벨과 실제 중심 
   expect(km).toBeLessThan(410_000);
   await moon.click();
   await expect(page).toHaveURL(/target=moon$/);
+  await search(page, '화성', /^화성 /);
+  await expect(page).toHaveURL(/target=mars$/);
+  await expect(scene.getByRole('button', { name: '화성', exact: true })).toHaveAttribute('aria-current', 'true');
+  expect(rootWarnings).toEqual([]);
+});
+
+test('좁은 화면으로 축소해도 선택한 태양계 라벨과 주변 라벨이 겹치지 않는다', async ({ page }) => {
+  await page.setViewportSize({ width: 480, height: 840 });
+  await page.goto(`${milkyWay}?system=solar&target=saturn`);
+  const scene = page.getByLabel('회전하고 확대할 수 있는 태양계 3D 모델');
+  const selected = scene.locator('button[aria-current="true"]');
+  await expect(selected).toHaveText('토성');
+  for (let step = 0; step < 12; step++) {
+    await scene.locator('canvas').dispatchEvent('wheel', { deltaY: 100, clientX: 240, clientY: 420, cancelable: true, bubbles: true });
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  }
+  await expect(selected).toBeVisible();
+  await expect.poll(async () => scene.getByRole('button').count()).toBeGreaterThan(2);
+  const overlaps = await scene.getByRole('button').evaluateAll((buttons) => {
+    const boxes = buttons.map((button) => button.getBoundingClientRect());
+    return boxes.some((a, index) => boxes.slice(index + 1).some((b) =>
+      a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom));
+  });
+  expect(overlaps).toBe(false);
+});
+
+test('터치로 달까지의 거리를 비교해도 기준 천체가 유지된다', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, viewport: { width: 480, height: 900 }, hasTouch: true });
+  try {
+    const page = await context.newPage();
+    await page.goto(`${milkyWay}?system=solar&target=earth`);
+    const toggle = page.getByRole('button', { name: '거리 비교', exact: true });
+    const scene = page.getByLabel('회전하고 확대할 수 있는 태양계 3D 모델');
+    const moon = scene.getByRole('button', { name: '달', exact: true });
+    await toggle.tap({ timeout: 6_000 });
+    await expect(page.getByText('거리를 잴 천체나 라벨을 선택하세요.')).toBeVisible();
+    for (let step = 0; step < 9; step++) {
+      await scene.locator('canvas').dispatchEvent('wheel', { deltaY: 100, clientX: 240, clientY: 340, cancelable: true, bubbles: true });
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    }
+    await moon.tap({ timeout: 6_000 });
+    await expect(page.getByText('지구 기준 중심 간 거리')).toBeVisible();
+    await expect(moon).toHaveAttribute('data-comparison-target', 'true');
+    await expect(page).toHaveURL(/target=earth$/);
+    await toggle.tap();
+    await expect(page.getByText('지구 기준 중심 간 거리')).toHaveCount(0);
+    await moon.tap({ timeout: 6_000 });
+    await expect(page).toHaveURL(/target=moon$/);
+  } finally {
+    await context.close();
+  }
 });
 
 test('타이탄의 대기와 관측 지표를 전환한다', async ({ page }) => {

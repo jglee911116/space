@@ -17,6 +17,7 @@ import {
   BlackHoleDetails,
   BodyDetails,
   BodyTooltip,
+  BodyDistance,
   GalaxyDetails,
   isMultiStar,
   OortCloudDetails,
@@ -160,7 +161,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const animatedAccretion = distantObject?.kind === 'quasar' || featuredObject?.kind === 'black-hole'
     || featuredObject?.kind === 'x-ray-binary' || (extraView && activeGalaxy.id === 'm87' && focus === 'm87-star');
   const featuredShape = featuredObject?.observationImage?.shape;
-  const animatedFeaturedVolume = featuredShape === 'bipolar-jet' || featuredShape === 'shocked-shell' || featuredShape === 'dust-spiral' || featuredShape === 'edge-on-disk' || featuredShape === 'light-echo';
+  const animatedFeaturedVolume = featuredObject?.id === 'betelgeuse' || featuredObject?.id === 'rigel-a' || featuredShape === 'bipolar-jet' || featuredShape === 'shocked-shell' || featuredShape === 'dust-spiral' || featuredShape === 'edge-on-disk' || featuredShape === 'light-echo';
   const heading = region
     ? association
       ? association.name
@@ -229,8 +230,13 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const [recenter, setRecenter] = useState(0);
   const [hovered, setHovered] = useState<HoveredBody | null>(null);
   const hoveredBody = hovered && system.bodies.find((other) => other.id === hovered.id);
+  const [comparison, setComparison] = useState<{ origin: string; destination: Target } | null>(null);
+  const canCompare = target !== null && system.id === 'solar' && !galaxyView && !cosmicView && !extraView && !featuredObject && !neighborhoodView;
+  const activeComparison = canCompare && comparison?.origin === target ? comparison : null;
+  const comparisonBody = activeComparison && system.bodies.find((item) => item.id === activeComparison.destination);
+  const distanceTarget = activeComparison ? activeComparison.destination : hovered?.id ?? null;
   const [hoverDistance, setHoverDistance] = useState<{ origin: string; body: string; au: number } | null>(null);
-  const distanceOrigin = hoverDistance && hoverDistance.origin === target && hoverDistance.body === hovered?.id && system.id === 'solar'
+  const distanceOrigin = hoverDistance && hoverDistance.origin === target && hoverDistance.body === distanceTarget && canCompare
     ? system.bodies.find((body) => body.id === hoverDistance.origin) : undefined;
 
   useEffect(() => {
@@ -239,6 +245,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
       setCenterZoom(null);
       setSpaceEntry(undefined);
       setHovered(null);
+      setComparison(null);
     };
     window.addEventListener('popstate', resetWheelView);
     return () => window.removeEventListener('popstate', resetWheelView);
@@ -252,27 +259,30 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
 
   const enterGalaxy = useCallback((entry: ZoomHandoff) => {
     setHovered(null);
+    setComparison(null);
     setWheelView({ scene: 'galaxy', entry });
-  }, []);
+  }, [setHovered, setComparison]);
   const enterSolarSystem = useCallback((entry: ZoomHandoff) => {
     setHovered(null);
     setWheelView({ scene: 'system', entry });
-  }, []);
+  }, [setHovered]);
 
   const navigateTo = useCallback(
     (next: Target, nextOverview: ExplorerView = null, nextSystem = systemId) => {
       setHovered(null);
+      setComparison(null);
       setWheelView(null);
       setCenterZoom(null);
       setSpaceEntry(undefined);
       if (!recordView(locale, next, nextOverview, nextSystem, DEFAULT_SYSTEM_ID, systems.find((item) => item.id === nextSystem)?.galaxyId ?? milkyWay.id)) setRecenter((revision) => revision + 1);
     },
-    [locale, systemId, systems],
+    [locale, systemId, systems, setHovered, setComparison],
   );
 
   const navigateSpace = useCallback(
     (url: string, entry?: ZoomHandoff) => {
       setHovered(null);
+      setComparison(null);
       setWheelView(null);
       setCenterZoom(null);
       setSpaceEntry(entry);
@@ -282,7 +292,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
       if (current.href !== destination.href) window.history.pushState(null, '', destination);
       else setRecenter((revision) => revision + 1);
     },
-    [locale],
+    [locale, setHovered, setComparison],
   );
   const enterUniverse = useCallback((entry?: ZoomHandoff) => navigateSpace(UNIVERSE_PATH, entry), [navigateSpace]);
   const selectDistantObject = useCallback((id: string) => navigateSpace(distantObjectPath(id)), [navigateSpace]);
@@ -353,11 +363,11 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
 
   const hoverBody = useCallback((id: string, x: number, y: number) => {
     setHovered({ id, x, y });
-  }, []);
+  }, [setHovered]);
 
   const leaveBody = useCallback((id: string) => {
     setHovered((current) => (current?.id === id ? null : current));
-  }, []);
+  }, [setHovered]);
 
   const reportHoverDistance = useCallback((origin: string, body: string, au: number) => {
     setHoverDistance((previous) => previous?.origin === origin && previous.body === body && previous.au === au
@@ -449,11 +459,19 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             onZoomOut={hasGalaxy ? enterGalaxy : externalGalaxy && system.galaxyMarkerKpc ? returnToExternalGalaxy : undefined}
             target={target}
             hoveredTarget={hovered?.id ?? null}
+            distanceTarget={distanceTarget}
+            comparisonTarget={activeComparison?.destination ?? null}
             overview={overview}
             paused={paused}
             simulationDaysRef={simulationDaysRef}
             recenter={recenter}
-            onSelect={navigateTo}
+            onSelect={(next) => {
+              if (!activeComparison) navigateTo(next);
+              else if (next && next !== target) {
+                setComparison({ origin: activeComparison.origin, destination: next });
+                setHovered(null);
+              }
+            }}
             onScaleChange={setScale}
             onHoverBody={hoverBody}
             onLeaveBody={leaveBody}
@@ -461,7 +479,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
           />
         )}
       </div>
-      {hovered && hoveredBody && <BodyTooltip body={hoveredBody} x={hovered.x} y={hovered.y}
+      {!activeComparison && hovered && hoveredBody && <BodyTooltip body={hoveredBody} x={hovered.x} y={hovered.y}
         distance={distanceOrigin && hoverDistance ? { origin: distanceOrigin, au: hoverDistance.au } : undefined} />}
 
       <header className={styles.header}>
@@ -656,6 +674,24 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             />
           )}
           <p className={styles.hint}>{t('navigation.cameraInstructions')}</p>
+          {canCompare && target && (
+            <div className={styles.distanceComparison}>
+              <button type="button" aria-pressed={Boolean(activeComparison)}
+                onClick={() => {
+                  setHovered(null);
+                  setComparison(activeComparison ? null : { origin: target, destination: null });
+                }}
+              >
+                {t('details.compareDistance')}
+              </button>
+              {activeComparison && (comparisonBody && distanceOrigin && hoverDistance ? (
+                <div className={styles.distanceReadout}>
+                  <strong>{catalogText(comparisonBody.name)}</strong>
+                  <BodyDistance origin={distanceOrigin} au={hoverDistance.au} />
+                </div>
+              ) : <p className={styles.hint}>{t('details.pickDistanceTarget')}</p>)}
+            </div>
+          )}
         </div>
         {region ? (
           <SuperclusterDetails region={region} association={association} onSelectCluster={enterAssociation} onSelectGalaxy={selectCatalogGalaxy} />

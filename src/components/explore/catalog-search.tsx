@@ -24,7 +24,12 @@ export function CatalogSearch({ systems, onSelect }: { systems: readonly StarSys
 
   return (
     <>
-      <button className={styles.searchTrigger} type="button" popoverTarget={panelId} aria-label={t('search.title')} title={t('search.title')} />
+      <button className={styles.searchTrigger} type="button" popoverTarget={panelId} aria-label={t('search.title')} title={t('search.title')}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+          <circle cx="10.5" cy="10.5" r="5.75" />
+          <path d="m14.6 14.6 5 5" />
+        </svg>
+      </button>
       <section
         ref={panel}
         className={`${styles.exploreMenu} ${styles.searchPanel}`}
@@ -36,6 +41,7 @@ export function CatalogSearch({ systems, onSelect }: { systems: readonly StarSys
         }}
       >
         <form
+          className={styles.searchForm}
           role="search"
           onSubmit={(event) => {
             event.preventDefault();
@@ -58,6 +64,18 @@ export function CatalogSearch({ systems, onSelect }: { systems: readonly StarSys
               }
             }}
           />
+          {query && (
+            <button className={styles.searchClear} type="button" aria-label={t('search.clear')}
+              onClick={() => {
+                setQuery('');
+                input.current?.focus();
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+                <path d="m4.5 4.5 7 7m0-7-7 7" />
+              </svg>
+            </button>
+          )}
         </form>
 
         {results.length ? (

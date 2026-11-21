@@ -15,6 +15,7 @@ import { AccretionModel } from '../three/black-holes/accretion-model';
 import { NebulaVolume } from '../three/nebulae/nebula-volume';
 import { useSurfaceMap } from '../three/shared/use-surface-map';
 import { CosmicMapMarkers, type CosmicMapMarker } from '../three/maps/cosmic-map-markers';
+import { CosmicBackground } from '../three/maps/cosmic-background';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { GalacticLabelLayer, GalacticMarker } from '../three/maps/galactic-marker';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
@@ -309,9 +310,13 @@ export default function UniverseScene(props: Props) {
         {object?.kind === 'quasar' ? (
           <AccretionModel object={object} showCounterjet={props.showCounterjet} onExit={exit} time={props.accretionPlaybackTime} />
         ) : object ? (
-          <DistantGalaxyModel object={object} onExit={exit} />
+          <>
+            <CosmicBackground />
+            <DistantGalaxyModel object={object} onExit={exit} />
+          </>
         ) : (
           <GalacticLabelLayer>
+            <CosmicBackground />
             <UniverseMap {...props} />
           </GalacticLabelLayer>
         )}

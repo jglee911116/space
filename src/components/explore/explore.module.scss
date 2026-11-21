@@ -282,6 +282,7 @@
   }
   .details {
     padding: 0.7rem 0.85rem;
+    max-height: min(25svh, 14rem);
   }
   .details h2,
   .details dl {
@@ -307,6 +308,21 @@
 .playback button:focus-visible {
   outline: 2px solid #ffb977;
   outline-offset: 3px;
+}
+
+.distanceComparison button[aria-pressed='true'] {
+  color: #ffc58d;
+  border-color: #ffc58d80;
+}
+
+.distanceReadout {
+  width: fit-content;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ffffff2e;
+  border-radius: 0.55rem;
+  background: #11111af5;
+  color: $space-fg;
+  font-size: 0.8rem;
 }
 
 @media (max-width: 560px) {
@@ -382,8 +398,22 @@
   border-top: 1px solid #ffffff26;
 }
 
+.systemCanvas,
+.solarBodyLabels {
+  position: absolute;
+  inset: 0;
+}
+
+.solarBodyLabels {
+  overflow: clip;
+  pointer-events: none;
+}
+
 .solarBodyLabel {
+  position: absolute;
+  inset: 0 auto auto 0;
   display: block;
+  visibility: hidden;
   pointer-events: auto;
   cursor: pointer;
   white-space: nowrap;
@@ -397,11 +427,8 @@
   opacity: 0.66;
 }
 
-.solarBodyLabel[hidden] {
-  display: none;
-}
-
 .solarBodyLabel[aria-current='true'],
+.solarBodyLabel[data-comparison-target='true'],
 .solarBodyLabel[data-hovered='true'],
 .solarBodyLabel:hover,
 .solarBodyLabel:focus-visible {
@@ -601,7 +628,9 @@
 }
 
 .searchTrigger {
-  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
   inline-size: 2.35rem;
   block-size: 2.35rem;
   border: 1px solid #ffffff32;
@@ -612,43 +641,46 @@
   pointer-events: auto;
 }
 
-.searchTrigger::before,
-.searchTrigger::after {
-  position: absolute;
-  content: '';
-}
-
-.searchTrigger::before {
-  inset: 0.59rem auto auto 0.59rem;
-  width: 0.58rem;
-  height: 0.58rem;
-  border: 1.5px solid currentColor;
-  border-radius: 50%;
-}
-
-.searchTrigger::after {
-  top: 1.31rem;
-  left: 1.24rem;
-  width: 0.46rem;
-  height: 1.5px;
-  background: currentColor;
-  transform: rotate(45deg);
-  transform-origin: left center;
-}
-
 .searchPanel {
   width: min(25rem, calc(100vw - var(--edge) * 2));
 }
 
+.searchForm {
+  position: relative;
+}
+
 .searchInput {
+  appearance: none;
   box-sizing: border-box;
   width: 100%;
   padding: 0.65rem 0.75rem;
+  padding-inline-end: 2.75rem;
   border: 1px solid #ffffff32;
   border-radius: 0.45rem;
   background: #181821;
   color: inherit;
   font: inherit;
+}
+
+.searchInput::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.searchClear {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 0.4rem;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  inline-size: 1.85rem;
+  block-size: 1.85rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: #ffc58d;
+  cursor: pointer;
 }
 
 .searchResults {
@@ -675,11 +707,13 @@
 }
 
 .searchTrigger:hover,
+.searchClear:hover,
 .searchResults button:hover {
   background: #ffffff18;
 }
 
 .searchTrigger:focus-visible,
+.searchClear:focus-visible,
 .searchInput:focus-visible,
 .searchResults button:focus-visible {
   outline: 2px solid #ffb977;

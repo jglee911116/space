@@ -1,12 +1,14 @@
 import { useFrame } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
-import { BackSide, Vector3, type Mesh, type ShaderMaterial, type Texture } from 'three';
+import { useMemo, useRef, type RefObject } from 'react';
+import { BackSide, MathUtils, Vector3, type Mesh, type ShaderMaterial, type Texture } from 'three';
 import { previewVisibility } from '../maps/map-detail';
 import { REALTIME_DAYS_PER_SECOND } from '../../utils/orbit';
 import { apepDustDensity, bipolarJetDensity, cartwheelDensity, edgeOnDiskDensity, hourglassDensity, shockedShellDensity, southernRingDensity } from './webb-nebula-density';
 import { catsEyeDensity, homunculusDensity, lightEchoDensity } from './hubble-nebula-density';
 import { butterflyDensity, debrisDiskDensity, velaWindDensity } from './observed-structure-density';
 import { quintetDensity } from '../galaxies/quintet-density';
+import { betelgeusePlumeDensity } from '../stellar/betelgeuse-plume';
+import { STELLAR_WIND_RADIUS, rigelWindDensity, solarWindDensity } from '../stellar/stellar-wind-density';
 import { spatialNoise } from '../shared/shaders';
 
 const vertex = /* glsl */ `
@@ -159,9 +161,13 @@ const densityByShape = {
   'vela-wind': velaWindDensity,
   butterfly: butterflyDensity,
   quintet: quintetDensity,
+  'betelgeuse-plume': betelgeusePlumeDensity,
+  'rigel-wind': rigelWindDensity,
+  'solar-wind': solarWindDensity,
   cartwheel: cartwheelDensity,
 };
 export type NebulaVolumeShape = keyof typeof densityByShape;
+const stellarWindShapes = new Set<NebulaVolumeShape>(['betelgeuse-plume', 'rigel-wind', 'solar-wind']);
 
 function fragment(shape: NebulaVolumeShape, preview: boolean) {
   return /* glsl */ `
@@ -194,6 +200,13 @@ function fragment(shape: NebulaVolumeShape, preview: boolean) {
     vec3 exit = max(a, b);
     float start = max(0.0, max(entry.x, max(entry.y, entry.z)));
     float end = min(exit.x, min(exit.y, exit.z));
+    ${stellarWindShapes.has(shape) ? `
+      // Integrate only the gas in front of the opaque photosphere.
+      float closest = -dot(eye, direction);
+      float impact = dot(eye, eye) - closest * closest;
+      float disk = ${(1 / STELLAR_WIND_RADIUS ** 2).toFixed(8)} - impact;
+      if (closest > 0.0 && disk > 0.0) end = min(end, closest - sqrt(disk));
+    ` : ''}
     if (end <= start) discard;
 
     const int steps = ${preview ? 28 : shape === 'cats-eye' || shape === 'quintet' || shape === 'butterfly' ? 54 : 44};
@@ -228,12 +241,13 @@ function fragment(shape: NebulaVolumeShape, preview: boolean) {
 `;
 }
 
-export function NebulaVolume({ texture, radius, shape, preview = false, paused = true, daysPerSecond = REALTIME_DAYS_PER_SECOND }: { texture?: Texture; radius: number; shape: NebulaVolumeShape; preview?: boolean; paused?: boolean; daysPerSecond?: number }) {
+export function NebulaVolume({ texture, radius, shape, preview = false, paused = true, daysPerSecond = REALTIME_DAYS_PER_SECOND, activityDays }: { texture?: Texture; radius: number; shape: NebulaVolumeShape; preview?: boolean; paused?: boolean; daysPerSecond?: number; activityDays?: RefObject<number> }) {
   const mesh = useRef<Mesh>(null);
   const material = useRef<ShaderMaterial>(null);
   const position = useMemo(() => new Vector3(), []);
   const initialPhase = shape === 'light-echo' ? 4 : 0;
   const motion = useRef(initialPhase);
+  const activityStart = useRef<number | null>(null);
   const rate = Math.max(0.18, 1 + 0.32 * Math.log10(daysPerSecond / REALTIME_DAYS_PER_SECOND));
   const uniforms = useMemo(() => ({
     observation: { value: texture ?? null },
@@ -244,7 +258,20 @@ export function NebulaVolume({ texture, radius, shape, preview = false, paused =
 
   useFrame(({ camera, size }, delta) => {
     if (!mesh.current || !material.current) return;
-    if (!preview && (shape === 'bipolar-jet' || shape === 'shocked-shell' || shape === 'dust-spiral' || shape === 'edge-on-disk' || shape === 'light-echo' || shape === 'vela-wind')) {
+    if (stellarWindShapes.has(shape)) {
+      if (activityDays) {
+        activityStart.current ??= activityDays.current;
+        motion.current = (activityDays.current - activityStart.current) * 2400;
+      } else if (!paused) {
+        motion.current += Math.min(delta, 0.1) * rate * (shape === 'rigel-wind' ? 1.05 : 0.65);
+      }
+      mesh.current.getWorldPosition(position);
+      const distanceInStellarRadii = camera.position.distanceTo(position) * STELLAR_WIND_RADIUS / radius;
+      const visibility = 1 - MathUtils.smoothstep(distanceInStellarRadii, 8.4, 12.8);
+      mesh.current.visible = visibility > 0;
+      material.current.uniforms.visibility.value = visibility;
+      material.current.uniforms.motion.value = motion.current;
+    } else if (!preview && (shape === 'bipolar-jet' || shape === 'shocked-shell' || shape === 'dust-spiral' || shape === 'edge-on-disk' || shape === 'light-echo' || shape === 'vela-wind')) {
       if (!paused) {
         const elapsed = motion.current + Math.min(delta, 0.1) * rate;
         if (shape === 'shocked-shell') motion.current = Math.min(elapsed, 18);

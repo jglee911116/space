@@ -42,12 +42,23 @@ export const surfaceFragment = /* glsl */ `
   uniform vec3 surfaceHot;
   uniform vec3 photosphere;
   uniform float convectionPhase;
+  uniform bool dwarfFlares;
   varying vec3 surface;
   varying vec2 starUv;
   varying vec3 viewNormal;
   varying vec3 viewDirection;
 
   ${spatialNoise}
+
+  vec3 activeRegion(vec3 surfacePoint, vec3 direction, float elapsed) {
+    float rise = smoothstep(0.0, 0.24, elapsed);
+    float flash = rise * (1.0 - smoothstep(0.33, 1.35, elapsed));
+    float cooling = rise * (1.0 - smoothstep(0.65, 3.0, elapsed));
+    float separation = max(0.0, 1.0 - dot(surfacePoint, normalize(direction)));
+    float core = flash * exp(-separation * 210.0);
+    float fringe = cooling * exp(-separation * 61.0);
+    return vec3(0.95, 0.88, 1.0) * core * 1.8 + vec3(0.92, 0.15, 0.055) * fringe * 0.52;
+  }
 
   void main() {
     vec3 p = normalize(surface);
@@ -82,6 +93,12 @@ export const surfaceFragment = /* glsl */ `
       float plasma = 0.28 + 0.46 * granular + 0.26 * convection;
       vec3 color = mix(surfaceDark, surfaceHot, plasma + faculae * 0.19);
       color *= (1.0 - 0.78 * spots) * mix(0.53, 1.18, pow(center, 0.40));
+      if (dwarfFlares) {
+        float time = (convectionPhase - 0.043) * 1440.0;
+        color += activeRegion(p, vec3(-0.56, 0.34, 0.76), mod(time - 1.7, 18.0));
+        color += activeRegion(p, vec3(0.66, -0.25, 0.71), mod(time - 6.5, 27.0));
+        color += activeRegion(p, vec3(0.35, 0.69, -0.63), mod(time - 10.0, 22.0));
+      }
       gl_FragColor = vec4(color, 1.0);
       return;
     }

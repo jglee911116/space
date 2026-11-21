@@ -1,15 +1,16 @@
 'use client';
 
 import { useLanguage } from '@/i18n/language';
-import { Html, OrbitControls, Stars } from '@react-three/drei';
+import { OrbitControls, Stars } from '@react-three/drei';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react';
-import { Color, DoubleSide, Points, Vector3, MathUtils, Mesh, type Camera, type Group, type LineLoop, type Object3D, type PointsMaterial, type MeshBasicMaterial, type ShaderMaterial } from 'three';
+import { Color, Points, Vector3, MathUtils, Mesh, type Camera, type Group, type LineLoop, type PointsMaterial, type ShaderMaterial } from 'three';
 import { KM_PER_AU } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import type { Body, StarSystem } from '@/constants/space';
 import { createMotions, isSatellite, rotationPhase, setOrbitalPositionAu, setWorldPosition, stellarTextureShear, writeOrbitVertices, UNITS_PER_AU } from '../utils/orbit';
 import { OortCloudModel } from '../three/planetary-systems/oort-cloud';
+import { KuiperBelt } from '../three/planetary-systems/kuiper-belt';
 import styles from '../explore.module.scss';
 import { IcePlumes } from '../three/planetary-systems/ice-plumes';
 import { ObservedBodyModel } from '../three/planetary-systems/observed-body-model';
@@ -17,6 +18,8 @@ import { PlanetMaterial, PlanetRings } from '../three/planetary-systems/planet-s
 import { PlanetGeometry } from '../three/planetary-systems/outer-solar-surface';
 import { JUPITER_RED_SPOT_LATITUDE, surfaceFragment, surfaceVertex } from '../three/shared/shaders';
 import { SolarProminences } from '../three/stellar/solar-prominences';
+import { NebulaVolume } from '../three/nebulae/nebula-volume';
+import { STELLAR_WIND_RADIUS } from '../three/stellar/stellar-wind-density';
 import { StellarGlow } from '../three/stellar/stellar-glow';
 import { useSurfaceMap } from '../three/shared/use-surface-map';
 import { useCursorZoom } from '../three/shared/use-cursor-zoom';
@@ -31,6 +34,8 @@ export type SceneProps = {
   system: StarSystem;
   target: Target;
   hoveredTarget: Target;
+  distanceTarget: Target;
+  comparisonTarget: Target;
   overview: Overview;
   paused: boolean;
   simulationDaysRef: RefObject<number>;
@@ -54,6 +59,9 @@ const DEFAULT_FOCUS_SCALE = 6.75;
 const ORBIT_OPACITY = 0.34;
 const SELECTED_ORBIT_OPACITY = 0.6;
 const HOVERED_ORBIT_OPACITY = 0.72;
+const LABEL_GAP = 5;
+const LABEL_MARGIN = 7;
+type LabelBounds = { x: number; y: number; width: number; height: number };
 
 function findBody(system: StarSystem, id: Target) {
   return id === null ? undefined : system.bodies.find((body) => body.id === id);
@@ -110,7 +118,7 @@ function Star({
   const texture = useSurfaceMap(body.surfaceMap?.file);
   const isSun = body.id === 'sun';
   const photosphere = body.stellar?.photosphere;
-  const showFlares = isSun || (focused && photosphere?.flarePreview === true);
+  const showDwarfFlares = focused && photosphere?.flarePreview === true;
   const [uniforms] = useState(() => ({
     surfacePhase: { value: 0 },
     surfaceMap: { value: null },
@@ -118,6 +126,7 @@ function Star({
     surfaceShear: { value: 0 },
     photosphere: { value: new Vector3(photosphere?.seed ?? 0, photosphere?.granuleScale ?? 0, photosphere?.activeRegions ?? 0) },
     convectionPhase: { value: 0 },
+    dwarfFlares: { value: false },
     surfaceDark: { value: new Color(body.colors[0]).convertLinearToSRGB() },
     surfaceHot: { value: new Color(body.colors[1]).convertLinearToSRGB() },
   }));
@@ -136,6 +145,7 @@ function Star({
     material.surfacePhase.value = rotationPhase(time, body.spinDays);
     material.surfaceShear.value = stellarTextureShear(time, body.spinDays, body.stellar?.poleSpinDays);
     material.convectionPhase.value = activityDays.current;
+    material.dwarfFlares.value = showDwarfFlares;
   });
 
   return (
@@ -153,8 +163,9 @@ function Star({
         <sphereGeometry args={[body.displayRadius, 96, 64]} />
         <shaderMaterial ref={surface} uniforms={uniforms} vertexShader={surfaceVertex} fragmentShader={surfaceFragment} />
       </mesh>
-      <StellarGlow radius={body.displayRadius} color={body.stellar?.emissionColor ?? body.colors[2]} strength={body.stellar?.glowStrength} paused={paused} activityDays={showFlares ? activityDays : undefined} />
-      {showFlares && <SolarProminences radius={body.displayRadius} days={days} activityDays={activityDays} spinDays={body.spinDays} poleSpinDays={body.stellar?.poleSpinDays} />}
+      <StellarGlow radius={body.displayRadius} color={body.stellar?.emissionColor ?? body.colors[2]} strength={body.stellar?.glowStrength} paused={paused} activityDays={isSun ? activityDays : undefined} />
+      {isSun && <SolarProminences radius={body.displayRadius} days={days} activityDays={activityDays} spinDays={body.spinDays} poleSpinDays={body.stellar?.poleSpinDays} />}
+      {isSun && focused && <NebulaVolume shape="solar-wind" radius={body.displayRadius * STELLAR_WIND_RADIUS} activityDays={activityDays} />}
     </>
   );
 }
@@ -163,6 +174,8 @@ function Scene({
   system,
   target,
   hoveredTarget,
+  distanceTarget,
+  comparisonTarget,
   overview,
   paused,
   simulationDaysRef,
@@ -177,8 +190,8 @@ function Scene({
   onHoverDistance,
   farOverview,
   showTitanSurface,
-}: SceneProps & { farOverview: number; showTitanSurface: boolean }) {
-  const { catalogText } = useLanguage();
+  labels,
+}: SceneProps & { farOverview: number; showTitanSurface: boolean; labels: RefObject<Record<string, HTMLButtonElement | null>> }) {
   const motions = useMemo(() => createMotions(system), [system]);
   const orbitPaths = useMemo(() => Object.fromEntries(system.bodies.map((body) => [
     body.id,
@@ -207,14 +220,13 @@ function Scene({
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const cursorZoomRef = useCursorZoom();
   const bodies = useRef<Record<string, Group | undefined>>({});
-  const labels = useRef<Record<string, HTMLButtonElement | null>>({});
+  const labelBounds = useRef(new Map<string, LabelBounds>());
   const distanceSample = useRef<{ origin: string; body: string; next: number } | null>(null);
   const spins = useRef<Record<string, Group | undefined>>({});
   const orbitAnchors = useRef<Record<string, Group | undefined>>({});
   const markers = useRef<Points>(null);
   const markerMaterial = useRef<PointsMaterial>(null);
-  const belt = useRef<Mesh>(null);
-  const beltMaterial = useRef<MeshBasicMaterial>(null);
+  const beltOpacity = useRef(0);
   const cloudOpacity = useRef(0);
   const systemVisible = useRef(true);
   const lastScale = useRef<ZoomScale | null>(null);
@@ -319,38 +331,36 @@ function Scene({
 
     cloudOpacity.current = layers.cloudOpacity;
     systemVisible.current = layers.systemOpacity > 0.01;
-    if (showBodyLabels && target && hoveredTarget && target !== hoveredTarget) {
+    if (showBodyLabels && target && distanceTarget && target !== distanceTarget) {
       const now = performance.now();
       const sample = distanceSample.current;
-      if (!sample || sample.origin !== target || sample.body !== hoveredTarget || now >= sample.next) {
+      if (!sample || sample.origin !== target || sample.body !== distanceTarget || now >= sample.next) {
         const { origin, body, local } = distanceScratch;
         setOrbitalPositionAu(system, motions, target, origin, local, days.current);
-        setOrbitalPositionAu(system, motions, hoveredTarget, body, local, days.current);
-        onHoverDistance(target, hoveredTarget, origin.distanceTo(body));
-        distanceSample.current = { origin: target, body: hoveredTarget, next: now + 125 };
+        setOrbitalPositionAu(system, motions, distanceTarget, body, local, days.current);
+        onHoverDistance(target, distanceTarget, origin.distanceTo(body));
+        distanceSample.current = { origin: target, body: distanceTarget, next: now + 125 };
       }
     } else {
       distanceSample.current = null;
     }
-    if (belt.current) belt.current.visible = layers.beltOpacity > 0.002;
-    if (beltMaterial.current) beltMaterial.current.opacity = 0.11 * layers.beltOpacity;
+    beltOpacity.current = layers.beltOpacity;
     for (const body of system.bodies) {
       const show = systemVisible.current && bodyVisible(body);
       const mesh = bodies.current[body.id];
       if (mesh) mesh.visible = show;
-      const label = labels.current[body.id];
-      if (label && label.hidden === show) label.hidden = !show;
 
       const anchor = orbitAnchors.current[body.id];
       if (anchor) {
         anchor.visible = show;
         const line = anchor.children[0] as LineLoop | undefined;
         if (line && !Array.isArray(line.material)) {
-          const opacity = body.id === hoveredTarget ? HOVERED_ORBIT_OPACITY : body.id === target ? SELECTED_ORBIT_OPACITY : ORBIT_OPACITY;
+          const opacity = body.id === hoveredTarget || body.id === comparisonTarget ? HOVERED_ORBIT_OPACITY : body.id === target ? SELECTED_ORBIT_OPACITY : ORBIT_OPACITY;
           line.material.opacity = opacity * layers.systemOpacity;
         }
       }
     }
+    if (showBodyLabels) placeLabels(camera);
 
     if (markers.current && markerMaterial.current) {
       markers.current.visible = systemVisible.current && radius > 55;
@@ -389,13 +399,84 @@ function Scene({
     return !satellites.has(body.id) || body.parent === satelliteParent;
   }
 
-  function labelPosition(object: Object3D, camera: Camera, size: { width: number; height: number }, radius: number) {
-    labelPoint.setFromMatrixPosition(object.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
+  function projectLabel(camera: Camera, size: { width: number; height: number }, radius: number) {
+    labelPoint.applyMatrix4(camera.matrixWorldInverse);
+    const inFront = labelPoint.z < 0;
     const rim = Math.min(150, radius * camera.projectionMatrix.elements[5] * size.height / (2 * Math.max(0.001, -labelPoint.z)));
     labelPoint.applyMatrix4(camera.projectionMatrix);
     const x = (1 + labelPoint.x) * size.width / 2;
     const y = (1 - labelPoint.y) * size.height / 2;
-    return [x + rim * 0.52 + 9, y + rim * 0.9 + 9];
+    return { x, y, rim, inFront, anchorX: x + rim * 0.52 + 9, anchorY: y + rim * 0.9 + 9 };
+  }
+
+  function placeLabels(camera: Camera) {
+    camera.updateMatrixWorld();
+    const previous = labelBounds.current;
+    const occupied: LabelBounds[] = [];
+    const overlay = Object.values(labels.current).find(Boolean)?.parentElement;
+    const explorer = overlay?.closest('main');
+    if (overlay && explorer) {
+      const viewport = overlay.getBoundingClientRect();
+      for (const panel of explorer.querySelectorAll(`.${styles.details}, .${styles.playback}`)) {
+        const bounds = panel.getBoundingClientRect();
+        if (bounds.top < viewport.bottom && bounds.bottom > viewport.top) {
+          occupied.push({ x: bounds.left - viewport.left, y: bounds.top - viewport.top, width: bounds.width, height: bounds.height });
+        }
+      }
+    }
+    const panelCount = occupied.length;
+    const entries = system.bodies.flatMap((body) => {
+      const button = labels.current[body.id];
+      const group = bodies.current[body.id];
+      if (!button || !group) return [];
+      const priority = body.id === target ? 3 : body.id === hoveredTarget || body.id === comparisonTarget || button === document.activeElement ? 2 : 1;
+      labelPoint.copy(group.position);
+      const position = projectLabel(camera, { width, height }, body.displayRadius);
+      const onScreen = group.visible && position.inFront && position.x >= 0 && position.x <= width && position.y >= 0 && position.y <= height;
+      return [{ id: body.id, button, priority, position, onScreen, width: button.offsetWidth, height: button.offsetHeight }];
+    });
+    entries.sort((a, b) => b.priority - a.priority);
+    for (const entry of entries) {
+      const { id, button, priority, position, onScreen } = entry;
+      const { x, y, rim, anchorX, anchorY } = position;
+      const old = previous.get(id);
+      const candidates = [
+        [anchorX, anchorY],
+        [x + rim + 9, y - entry.height / 2],
+        [x - rim - entry.width - 9, y - entry.height / 2],
+        [x - entry.width / 2, y - rim - entry.height - 7],
+        [x - entry.width / 2, y + rim + 7],
+        [anchorX, anchorY + entry.height + LABEL_GAP],
+        [x - entry.width / 2, y - rim - 2 * (entry.height + LABEL_GAP)],
+      ];
+      for (const panel of occupied.slice(0, panelCount)) {
+        const top = panel.y - entry.height - LABEL_GAP;
+        if (top >= LABEL_MARGIN && y >= top && y - top <= rim + 125) {
+          candidates.push([anchorX, top], [x - entry.width - 9, top]);
+        }
+      }
+      // A promoted hover label stays under the pointer when nearby labels move.
+      if (priority === 2 && old && Math.hypot(old.x - anchorX, old.y - anchorY) < rim + 90) {
+        candidates.unshift([old.x, old.y]);
+      }
+      const fits = (bounds: LabelBounds) => occupied.every((other) =>
+        bounds.x + bounds.width + LABEL_GAP <= other.x || other.x + other.width + LABEL_GAP <= bounds.x ||
+        bounds.y + bounds.height + LABEL_GAP <= other.y || other.y + other.height + LABEL_GAP <= bounds.y);
+      const bounds = onScreen && candidates.map(([left, top]) => ({
+        x: MathUtils.clamp(left, LABEL_MARGIN, Math.max(LABEL_MARGIN, width - entry.width - LABEL_MARGIN)),
+        y: MathUtils.clamp(top, LABEL_MARGIN, Math.max(LABEL_MARGIN, height - entry.height - LABEL_MARGIN)),
+        width: entry.width,
+        height: entry.height,
+      })).find(fits);
+      button.style.visibility = bounds ? 'visible' : 'hidden';
+      if (!bounds) {
+        previous.delete(id);
+        continue;
+      }
+      occupied.push(bounds);
+      previous.set(id, bounds);
+      button.style.translate = `${Math.round(bounds.x)}px ${Math.round(bounds.y)}px`;
+    }
   }
 
   return (
@@ -404,12 +485,7 @@ function Scene({
         <Stars radius={2800} depth={850} count={2800} factor={190} saturation={0} fade speed={0} />
       </group>
       {system.oortCloud && <OortCloudModel cloud={system.oortCloud} opacity={cloudOpacity} />}
-      {system.outerRegion && (
-        <mesh ref={belt} rotation-x={-Math.PI / 2} raycast={() => {}}>
-          <ringGeometry args={[system.outerRegion.beltAu[0] * UNITS_PER_AU, system.outerRegion.beltAu[1] * UNITS_PER_AU, 180]} />
-          <meshBasicMaterial ref={beltMaterial} color="#7994bb" transparent opacity={0} depthWrite={false} side={DoubleSide} />
-        </mesh>
-      )}
+      {system.outerRegion && <KuiperBelt beltAu={system.outerRegion.beltAu} opacity={beltOpacity} />}
       <ambientLight intensity={0.65} />
       {system.bodies.map((body) => (
         <group key={body.id}>
@@ -483,28 +559,6 @@ function Scene({
                 <PlanetRings body={body} />
               </group>
             )}
-            {showBodyLabels && bodyVisible(body) && (
-              <Html
-                zIndexRange={[1, 0]}
-                calculatePosition={(object, camera, size) => labelPosition(object, camera, size, body.displayRadius)}
-              >
-                <button
-                  type="button"
-                  ref={(element) => { labels.current[body.id] = element; }}
-                  className={styles.solarBodyLabel}
-                  aria-current={body.id === target ? 'true' : undefined}
-                  data-hovered={body.id === hoveredTarget}
-                  onPointerMove={(event) => {
-                    if (event.pointerType !== 'touch' && event.buttons === 0) onHoverBody(body.id, event.clientX, event.clientY);
-                  }}
-                  onPointerLeave={() => onLeaveBody(body.id)}
-                  onPointerDown={() => onLeaveBody(body.id)}
-                  onClick={() => { if (body.id !== target) onSelect(body.id); }}
-                >
-                  {catalogText(body.name)}
-                </button>
-              </Html>
-            )}
           </group>
         </group>
       ))}
@@ -564,6 +618,7 @@ function Scene({
 
 export default function SystemScene(props: SceneProps) {
   const { t, catalogText } = useLanguage();
+  const labels = useRef<Record<string, HTMLButtonElement | null>>({});
   const [showTitanSurface, setShowTitanSurface] = useState(false);
   const farOverview = useMemo(() => distantDistance(props.system), [props.system]);
   const [initialCamera] = useState(() => {
@@ -580,14 +635,38 @@ export default function SystemScene(props: SceneProps) {
 
   return (
     <CanvasBoundary>
-      <Canvas
-        camera={initialCamera}
-        dpr={[1, 1.5]}
-        fallback={<span aria-hidden="true">{t('canvas.systemModel', [catalogText(props.system.name)])}</span>}
-        aria-label={t('canvas.interactiveModel', [catalogText(props.system.name)])}
-      >
-        <Scene {...props} farOverview={farOverview} showTitanSurface={showTitanSurface} />
-      </Canvas>
+      <div className={styles.systemCanvas} role="group" aria-label={t('canvas.interactiveModel', [catalogText(props.system.name)])}>
+        <Canvas
+          camera={initialCamera}
+          dpr={[1, 1.5]}
+          fallback={<span aria-hidden="true">{t('canvas.systemModel', [catalogText(props.system.name)])}</span>}
+        >
+          <Scene {...props} farOverview={farOverview} showTitanSurface={showTitanSurface} labels={labels} />
+        </Canvas>
+        {props.system.id === 'solar' && props.target && (
+          <div className={styles.solarBodyLabels}>
+            {props.system.bodies.map((body) => (
+              <button
+                key={body.id}
+                type="button"
+                ref={(element) => { labels.current[body.id] = element; }}
+                className={styles.solarBodyLabel}
+                aria-current={body.id === props.target ? 'true' : undefined}
+                data-comparison-target={body.id === props.comparisonTarget}
+                data-hovered={body.id === props.hoveredTarget}
+                onPointerMove={(event) => {
+                  if (event.pointerType !== 'touch' && event.buttons === 0) props.onHoverBody(body.id, event.clientX, event.clientY);
+                }}
+                onPointerLeave={() => props.onLeaveBody(body.id)}
+                onPointerDown={() => props.onLeaveBody(body.id)}
+                onClick={() => { if (body.id !== props.target) props.onSelect(body.id); }}
+              >
+                {catalogText(body.name)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       {props.target === 'titan' && (
         <button className={styles.surfaceViewButton} type="button" aria-pressed={showTitanSurface} onClick={() => setShowTitanSurface((show) => !show)}>
           {t('navigation.titanSurface')}
