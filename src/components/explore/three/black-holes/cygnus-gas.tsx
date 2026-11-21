@@ -121,9 +121,10 @@ const fragment = /* glsl */ `
   }
 `;
 
-export function CygnusGas({ time }: { time: RefObject<number> }) {
+export function CygnusGas({ time, preview = false }: { time: RefObject<number>; preview?: boolean }) {
   const material = useRef<ShaderMaterial>(null);
   const uniforms = useMemo(() => ({ time: { value: 0 }, diskPhase: { value: 0 } }), []);
+  const shader = preview ? fragment.replace('const int samples = 48;', 'const int samples = 18;') : fragment;
   useFrame(() => {
     if (!material.current) return;
     material.current.uniforms.time.value = time.current;
@@ -132,7 +133,7 @@ export function CygnusGas({ time }: { time: RefObject<number> }) {
   return (
     <mesh renderOrder={1} raycast={() => {}}>
       <boxGeometry args={[2.32, 1.12, 1.12]} />
-      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={vertex} fragmentShader={fragment} side={BackSide} transparent depthWrite={false} depthTest={false} />
+      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={vertex} fragmentShader={shader} side={BackSide} transparent depthWrite={false} depthTest={preview} />
     </mesh>
   );
 }

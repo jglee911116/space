@@ -3,6 +3,22 @@ import type { FeaturedObject } from '../../types';
 
 export const hubbleNebulae: readonly FeaturedObject[] = [
   {
+    id: 'ngc-7027',
+    name: message('catalog.new.ngc-7027.name'),
+    designation: 'NGC 7027',
+    aliases: ['Jewel Bug Nebula', 'Pink Pillow Nebula', '보석벌레성운'],
+    description: message('catalog.new.ngc-7027.summary'),
+    kind: 'planetary-nebula',
+    observationStatus: 'observed',
+    distanceLightYears: 3000,
+    rightAscension: 316.75725,
+    declination: 42.23636,
+    extentLightYears: 0.85,
+    color: '#8dcfef',
+    observationImage: { file: '/textures/nebulae/planetary/ngc-7027/hubble.jpg', shape: 'jewel-bug', telescope: 'hubble' },
+    sources: [{ label: 'NASA, ESA & J. Kastner (RIT) · Hubble', href: 'https://esahubble.org/images/heic2011c/' }],
+  },
+  {
     id: 'ngc-6302',
     name: message('catalog.featured-objects.ngc-6302.name'),
     designation: 'NGC 6302 · Caldwell 69',

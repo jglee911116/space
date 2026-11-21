@@ -84,14 +84,14 @@ const fragment = /* glsl */ `
   }
 `;
 
-export function GalaxyPreview({ galaxy, texture }: { galaxy: Galaxy; texture?: Texture }) {
-  const { diskObservation, morphology, modelRadiusKpc } = galaxy;
+export function GalaxyPreview({ galaxy, texture, radius = galaxy.modelRadiusKpc, opacity = 1, onSelect }: { galaxy: Galaxy; texture?: Texture; radius?: number; opacity?: number; onSelect?: () => void }) {
+  const { diskObservation, morphology } = galaxy;
   const mesh = useRef<Mesh>(null);
   const material = useRef<ShaderMaterial>(null);
   const position = useMemo(() => new Vector3(), []);
   const uniforms = useMemo(() => {
     const rotation = diskObservation?.rotation ?? 0;
-    const shape = morphology?.includes('elliptical') ? 2 : morphology?.includes('irregular') ? 1 : 0;
+    const shape = morphology?.includes('elliptical') || (onSelect && !morphology) ? 2 : morphology?.includes('irregular') ? 1 : 0;
     return {
       diskMap: { value: texture ?? null },
       mapped: { value: texture !== undefined },
@@ -104,18 +104,22 @@ export function GalaxyPreview({ galaxy, texture }: { galaxy: Galaxy; texture?: T
       barred: { value: morphology === 'barred-spiral' },
       visibility: { value: 0 },
     };
-  }, [diskObservation, galaxy.color, morphology, texture]);
+  }, [diskObservation, galaxy.color, morphology, onSelect, texture]);
 
   useFrame(({ camera, size }) => {
     if (!mesh.current || !material.current) return;
     mesh.current.getWorldPosition(position).applyMatrix4(camera.matrixWorldInverse);
-    const visibility = previewVisibility(modelRadiusKpc * 2, -position.z, camera, size.height);
+    const visibility = previewVisibility(radius * 2, -position.z, camera, size.height) * opacity;
     mesh.current.visible = visibility > 0;
     material.current.uniforms.visibility.value = visibility;
   });
 
   return (
-    <mesh ref={mesh} scale={modelRadiusKpc} raycast={() => {}}>
+    <mesh ref={mesh} scale={radius} {...(onSelect ? { onClick: (event: import('@react-three/fiber').ThreeEvent<MouseEvent>) => {
+      if (!mesh.current?.visible || event.delta > 4) return;
+      event.stopPropagation();
+      onSelect();
+    } } : { raycast: () => {} })}>
       <boxGeometry args={[2, 1.68, 2]} />
       <shaderMaterial ref={material} uniforms={uniforms} vertexShader={vertex} fragmentShader={fragment} side={BackSide} transparent depthWrite={false} blending={AdditiveBlending} />
     </mesh>

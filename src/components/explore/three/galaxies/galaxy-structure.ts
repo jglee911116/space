@@ -30,7 +30,7 @@ const morphology: Partial<Record<NonNullable<Galaxy['morphology']>, Profile>> = 
   'dust-lane-elliptical': { ...elliptical, dust: 1 },
 };
 
-const variants: Readonly<Record<string, Partial<Profile>>> = {
+const variants: Readonly<Record<string, Partial<Profile & { phase: number }>>> = {
   'large-magellanic-cloud': { axis: 0.80, bar: 0.37, asymmetry: 0.45 },
   'small-magellanic-cloud': { axis: 0.57, thickness: 0.25, asymmetry: 0.55 },
   triangulum: { arms: 3, winding: 1.69, core: 0.085, dust: 0.44, asymmetry: 0.23 },
@@ -53,12 +53,19 @@ const variants: Readonly<Record<string, Partial<Profile>>> = {
   m105: { axis: 0.94, thickness: 0.85, core: 0.14 },
   'ngc-3311': { axis: 0.98, thickness: 0.9, core: 0.32 },
   'ngc-3309': { axis: 0.78, thickness: 0.69, core: 0.16 },
+  'ngc-6822': { axis: 0.74, thickness: 0.24, core: 0.11, asymmetry: 0.52, dust: 0.68 },
+  wlm: { axis: 0.43, thickness: 0.21, core: 0.10, asymmetry: 0.32 },
+  'ngc-1566': { winding: -1.65, phase: -1.95, axis: 0.96, core: 0.16 },
+  'phoenix-dwarf': { axis: 0.76, thickness: 0.33, core: 0.16, asymmetry: 0.19, dust: 0.08 },
+  'ngc-147': { axis: 0.71, thickness: 0.55, core: 0.24 },
+  'ngc-185': { axis: 0.85, thickness: 0.63, core: 0.19 },
+  'sagittarius-dsph': { axis: 0.42, thickness: 0.45, core: 0.28, asymmetry: 0.22 },
 };
 
 export function galaxyStructure(galaxy: Galaxy) {
   const base = galaxy.morphology ? morphology[galaxy.morphology] ?? disk : disk;
   const seed = [...galaxy.id].reduce((value, character) => Math.imul(value, 31) + character.charCodeAt(0) | 0, 119);
-  return { ...base, ...variants[galaxy.id], seed, phase: (seed >>> 0) % 4096 / 4096 * Math.PI * 2 };
+  return { ...base, seed, phase: (seed >>> 0) % 4096 / 4096 * Math.PI * 2, ...variants[galaxy.id] };
 }
 
 export function galaxyParticles(galaxy: Galaxy, count: number) {
@@ -78,9 +85,10 @@ export function galaxyParticles(galaxy: Galaxy, count: number) {
 
   for (let offset = 0; offset < positions.length; offset += 3) {
     const elliptical = profile.shape === 'elliptical';
+    const diffuse = profile.shape === 'irregular';
     const core = random() < (elliptical ? 0.48 : 0.17);
     const arm = !core && profile.arms > 0 && random() < 0.64;
-    const r = core ? profile.core * 1.55 * random() ** 1.3 : random() ** (elliptical ? 0.83 : 0.62);
+    const r = core ? profile.core * 1.55 * random() ** 1.3 : random() ** (elliptical ? 0.83 : diffuse ? 0.74 : 0.62);
     let angle = random() * Math.PI * 2;
     if (arm) {
       const branch = Math.floor(random() * profile.arms) * Math.PI * 2 / profile.arms;
@@ -89,16 +97,17 @@ export function galaxyParticles(galaxy: Galaxy, count: number) {
     }
     const uneven = 1 + profile.asymmetry * (0.36 * Math.cos(angle - profile.phase) + 0.18 * Math.sin(3 * angle + profile.phase));
     const latitude = 2 * random() - 1;
-    const plane = elliptical ? Math.sqrt(1 - latitude * latitude) : 1;
+    const plane = elliptical || diffuse ? Math.sqrt(1 - latitude * latitude) : 1;
     const size = galaxy.modelRadiusKpc;
     positions[offset] = r * plane * Math.cos(angle) * uneven * size;
-    positions[offset + 1] = latitude * (elliptical ? profile.thickness * r : core ? 0.55 * profile.core : profile.thickness * (1 - 0.55 * r)) * size;
+    positions[offset + 1] = latitude * (elliptical || diffuse ? profile.thickness * r : core ? 0.55 * profile.core : profile.thickness * (1 - 0.55 * r)) * size;
     positions[offset + 2] = r * plane * Math.sin(angle) * profile.axis * uneven * size;
     const knot = !elliptical && !core && random() > 0.96;
     tint.copy(core || elliptical ? diskColor : arm ? hotColor : diskColor)
       .lerp(coreColor, core ? 0.61 : elliptical ? 0.18 : 0.06);
     if (knot) tint.lerp(nebulaColor, 0.75);
-    tint.multiplyScalar(((knot ? 0.67 : 0.23) + random() * (knot ? 0.56 : 0.58)) * (1 - r ** 4));
+    const edgeFade = diffuse ? (1 - r * r) ** 2 : 1 - r ** 4;
+    tint.multiplyScalar(((knot ? 0.67 : 0.23) + random() * (knot ? 0.56 : 0.58)) * edgeFade);
     tint.toArray(colors, offset);
   }
   return { positions, colors };

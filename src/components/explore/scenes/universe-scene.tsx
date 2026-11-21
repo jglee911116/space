@@ -15,7 +15,10 @@ import { AccretionModel } from '../three/black-holes/accretion-model';
 import { NebulaVolume } from '../three/nebulae/nebula-volume';
 import { useSurfaceMap } from '../three/shared/use-surface-map';
 import { CosmicMapMarkers, type CosmicMapMarker } from '../three/maps/cosmic-map-markers';
+import { GalaxyPreview } from '../three/galaxies/galaxy-preview';
 import { CosmicBackground } from '../three/maps/cosmic-background';
+import { PandoraCluster } from '../three/galaxies/pandora-cluster';
+import { DistanceRings } from '../three/maps/distance-rings';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { GalacticLabelLayer, GalacticMarker } from '../three/maps/galactic-marker';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
@@ -94,28 +97,35 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
   const gridRadius = association?.gridRadiusMly ?? region?.gridRadiusMly ?? RADIUS;
   const markers = useMemo(() => {
     if (association) {
-      return association.members.flatMap(({ id, name, skyPosition, distanceKpc, color }) =>
-        skyPosition
+      return association.members.flatMap((galaxy, index) => {
+        const { id, name, skyPosition, distanceKpc, color } = galaxy;
+        const distance = (distanceKpc * AU_PER_KPC * KM_PER_AU) / KM_PER_MAP_UNIT;
+        // Preserve the observed sightlines. Spread the unresolved depths only in the visualization.
+        const depth = (MathUtils.euclideanModulo(index * 0.618034, 1) - 0.5) * (association.illustrativeDepthMly ?? 0);
+        return skyPosition
           ? [
               {
                 name,
                 color,
                 galaxyId: id,
+                galaxy,
                 clusterId: undefined,
-                position: positionAt(skyPosition.rightAscension, skyPosition.declination, (distanceKpc * AU_PER_KPC * KM_PER_AU) / KM_PER_MAP_UNIT),
+                position: positionAt(skyPosition.rightAscension, skyPosition.declination, distance + depth),
               },
             ]
-          : [],
-      );
+          : [];
+      });
     }
     return (
       region?.markers.map((item) => ({
         ...item,
+        galaxy: undefined,
         position: positionAt(item.rightAscension, item.declination, item.distanceMly),
       })) ?? []
     );
   }, [association, region]);
   const bodies = useMemo(() => {
+    if (association?.volumeMembers) return [];
     const result: CosmicMapMarker[] = markers.map(({ galaxyId, position, color }) => {
       const morphology = galaxies.find((galaxy) => galaxy.id === galaxyId)?.morphology;
       return {
@@ -127,7 +137,7 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
     if (!association) result.push({ position: ORIGIN, color: '#ffd195', style: 'cluster' });
     if (!region) {
       for (const object of landmarks) {
-        const style = object.kind === 'quasar' ? (object.visibleJet ? 'jet' : 'quasar') : object.kind === 'ring-galaxy' ? 'ring' : 'irregular';
+        const style = object.kind === 'quasar' ? (object.visibleJet ? 'jet' : 'quasar') : object.kind === 'ring-galaxy' ? 'ring' : object.kind === 'galaxy-cluster' ? 'cluster' : 'irregular';
         result.push({ position: object.position, color: object.color, style });
       }
     }
@@ -155,14 +165,6 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
     camera.position.copy(orbitTarget).addScaledVector(cameraDirection, distance);
     orbit.update();
   }, [camera, association, entry, entryLimit, focusedLandmark, landmarkReturnDistance, orbitTarget, outerLimit, preset]);
-  const grid = useMemo(
-    () =>
-      Array.from({ length: 129 }, (_, index) => {
-        const angle = (index * Math.PI) / 64;
-        return new Vector3(Math.cos(angle), 0, Math.sin(angle));
-      }),
-    [],
-  );
   useFrame(({ camera, size }) => {
     const orbit = controls.current;
     if (!orbit) return;
@@ -178,20 +180,14 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
 
   return (
     <>
-      {[0.25, 0.5, 0.75, 1].map((ratio) => (
-        <group key={ratio} position={mapCenter} scale={gridRadius * ratio}>
-          <Line points={grid} color="#859ad8" transparent opacity={ratio === 1 ? 0.46 : 0.16} depthWrite={false} raycast={() => {}} />
-          {!region && ratio === 1 && (
-            <>
-              <Line points={grid} rotation-x={Math.PI / 2} color="#859ad8" transparent opacity={0.24} depthWrite={false} raycast={() => {}} />
-              <Line points={grid} rotation-z={Math.PI / 2} color="#859ad8" transparent opacity={0.24} depthWrite={false} raycast={() => {}} />
-            </>
-          )}
+      <DistanceRings center={mapCenter} outerRadius={gridRadius} lightYearsPerUnit={KM_PER_MAP_UNIT / KM_PER_LIGHT_YEAR} showReferencePlanes={!region} />
+      {association?.volumeMembers ? markers.map(({ galaxy, position }, index) => galaxy && (
+        <group key={galaxy.id} position={position} rotation={[galaxy.diskTilt ?? (index % 7) * 0.26, index * 0.71, index * 0.41]}>
+          <GalaxyPreview galaxy={galaxy} radius={0.12 + galaxy.modelRadiusKpc * 0.004} onSelect={() => onSelectGalaxy(galaxy.id)} />
         </group>
-      ))}
-      <CosmicMapMarkers markers={bodies} referenceDepth={preset} accretionTime={region ? undefined : accretionPlaybackTime} />
+      )) : <CosmicMapMarkers markers={bodies} referenceDepth={preset} accretionTime={region ? undefined : accretionPlaybackTime} />}
       {!association && <GalacticMarker name={innerName} priority={2} color="#ffd195" labelOffset={-0.92} onSelect={() => onStepIn()} />}
-      {markers.map(({ name, position, color, galaxyId, clusterId }, index) => (
+      {markers.map(({ name, position, color, galaxyId, clusterId, galaxy }, index) => (!association?.volumeMembers || galaxy?.morphology) && (
         <MapMarker
           key={typeof name === 'string' ? name : name.key}
           name={name}
@@ -250,7 +246,7 @@ function DistantGalaxyModel({ object, onExit }: { object: Exclude<DistantObject,
   const volumeShape = object.kind === 'ring-galaxy' ? 'cartwheel' : object.kind === 'galaxy-group' ? 'quintet' : undefined;
   const texture = useSurfaceMap('observationImage' in object ? object.observationImage : undefined);
   const stars = useMemo(() => {
-    if (volumeShape) return undefined;
+    if (volumeShape || object.kind === 'galaxy-cluster') return undefined;
     const count = 4000;
     const positions = new Float32Array(count * 3);
     const goldenAngle = Math.PI * (3 - Math.sqrt(5));
@@ -262,11 +258,11 @@ function DistantGalaxyModel({ object, onExit }: { object: Exclude<DistantObject,
       positions.set([horizontal * Math.cos(angle), radius * height * 0.58, horizontal * Math.sin(angle) * 0.76], i * 3);
     }
     return positions;
-  }, [volumeShape]);
+  }, [volumeShape, object.kind]);
 
   return (
     <>
-      {stars ? (
+      {object.kind === 'galaxy-cluster' ? <PandoraCluster /> : stars ? (
         <points rotation={[0.14, 0.28, -0.24]}>
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" args={[stars, 3]} />
@@ -299,7 +295,7 @@ export default function UniverseScene(props: Props) {
   };
   const position: [number, number, number] = object?.kind === 'ring-galaxy'
     ? [1.7, 1.0, 14.6]
-    : object?.kind === 'galaxy-group' ? [0.36, 0.46, 15.8] : object ? [5, 5.6, 13] : [0, 0, RADIUS * 2.65];
+    : object?.kind === 'galaxy-group' || object?.kind === 'galaxy-cluster' ? [0.36, 0.46, 15.8] : object ? [5, 5.6, 13] : [0, 0, RADIUS * 2.65];
   return (
     <CanvasBoundary>
       <Canvas
@@ -311,12 +307,12 @@ export default function UniverseScene(props: Props) {
           <AccretionModel object={object} showCounterjet={props.showCounterjet} onExit={exit} time={props.accretionPlaybackTime} />
         ) : object ? (
           <>
-            <CosmicBackground />
+            {object.kind !== 'galaxy-cluster' && <CosmicBackground />}
             <DistantGalaxyModel object={object} onExit={exit} />
           </>
         ) : (
           <GalacticLabelLayer>
-            <CosmicBackground />
+            {props.region && <CosmicBackground />}
             <UniverseMap {...props} />
           </GalacticLabelLayer>
         )}

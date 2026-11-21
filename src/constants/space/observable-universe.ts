@@ -15,6 +15,16 @@ export const observableUniverse: ObservableUniverse = {
 
 export const distantObjects: readonly DistantObject[] = [
   {
+    id: 'abell-2744', kind: 'galaxy-cluster', name: message('catalog.new.pandora.name'),
+    aliases: ['Abell 2744', 'ACO 2744', 'A2744', 'Pandora Cluster'], observationStatus: 'observed',
+    redshift: 0.306, rightAscension: 3.583458, declination: -30.388278, color: '#e8c7ad',
+    summary: message('catalog.new.pandora.summary'),
+    sources: [
+      { label: 'NASA Webb · Pandora’s Cluster', href: 'https://science.nasa.gov/asset/webb/pandoras-cluster-nircam-image/' },
+      { label: 'Richard et al. · MUSE spectroscopy', href: 'https://doi.org/10.26093/cds/vizier.36460083' },
+    ],
+  },
+  {
     id: 'stephans-quintet',
     kind: 'galaxy-group',
     name: message('catalog.observable-universe.stephans-quintet.name'),

@@ -29,21 +29,54 @@ export const butterflyDensity = /* glsl */ `
     float h = abs(q.y);
     float fine = noise(q * 32.0);
     float coarse = noise(q * 11.0);
-    float width = 0.075 + 0.53 * pow(h, 0.73);
-    float sectionRadius = length(vec2(q.x, q.z * 1.36)) / width;
-    float rim = exp(-pow(abs(sectionRadius - 0.83 + 0.19 * (coarse - 0.5)) / 0.26, 2.0));
-    float web = 0.29 + 0.71 * pow(0.5 + 0.5 * sin(q.x * 38.0 + q.z * 26.0 + coarse * 8.5 - h * 9.0), 2.0);
+    float width = 0.075 + 0.57 * pow(h, 0.73);
+    vec2 section = vec2(q.x - 0.09 * h * h, q.z * (1.14 + 0.15 * h));
+    float angle = atan(section.y, section.x + 0.0001);
+    float sectionRadius = length(section) / width;
+    float folds = 0.09 * sin(5.0 * angle + h * 11.0) + 0.07 * sin(9.0 * angle - q.y * 14.0);
+    float rimOffset = (sectionRadius - 0.83 + folds + 0.23 * (coarse - 0.5)) / 0.18;
+    float rim = exp(-rimOffset * rimOffset);
+    float grooves = 0.5 + 0.5 * sin(12.0 * angle + h * 17.0 + coarse * 7.0);
+    float web = 0.28 + 0.72 * grooves * grooves;
+    float knots = smoothstep(0.40, 0.82, fine + 0.20 * noise(q * 53.0));
     float envelope = smoothstep(0.018, 0.17, h) * (1.0 - smoothstep(0.76, 1.01, h));
-    float dustLane = exp(-abs(q.y + q.x * 0.17) / 0.032) * (1.0 - smoothstep(0.055, 0.23, length(q.xz)));
-    vec2 projected = (p.xy - p.z * vec2(0.023, 0.063)) / (1.0 - p.z / 2.87);
+    float dustLane = exp(-abs(q.y + q.x * 0.17) / 0.033) * (1.0 - smoothstep(0.065, 0.25, length(q.xz)));
+    vec3 view = normalize(localEye);
+    // Project the observation from both faces. The rear camera supplies the
+    // screen-space reflection while the projection stays on the 3D gas.
+    float faceDepth = view.z < 0.0 ? -p.z : p.z;
+    vec2 projected = (p.xy - faceDepth * vec2(0.023, 0.063)) / (1.0 - faceDepth / 2.87);
     vec3 base = mix(vec3(0.54, 0.13, 0.052), vec3(0.63, 0.63, 0.88), 1.0 - smoothstep(0.09, 0.56, h));
     vec3 image = observe(vec2(0.525, 0.54) + projected * vec2(0.49, 0.48), 0.25, base);
     float signal = smoothstep(0.014, 0.56, max(image.r, max(image.g, image.b)));
-    float imageWeight = mapped ? smoothstep(0.36, 0.97, normalize(localEye).z) : 0.0;
-    float gas = envelope * (rim * (1.7 + 6.8 * web * fine) + 0.51 * exp(-sectionRadius * sectionRadius));
-    gas *= mix(1.0, 0.34 + 1.8 * signal, imageWeight);
-    return vec4(mix(mix(base, image * 1.57, 0.76 * imageWeight), vec3(0.030, 0.015, 0.013), dustLane),
-      gas + dustLane * 10.0);
+    float faceWeight = smoothstep(0.39, 0.97, abs(view.z));
+    float imageWeight = mapped ? faceWeight : 0.0;
+    vec3 filaments = mix(base * 0.63, mix(vec3(1.0, 0.35, 0.13), vec3(0.66, 0.76, 1.0), 1.0 - smoothstep(0.25, 0.69, h)), knots);
+    float original = envelope * (rim * (1.5 + 15.0 * web * knots) + 0.67 * exp(-sectionRadius * sectionRadius) * coarse);
+    float photoGas = original * (0.34 + 1.8 * signal);
+
+    // Wrap filament detail around the lobes, so side and polar views still
+    // resolve thin folds, wisps and the dark waist as separate structures.
+    vec2 sideUV = vec2(0.525, 0.54) + vec2(q.z * 1.32 + 0.44 * q.y, q.y) * vec2(0.49, 0.48);
+    vec3 sideImage = observe(sideUV, 0.60, filaments);
+    float sideSignal = smoothstep(0.045, 0.64, max(sideImage.r, max(sideImage.g, sideImage.b)));
+    float twist = angle + q.y * 1.7 + 0.14 * sin(h * 24.0 + 6.0 * angle);
+    float threads = pow(0.5 + 0.5 * sin(18.0 * twist + coarse * 8.0), 4.0);
+    float ribbons = pow(0.5 + 0.5 * sin(44.0 * h - 5.0 * angle + fine * 4.2), 5.0);
+    float shell = exp(-0.76 * rimOffset * rimOffset);
+    float innerOffset = (sectionRadius - 0.61 - 0.69 * folds + 0.11 * (coarse - 0.5)) / 0.085;
+    float innerShell = exp(-innerOffset * innerOffset);
+    float shellGas = envelope * ((0.55 + 13.0 * threads * knots + 3.4 * ribbons * fine) * shell +
+      (0.15 + 6.6 * ribbons * knots) * innerShell);
+    shellGas *= mapped ? 0.60 + 1.28 * sideSignal : 1.0;
+    vec3 lateral = mix(filaments * 0.78, sideImage * 1.59, mapped ? 0.62 * smoothstep(0.04, 0.53, sideSignal) : 0.0);
+    lateral = mix(lateral, vec3(0.90, 0.86, 1.0), ribbons * knots * 0.42);
+    float waistRadius = length(vec2(q.x, q.z * 1.1));
+    float waist = exp(-abs(q.y + q.x * 0.17) / 0.043) * exp(-30.0 * abs(waistRadius - 0.16));
+    vec3 face = mix(filaments, image * 1.57, 0.76);
+    vec3 color = mix(lateral, face, imageWeight);
+    float gas = mix(shellGas + 0.62 * waist * coarse, photoGas, imageWeight);
+    return vec4(mix(color, vec3(0.030, 0.015, 0.013), dustLane), gas + dustLane * 10.0);
   }
 `;
 

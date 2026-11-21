@@ -14,10 +14,13 @@ import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { surfaceVertex, supergiantFragment } from '../three/shared/shaders';
 import { NebulaVolume } from '../three/nebulae/nebula-volume';
 import { PleiadesCluster } from '../three/stellar/pleiades-cluster';
+import { GlobularCluster } from '../three/stellar/globular-cluster';
+import { neutronThermalFragment } from '../three/stellar/neutron-thermal-surface';
 import { MagnetarSurface } from '../three/stellar/magnetar-surface';
 import { useSurfaceMap } from '../three/shared/use-surface-map';
 import { StellarGlow } from '../three/stellar/stellar-glow';
-import { STELLAR_WIND_RADIUS } from '../three/stellar/stellar-wind-density';
+import { STELLAR_DETAIL_EXIT, STELLAR_WIND_RADIUS } from '../three/stellar/stellar-wind-density';
+import { StellarWindHalo } from '../three/stellar/stellar-wind-halo';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { REALTIME_DAYS_PER_SECOND } from '../utils/orbit';
 
@@ -224,16 +227,18 @@ function nebulaParticles(object: FeaturedObject) {
 
 function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTime, paused, daysPerSecond, onLeave }: Props) {
   const pleiades = object.id === 'm45';
+  const globular = object.kind === 'globular-cluster';
   const scale = object.kind === 'pillars' || object.kind === 'supernova-remnant' ? 1 : object.extentLightYears / 6;
   const backgroundScale = Math.max(1, scale);
   const image = object.observationImage;
   const southernRing = image?.shape === 'southern-ring';
   const centralRadius = object.kind === 'planetary-nebula' && !southernRing && image?.shape !== 'butterfly' ? scale * 0.047
     : image?.shape === 'ejecta' ? 0.036
-      : image?.shape === 'light-echo' || image?.shape === 'homunculus' || image?.shape === 'debris-disk' || image?.shape === 'vela-wind' ? scale * 0.13 : 0;
+      : image?.shape === 'wolf-rayet-ejecta' ? scale * 0.088
+        : image?.shape === 'light-echo' || image?.shape === 'homunculus' || image?.shape === 'debris-disk' || image?.shape === 'vela-wind' ? scale * 0.13 : 0;
   const texture = useSurfaceMap(image?.file);
   const uniforms = useMemo(() => ({ particleScale: { value: scale }, expansion: { value: 0 }, particleOpacity: { value: texture ? 0.29 : 1 } }), [scale, texture]);
-  const particles = useMemo(() => pleiades || object.kind === 'x-ray-binary' || (image && image.shape !== 'crab' && image.shape !== 'ejecta') ? undefined : nebulaParticles(object), [object, pleiades, image]);
+  const particles = useMemo(() => pleiades || globular || object.kind === 'x-ray-binary' || (image && image.shape !== 'crab' && image.shape !== 'ejecta') ? undefined : nebulaParticles(object), [object, pleiades, globular, image]);
   const material = useRef<ShaderMaterial>(null);
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const start = useRef(0);
@@ -250,6 +255,7 @@ function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTim
     <>
       <Stars radius={46 * backgroundScale} depth={23 * backgroundScale} count={1800} factor={3} saturation={0} fade speed={0} />
       {pleiades && <PleiadesCluster radius={object.extentLightYears * 0.61} />}
+      {globular && <GlobularCluster radius={object.extentLightYears * 0.50} objectId={object.id} />}
       {object.kind === 'x-ray-binary' && <CygnusBinary size={object.extentLightYears} days={simulationDaysRef} time={accretionPlaybackTime} />}
       {image && <NebulaVolume texture={texture} radius={object.extentLightYears * (image.shape === 'crab' ? 0.71 : 0.61)} shape={image.shape} paused={paused} daysPerSecond={daysPerSecond} />}
       {particles && <points scale={scale} visible={!image || image.shape === 'crab' || image.shape === 'ejecta'}>
@@ -334,6 +340,8 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
   const beams = useRef<Group>(null);
   const surface = useRef<ShaderMaterial>(null);
   const brightness = useRef(1);
+  const thermalSurface = object.id === 'rx-j1856-5-3754';
+  const thermalUniforms = useMemo(() => ({ phase: { value: 0.65 } }), []);
   const { photosphere } = object;
   const magnetar = object.kind === 'magnetar';
   const surfaceUniforms = useMemo(
@@ -354,7 +362,10 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
   useFrame((_, delta) => {
     const days = simulationDaysRef.current;
     if (beams.current && !paused) beams.current.rotation.y = (beams.current.rotation.y + Math.min(delta, 0.1) * beamTurnsPerSecond * TAU) % TAU;
-    if (surface.current && pulsePeriod) {
+    if (surface.current && thermalSurface && !paused) {
+      const phase = surface.current.uniforms.phase;
+      phase.value = (phase.value + Math.min(delta, 0.1) * beamTurnsPerSecond * TAU) % TAU;
+    } else if (surface.current && pulsePeriod) {
       brightness.current = 0.79 + 0.2 * Math.cos(((days % pulsePeriod) / pulsePeriod) * TAU);
       surface.current.uniforms.brightness.value = brightness.current;
     }
@@ -366,14 +377,16 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
         <>
           <mesh>
             <sphereGeometry args={[1, 64, 40]} />
-            {surfaceUniforms ? <shaderMaterial ref={surface} uniforms={surfaceUniforms} vertexShader={surfaceVertex} fragmentShader={supergiantFragment} /> : <meshBasicMaterial color={object.color} />}
+            {thermalSurface ? <shaderMaterial ref={surface} uniforms={thermalUniforms} vertexShader={surfaceVertex} fragmentShader={neutronThermalFragment} />
+              : surfaceUniforms ? <shaderMaterial ref={surface} uniforms={surfaceUniforms} vertexShader={surfaceVertex} fragmentShader={supergiantFragment} /> : <meshBasicMaterial color={object.color} />}
           </mesh>
-          <StellarGlow radius={1} color={object.color} strength={photosphere ? 1.15 : 0.65} brightness={brightness} paused={paused || !photosphere} />
+          <StellarGlow radius={1} color={object.color} strength={thermalSurface ? 0.31 : photosphere ? 1.15 : 0.65} brightness={brightness} paused={paused || !photosphere} />
         </>
       )}
       {object.id === 'betelgeuse' && <NebulaVolume radius={STELLAR_WIND_RADIUS} shape="betelgeuse-plume" paused={paused} daysPerSecond={daysPerSecond} />}
       {object.id === 'rigel-a' && <NebulaVolume radius={STELLAR_WIND_RADIUS} shape="rigel-wind" paused={paused} daysPerSecond={daysPerSecond} />}
-      {spinPeriod && (
+      {(object.id === 'betelgeuse' || object.id === 'rigel-a') && <StellarWindHalo warm={object.id === 'betelgeuse'} />}
+      {spinPeriod && !thermalSurface && (
         <>
           <group ref={beams}>
             <group rotation-z={tilt}>
@@ -408,7 +421,7 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
           const orbit = controls.current;
           if (!orbit) return;
           const distance = orbit.getDistance();
-          if (distance >= 13 && distance > start.current) onLeave(orbit.object.position.clone().sub(orbit.target).normalize().toArray());
+          if (distance >= STELLAR_DETAIL_EXIT && distance > start.current) onLeave(orbit.object.position.clone().sub(orbit.target).normalize().toArray());
         }}
       />
     </>

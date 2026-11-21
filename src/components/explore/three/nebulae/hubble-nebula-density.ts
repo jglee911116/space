@@ -22,22 +22,27 @@ export const lightEchoDensity = /* glsl */ `
     vec3 q = p + vec3(0.08, -0.03, 0.0);
     float r = length(q / vec3(0.90, 0.80, 1.04));
     if (r > 1.04) return vec4(0.0);
-    float detail = noise(q * 21.0);
-    float structure = noise(q * 6.4 + detail * 0.28);
-    float sheet = sin(26.0 * r + 5.0 * structure + 1.3 * q.z);
-    float dust = smoothstep(0.25, 0.77, structure * 0.64 + detail * 0.36)
-      * (0.22 + 0.78 * smoothstep(-0.42, 0.81, sheet)) * smoothstep(0.10, 0.29, r)
+    float detail = noise(q * 39.0);
+    float structure = noise(q * 7.4 + detail * 0.22);
+    float ripple = 29.0 * r + 7.0 * structure + q.z * 3.5 - q.x * 2.1 + 2.0 * detail;
+    float sheet = 0.5 + 0.5 * sin(ripple);
+    float folds = 0.5 + 0.5 * sin(18.0 * length(q.yz + vec2(q.x * 0.20, 0.13)) - q.x * 5.0 + 8.0 * structure);
+    float dust = smoothstep(0.23, 0.76, structure * 0.59 + detail * 0.41)
+      * (0.22 + 0.64 * sheet * sheet + 0.25 * folds * folds) * smoothstep(0.10, 0.29, r)
       * (1.0 - smoothstep(0.78, 1.03, r));
     // Extra light-travel distance along a fixed reference sightline.
     float progress = motion / 14.0;
     float delay = length(p) - p.z;
     float front = 0.08 + 1.81 * progress;
-    float pulse = exp(-pow((delay - front) / 0.14, 2.0)) *
+    float echoOffset = (delay - front) / 0.16;
+    float pulse = exp(-echoOffset * echoOffset) *
       smoothstep(0.0, 0.13, progress) * (1.0 - smoothstep(0.77, 1.0, progress));
-    vec3 base = mix(vec3(0.10, 0.15, 0.24), vec3(0.68, 0.28, 0.13), structure);
-    vec3 image = observe(vec2(0.56, 0.56) + p.xy * vec2(0.45, 0.43), 1.5, base);
-    vec3 color = mix(base, min(image * 1.75, vec3(0.61)), 0.40);
-    return vec4(color * (0.68 + 0.62 * pulse), dust * (1.05 + 20.0 * pulse));
+    vec3 base = mix(vec3(0.11, 0.23, 0.38), vec3(0.88, 0.39, 0.18), smoothstep(0.28, 0.72, structure));
+    vec2 projected = (p.xy - p.z * vec2(0.023, 0.063)) / (1.0 - p.z / 2.87);
+    vec3 image = observe(vec2(0.56, 0.56) + projected * vec2(0.45, 0.43), 0.7, base);
+    float imageWeight = mapped ? 0.51 * smoothstep(0.35, 0.98, normalize(localEye).z) : 0.0;
+    vec3 color = mix(base, min(image * 1.75, vec3(0.73)), imageWeight);
+    return vec4(color * (0.62 + 0.61 * pulse + 0.21 * detail), dust * (2.35 + (9.0 + 8.0 * sheet) * pulse));
   }
 `;
 

@@ -32,6 +32,8 @@ function fragment(compact: boolean) {
   uniform vec3 features;
   uniform vec3 tint;
   uniform float visibility;
+  uniform bool taperObservation;
+  uniform vec4 observationFrame;
   ${spatialNoise}
 
   void sampleGalaxy(vec3 p, out vec3 light, out float density) {
@@ -76,10 +78,13 @@ function fragment(compact: boolean) {
     float clouds = noise(vec3(plane * 14.0, p.y * 17.0) + phase);
     float coarse = noise(vec3(plane * 5.0, p.y * 6.5) - phase);
     if (shape == 1) {
+      float diffuseRadius = length(vec3(plane, (p.y - midplane) / (1.8 * thickness)));
+      float envelope = 1.0 - smoothstep(0.48, 1.16, diffuseRadius);
+      float diffuse = exp(-3.1 * diffuseRadius * diffuseRadius) * envelope;
       float knotDensity = smoothstep(0.25, 0.75, coarse * 0.73 + clouds * 0.27);
-      stars += disk * (0.5 + 6.2 * knotDensity);
-      gas = disk * 5.0 * smoothstep(0.49, 0.78, clouds * 0.77 + coarse * 0.23);
-      dust = dustStrength * disk * 4.0 * smoothstep(0.39, 0.68, 1.0 - clouds);
+      stars += diffuse * (0.65 + 4.5 * knotDensity);
+      gas = diffuse * 2.1 * smoothstep(0.49, 0.78, clouds * 0.77 + coarse * 0.23);
+      dust = dustStrength * diffuse * 2.4 * smoothstep(0.39, 0.68, 1.0 - clouds);
     } else {
       float armPhase = structure.x * (angle - structure.y * log(max(0.11, r) / max(structure.z, 0.11))
         - (structure.z > 0.0 ? 0.0 : phase)) + (coarse - 0.5) * 0.85;
@@ -111,6 +116,14 @@ function fragment(compact: boolean) {
     density = stars + gas + dust + wind;
     light = stars * mix(tint, warm, 0.12 + 0.67 * nucleus)
       + gas * young * 1.55 + wind * vec3(0.96, 0.11, 0.17) * 2.1;
+    if (taperObservation) {
+      vec2 uv = observationFrame.xy + vec2(p.x, -p.z) * observationFrame.zw;
+      vec2 border = min(uv, 1.0 - uv);
+      float observed = smoothstep(-0.17, 0.12, min(border.x, border.y));
+      float outerWeight = mix(1.0, 0.11, observed);
+      density *= outerWeight;
+      light *= outerWeight;
+    }
   }
 
   void main() {
@@ -153,7 +166,7 @@ function fragment(compact: boolean) {
   `;
 }
 
-export function ProceduralGalaxy({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
+export function ProceduralGalaxy({ galaxy, compact, opacity = 1, blendObservation = false }: { galaxy: Galaxy; compact: boolean; opacity?: number; blendObservation?: boolean }) {
   const mesh = useRef<Mesh>(null);
   const material = useRef<ShaderMaterial>(null);
   const position = useMemo(() => new Vector3(), []);
@@ -166,16 +179,18 @@ export function ProceduralGalaxy({ galaxy, compact }: { galaxy: Galaxy; compact:
       structure: { value: new Vector4(model.arms, model.winding, model.bar, model.dust) },
       features: { value: new Vector3(model.ring, model.wind, model.phase) },
       tint: { value: new Color(galaxy.color) },
-      visibility: { value: compact ? 0 : 1 },
+      visibility: { value: compact ? 0 : opacity },
+      taperObservation: { value: blendObservation && !!galaxy.diskObservation },
+      observationFrame: { value: new Vector4(...(galaxy.diskObservation?.center ?? [0.5, 0.5]), ...(galaxy.diskObservation?.span ?? [0.5, 0.5])) },
     };
-  }, [galaxy, compact]);
+  }, [galaxy, compact, opacity, blendObservation]);
 
   useFrame(({ camera, size }) => {
     if (!compact || !mesh.current || !material.current) return;
     mesh.current.getWorldPosition(position).applyMatrix4(camera.matrixWorldInverse);
-    const opacity = previewVisibility(galaxy.modelRadiusKpc * 2, -position.z, camera, size.height);
-    mesh.current.visible = opacity > 0;
-    material.current.uniforms.visibility.value = opacity;
+    const visibility = previewVisibility(galaxy.modelRadiusKpc * 2, -position.z, camera, size.height) * opacity;
+    mesh.current.visible = visibility > 0;
+    material.current.uniforms.visibility.value = visibility;
   });
 
   return (

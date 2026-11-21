@@ -1,6 +1,87 @@
 import { message } from '@/i18n/messages';
 import type { FeaturedObject } from '../../types';
 
+export const horseheadNebula: FeaturedObject = {
+  id: 'horsehead-nebula',
+  name: message('catalog.featured-objects.horsehead-nebula.name'),
+  designation: 'Barnard 33 · B33',
+  aliases: ['Horsehead', 'B 33', 'Barnard 33', '말머리성운', 'IC 434'],
+  description: message('catalog.featured-objects.horsehead-nebula.description'),
+  kind: 'star-forming-region',
+  observationStatus: 'observed',
+  distanceLightYears: 1300,
+  rightAscension: 85.24579,
+  declination: -2.45837,
+  extentLightYears: 1.6,
+  color: '#df8490',
+  observationImage: { file: '/textures/nebulae/star-forming/horsehead-nebula/eso.jpg', telescope: 'eso', shape: 'horsehead' },
+  sources: [
+    { label: 'ESO / VLT · Optical silhouette · CC BY 4.0', href: 'https://www.eso.org/public/images/eso0202b/' },
+    { label: 'ESA/Webb, NASA, CSA · NIRCam illuminated edge', href: 'https://esawebb.org/images/weic2411a/' },
+  ],
+};
+
+export const tychoRemnant: FeaturedObject = {
+  id: 'tycho-remnant',
+  name: message('catalog.featured-objects.tycho-remnant.name'),
+  designation: 'SN 1572 · G120.1+1.4',
+  aliases: ['Tycho', 'Tycho SNR', '3C 10', '티코 잔해', '티코의 초신성'],
+  description: message('catalog.featured-objects.tycho-remnant.description'),
+  kind: 'supernova-remnant',
+  observationStatus: 'observed',
+  distanceLightYears: 13000,
+  distanceAssumed: true,
+  rightAscension: 6.32083,
+  declination: 64.14361,
+  extentLightYears: 30,
+  color: '#ab8efa',
+  observationImage: { file: '/textures/nebulae/supernova-remnants/tycho-remnant/chandra.jpg', telescope: 'chandra', shape: 'tycho-shell' },
+  sources: [
+    { label: 'NASA/CXC/Rutgers/K. Eriksen et al. · Chandra X-ray image', href: 'https://chandra.si.edu/photo/2011/tycho/' },
+    { label: 'Eriksen et al. · X-ray stripes in Tycho', href: 'https://arxiv.org/abs/1101.1454' },
+  ],
+};
+
+export const helixNebula: FeaturedObject = {
+  id: 'ngc-7293',
+  name: message('catalog.featured-objects.ngc-7293.name'),
+  designation: 'NGC 7293 · Caldwell 63',
+  aliases: ['Helix Nebula', '나선성운', 'C63'],
+  description: message('catalog.featured-objects.ngc-7293.description'),
+  kind: 'planetary-nebula',
+  observationStatus: 'observed',
+  distanceLightYears: 650,
+  rightAscension: 337.410,
+  declination: -20.837,
+  extentLightYears: 5.1,
+  color: '#7ecdc8',
+  observationImage: { file: '/textures/nebulae/planetary/ngc-7293/hubble.jpg', telescope: 'hubble', shape: 'helix' },
+  sources: [
+    { label: 'NASA, ESA, C.R. O’Dell, M. Meixner, P. McCullough and G. Bacon · Hubble/CTIO · CC BY 4.0', href: 'https://esahubble.org/images/opo0432d/' },
+    { label: 'NASA Hubble · Caldwell 63', href: 'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-caldwell-catalog/caldwell-63/' },
+  ],
+};
+
+export const sn1006: FeaturedObject = {
+  id: 'sn-1006',
+  name: 'SN 1006',
+  designation: 'G327.6+14.6',
+  aliases: ['SN1006', 'SN 1006 초신성 잔해', '1006년 초신성'],
+  description: message('catalog.featured-objects.sn-1006.description'),
+  kind: 'supernova-remnant',
+  observationStatus: 'observed',
+  distanceLightYears: 7100,
+  rightAscension: 225.712,
+  declination: -41.92357,
+  extentLightYears: 70,
+  color: '#958ffd',
+  observationImage: { file: '/textures/nebulae/supernova-remnants/sn-1006/chandra.jpg', telescope: 'chandra', shape: 'sn-1006-shell' },
+  sources: [
+    { label: 'NASA/CXC/Middlebury College/F. Winkler et al. · Chandra X-ray image', href: 'https://chandra.si.edu/photo/2013/sn1006/' },
+    { label: 'NASA/CXC/SAO (Chandra) · SN 1006', href: 'https://chandra.si.edu/photo/2023/sn1006/' },
+  ],
+};
+
 export const ringNebula: FeaturedObject = {
   id: 'm57',
   name: message('catalog.featured-objects.m57.name'),

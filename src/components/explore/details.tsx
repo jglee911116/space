@@ -420,7 +420,9 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
         )}
       </dl>
       <p>{catalogText(object.description)}</p>
-      {object.observationImage && <p>{t(object.observationImage.telescope === 'hubble' ? 'details.hubbleObservationVolume' : object.observationImage.telescope === 'chandra' ? 'details.chandraObservationVolume' : 'details.nebulaObservationVolume')}</p>}
+      {object.observationImage && <p>{t(object.observationImage.telescope === 'hubble' ? 'details.hubbleObservationVolume'
+        : object.observationImage.telescope === 'chandra' ? 'details.chandraObservationVolume'
+          : object.observationImage.telescope === 'eso' ? 'details.esoObservationVolume' : 'details.nebulaObservationVolume')}</p>}
       {radiusRatio !== undefined && (
         <div className={styles.radiusComparison}>
           <h3>{t('details.compareSolarRadius')}</h3>
@@ -482,7 +484,7 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange }: 
         <ObservationRow status={object.observationStatus} />
         <div>
           <dt>{t('details.type')}</dt>
-          <dd>{t(object.kind === 'quasar' ? 'details.quasar' : object.kind === 'ring-galaxy' ? 'details.ringGalaxy' : object.kind === 'galaxy-group' ? 'details.galaxyGroup' : 'details.earlyGalaxy')}</dd>
+          <dd>{t(object.kind === 'quasar' ? 'details.quasar' : object.kind === 'ring-galaxy' ? 'details.ringGalaxy' : object.kind === 'galaxy-cluster' ? 'details.galaxyCluster' : object.kind === 'galaxy-group' ? 'details.galaxyGroup' : 'details.earlyGalaxy')}</dd>
         </div>
         <div>
           <dt>{t('details.redshift')}</dt>
@@ -518,6 +520,7 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange }: 
       )}
       {object.kind === 'ring-galaxy' && <p>{t('details.webbRingGalaxyModel')}</p>}
       {object.kind === 'galaxy-group' && <p>{t('details.quintetModel')}</p>}
+      {object.kind === 'galaxy-cluster' && <p>{t('details.pandoraModel')}</p>}
       <ModelNotes>
         {object.kind === 'quasar' ? t('details.accretionModel') : t('details.galaxyModel')} {object.kind === 'quasar' && <>{t('details.blackHoleLensing')} </>}{t('details.cosmicModelScale')}
       </ModelNotes>
@@ -539,19 +542,21 @@ export function SuperclusterDetails({
 }) {
   const { t, catalogText, measurement } = useLanguage();
   if (association) {
+    const featured = association.volumeMembers ? association.members.filter(({ morphology }) => morphology) : association.members;
+    const survey = association.volumeMembers ? association.members.filter(({ morphology }) => !morphology) : [];
+    const memberButtons = (members: typeof association.members) => members.map(({ id, name, title }) => (
+      <button type="button" key={id} onClick={() => onSelectGalaxy(id)}>
+        {catalogText(title ?? name)}
+      </button>
+    ));
     return (
       <section className={styles.details} aria-labelledby="body-name">
         <h2 id="body-name">{catalogText(association.name)}</h2>
         {association.summary && <p>{catalogText(association.summary)}</p>}
         <p>{t('details.virgoClusterMembers')}</p>
-        <p>
-          {association.members.map(({ id, name, title }) => (
-            <button type="button" key={id} onClick={() => onSelectGalaxy(id)}>
-              {catalogText(title ?? name)}
-            </button>
-          ))}
-        </p>
-        <ModelNotes>{t('details.virgoClusterScale')} {t('details.cosmicMapSymbols')}</ModelNotes>
+        <p>{memberButtons(featured)}</p>
+        {survey.length > 0 && <details><summary>{t('details.surveyGalaxyMembers')} ({survey.length})</summary><p>{memberButtons(survey)}</p></details>}
+        <ModelNotes>{t('details.virgoClusterScale')} {!association.volumeMembers && t('details.cosmicMapSymbols')}</ModelNotes>
         <DetailSources sources={[...association.sources, ...association.members.flatMap(({ sources }) => sources)]} />
       </section>
     );

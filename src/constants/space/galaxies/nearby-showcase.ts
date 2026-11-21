@@ -43,6 +43,17 @@ export const whirlpoolMembers = [
 
 export const nearbyShowcase = [
   {
+    id: 'ngc-1566', name: 'NGC 1566', aliases: ['Spanish Dancer Galaxy', '스페인 무희 은하'],
+    summary: message('catalog.new.ngc-1566.summary'), superclusterId: 'virgo',
+    distanceKpc: 17700, skyPosition: { rightAscension: 65.00159, declination: -54.93801 },
+    modelRadiusKpc: 18.5, diskTilt: 0.76, morphology: 'open-spiral', color: '#ecad7c',
+    diskObservation: { file: '/textures/galaxies/ngc-1566/webb.jpg', previewFile: '/textures/galaxies/ngc-1566/webb.jpg', center: [0.486, 0.48], span: [1.57, 0.96] },
+    sources: [
+      { label: 'NASA, ESA, CSA, STScI & PHANGS · Webb · CC BY 4.0', href: 'https://esawebb.org/images/weic2403j/' },
+      { label: 'PHANGS–MUSE · Distance and disc parameters', href: 'https://academic.oup.com/mnras/article/520/4/4902/6987280' },
+    ],
+  },
+  {
     id: 'ngc-253',
     name: message('catalog.nearby-showcase.ngc253.name'),
     title: 'NGC 253 · Caldwell 65',

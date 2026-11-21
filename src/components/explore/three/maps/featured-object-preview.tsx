@@ -9,6 +9,9 @@ import { blackHoleBillboardVertex } from '../black-holes/black-hole-lensing';
 import { previewVisibility } from './map-detail';
 import { NebulaVolume } from '../nebulae/nebula-volume';
 import { PleiadesCluster } from '../stellar/pleiades-cluster';
+import { GlobularCluster } from '../stellar/globular-cluster';
+import { CygnusBinary } from '../black-holes/cygnus-binary';
+import { StellarWindHalo } from '../stellar/stellar-wind-halo';
 import { useSurfaceMap } from '../shared/use-surface-map';
 
 const fragmentShader = /* glsl */ `
@@ -44,12 +47,19 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
-export function FeaturedObjectPreview({ object, focused, playbackTime }: { object: FeaturedObject; focused: boolean; playbackTime?: RefObject<number> }) {
+export function FeaturedObjectPreview({ object, focused, playbackTime, simulationDays }: { object: FeaturedObject; focused: boolean; playbackTime?: RefObject<number>; simulationDays?: RefObject<number> }) {
   const image = object.observationImage;
   const texture = useSurfaceMap(image?.file, focused);
   const distance = featuredOverviewDistanceKpc(object);
 
   if (object.id === 'm45') return <PleiadesCluster radius={distance * 0.13} preview />;
+  if (object.kind === 'globular-cluster') return <GlobularCluster radius={distance * 0.10} objectId={object.id} preview />;
+  if (object.id === 'cygnus-x-1' && playbackTime && simulationDays) {
+    return <CygnusBinary size={distance / 5} days={simulationDays} time={playbackTime} preview />;
+  }
+  if (object.id === 'betelgeuse' || object.id === 'rigel-a') {
+    return <StellarWindHalo warm={object.id === 'betelgeuse'} overviewDistance={distance} />;
+  }
   if (image) return <NebulaVolume texture={texture} radius={distance * 0.13} shape={image.shape} preview />;
   if (object.kind === 'black-hole') {
     const diameter = distance * (playbackTime ? ACCRETION_MODEL_DIAMETER / ACCRETION_MODEL_EXIT_DISTANCE : 0.68);
@@ -67,7 +77,7 @@ function CompactObjectPreview({ object, diameter }: { object: FeaturedObject; di
   const mesh = useRef<Mesh>(null);
   const material = useRef<ShaderMaterial>(null);
   const position = useMemo(() => new Vector3(), []);
-  const form = object.kind === 'open-cluster' || object.kind === 'globular-cluster' ? 1 : object.extentLightYears > 0 ? 2 : 3;
+  const form = object.kind === 'open-cluster' ? 1 : object.extentLightYears > 0 ? 2 : 3;
   const uniforms = useMemo(() => ({
     tint: { value: new Color(object.color) },
     form: { value: form },

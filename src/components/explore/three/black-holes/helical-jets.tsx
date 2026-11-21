@@ -75,15 +75,15 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
-export function HelicalJets({ color, time, previewDiameter, observation, counterjet = 0.30, collimation = 1 }: {
-  color: string; time: RefObject<number>; previewDiameter?: number; observation?: Texture; counterjet?: number; collimation?: number;
+export function HelicalJets({ color, time, previewDiameter, observation, counterjet = 0.30, collimation = 1, lowDetail = false }: {
+  color: string; time: RefObject<number>; previewDiameter?: number; observation?: Texture; counterjet?: number; collimation?: number; lowDetail?: boolean;
 }) {
   const material = useRef<ShaderMaterial>(null);
   const points = useRef<Points>(null);
   const position = useMemo(() => new Vector3(), []);
   const bounds = useMemo(() => new Sphere(new Vector3(), 6.2), []);
   const pixelRatio = useThree((state) => state.viewport.dpr);
-  const preview = previewDiameter !== undefined;
+  const preview = previewDiameter !== undefined || lowDetail;
   const uniforms = useMemo(() => ({
     phase: { value: 0 },
     pixelRatio: { value: pixelRatio },

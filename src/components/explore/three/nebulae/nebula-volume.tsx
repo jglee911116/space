@@ -6,9 +6,13 @@ import { REALTIME_DAYS_PER_SECOND } from '../../utils/orbit';
 import { apepDustDensity, bipolarJetDensity, cartwheelDensity, edgeOnDiskDensity, hourglassDensity, shockedShellDensity, southernRingDensity } from './webb-nebula-density';
 import { catsEyeDensity, homunculusDensity, lightEchoDensity } from './hubble-nebula-density';
 import { butterflyDensity, debrisDiskDensity, velaWindDensity } from './observed-structure-density';
+import { horseheadDensity, tychoShellDensity, wolfRayetDensity } from './observed-cloud-density';
+import { helixDensity, sn1006ShellDensity } from './helix-and-sn1006-density';
+import { ngc346Density } from './ngc-346-density';
+import { jewelBugDensity } from './jewel-bug-density';
 import { quintetDensity } from '../galaxies/quintet-density';
 import { betelgeusePlumeDensity } from '../stellar/betelgeuse-plume';
-import { STELLAR_WIND_RADIUS, rigelWindDensity, solarWindDensity } from '../stellar/stellar-wind-density';
+import { STELLAR_WIND_FADE, STELLAR_WIND_RADIUS, rigelWindDensity, solarWindDensity } from '../stellar/stellar-wind-density';
 import { spatialNoise } from '../shared/shaders';
 
 const vertex = /* glsl */ `
@@ -160,6 +164,13 @@ const densityByShape = {
   'debris-disk': debrisDiskDensity,
   'vela-wind': velaWindDensity,
   butterfly: butterflyDensity,
+  horsehead: horseheadDensity,
+  'wolf-rayet-ejecta': wolfRayetDensity,
+  'tycho-shell': tychoShellDensity,
+  helix: helixDensity,
+  'sn-1006-shell': sn1006ShellDensity,
+  'ngc-346-ridges': ngc346Density,
+  'jewel-bug': jewelBugDensity,
   quintet: quintetDensity,
   'betelgeuse-plume': betelgeusePlumeDensity,
   'rigel-wind': rigelWindDensity,
@@ -209,7 +220,7 @@ function fragment(shape: NebulaVolumeShape, preview: boolean) {
     ` : ''}
     if (end <= start) discard;
 
-    const int steps = ${preview ? 28 : shape === 'cats-eye' || shape === 'quintet' || shape === 'butterfly' ? 54 : 44};
+    const int steps = ${preview ? 28 : shape === 'quintet' || shape === 'butterfly' || shape === 'light-echo' || shape === 'horsehead' || shape === 'tycho-shell' || shape === 'sn-1006-shell' || shape === 'wolf-rayet-ejecta' ? 64 : shape === 'cats-eye' ? 54 : 44};
     float stepSize = (end - start) / float(steps);
     vec3 accumulated = vec3(0.0);
     float transmission = 1.0;
@@ -267,7 +278,7 @@ export function NebulaVolume({ texture, radius, shape, preview = false, paused =
       }
       mesh.current.getWorldPosition(position);
       const distanceInStellarRadii = camera.position.distanceTo(position) * STELLAR_WIND_RADIUS / radius;
-      const visibility = 1 - MathUtils.smoothstep(distanceInStellarRadii, 8.4, 12.8);
+      const visibility = 1 - MathUtils.smoothstep(distanceInStellarRadii, ...STELLAR_WIND_FADE);
       mesh.current.visible = visibility > 0;
       material.current.uniforms.visibility.value = visibility;
       material.current.uniforms.motion.value = motion.current;

@@ -7,6 +7,7 @@ import { largeMagellanicCloud, smallMagellanicCloud } from './magellanic-clouds'
 import { milkyWay } from './milky-way';
 import { triangulum } from './triangulum';
 import { galaxyAssociations } from '../galaxy-associations';
+import { localDwarfs } from './local-dwarfs';
 
 export { andromeda, largeMagellanicCloud, m87, messier110, messier32, milkyWay, smallMagellanicCloud, triangulum };
 
@@ -19,6 +20,7 @@ export const galaxies: Galaxy[] = [
   triangulum,
   messier32,
   messier110,
+  ...localDwarfs,
   ...nearbyShowcase,
   ...galaxyAssociations.flatMap(({ members }) => members),
 ];

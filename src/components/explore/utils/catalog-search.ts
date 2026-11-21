@@ -76,7 +76,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
       ({ id, name, kind, aliases = [] }): Entry => ({
         name,
         path: distantObjectPath(id),
-        kind: kind === 'quasar' ? 'details.quasar' : kind === 'ring-galaxy' ? 'details.ringGalaxy' : kind === 'galaxy-group' ? 'details.galaxyGroup' : 'details.earlyGalaxy',
+        kind: kind === 'quasar' ? 'details.quasar' : kind === 'ring-galaxy' ? 'details.ringGalaxy' : kind === 'galaxy-cluster' ? 'details.galaxyCluster' : kind === 'galaxy-group' ? 'details.galaxyGroup' : 'details.earlyGalaxy',
         aliases: [id, ...aliases],
       }),
     ),

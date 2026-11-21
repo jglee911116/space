@@ -28,6 +28,13 @@ const units = {
 const astronomicalUnit = { km: KM_PER_AU, suffix: ' AU' };
 const kilometers = { km: 1, suffix: ' km' };
 
+export function formatLightYearDistance(lightYears: number, locale: Locale, number: FormatNumber) {
+  const km = lightYears * KM_PER_LIGHT_YEAR;
+  const lightYearUnits = units[locale].slice(0, -1);
+  const unit = lightYearUnits.find((entry) => km >= entry.km) ?? lightYearUnits[lightYearUnits.length - 1];
+  return `${number(km / unit.km, 2)}${unit.suffix}`;
+}
+
 export function distanceScale(kmPerPixel: number, locale: Locale, number: FormatNumber) {
   const maxKm = kmPerPixel * 112;
   const unit = units[locale].find(({ km }) => maxKm >= km) ?? (maxKm >= KM_PER_AU ? astronomicalUnit : kilometers);

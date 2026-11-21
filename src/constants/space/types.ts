@@ -169,6 +169,7 @@ export type FeaturedObject = {
     | 'ring-remnant'
     | 'star-forming-region'
     | 'wind-binary'
+    | 'wolf-rayet'
     | 'light-echo'
     | 'debris-disk'
     | 'pulsar-wind-nebula'
@@ -193,8 +194,8 @@ export type FeaturedObject = {
   variabilityDays?: number;
   observationImage?: {
     file: string;
-    telescope?: 'hubble' | 'chandra';
-    shape: 'crab' | 'ring' | 'pillars' | 'ejecta' | 'nursery' | 'hourglass' | 'bipolar-jet' | 'shocked-shell' | 'southern-ring' | 'dust-spiral' | 'edge-on-disk' | 'homunculus' | 'light-echo' | 'cats-eye' | 'debris-disk' | 'vela-wind' | 'butterfly';
+    telescope?: 'hubble' | 'chandra' | 'eso';
+    shape: 'crab' | 'ring' | 'pillars' | 'ejecta' | 'nursery' | 'hourglass' | 'bipolar-jet' | 'shocked-shell' | 'southern-ring' | 'dust-spiral' | 'edge-on-disk' | 'homunculus' | 'light-echo' | 'cats-eye' | 'debris-disk' | 'vela-wind' | 'butterfly' | 'horsehead' | 'wolf-rayet-ejecta' | 'tycho-shell' | 'helix' | 'sn-1006-shell' | 'ngc-346-ridges' | 'jewel-bug';
   };
   photosphere?: { dark: string; bright: string; cellScale: number };
   expansionPerYear?: number;
@@ -251,4 +252,5 @@ export type DistantObject = DistantObjectFields & (
   | { kind: 'early-galaxy'; ultravioletHalfLightRadiusParsecs: number }
   | { kind: 'ring-galaxy'; observationImage: string }
   | { kind: 'galaxy-group'; observationImage: string }
+  | { kind: 'galaxy-cluster' }
 );

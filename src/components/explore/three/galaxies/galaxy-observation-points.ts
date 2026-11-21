@@ -66,9 +66,10 @@ export function galaxyObservationPoints(texture: Texture, observation: NonNullab
     const y = (random() + random() - 1) * thickness;
     positions.set([x * radius, y * radius, z * radius], i * 3);
     const offset = low * 4;
+    const frameFade = MathUtils.smoothstep(Math.min(u, v, 1 - u, 1 - v), 0, 0.13);
     tint
       .setRGB(data[offset] / 255, data[offset + 1] / 255, data[offset + 2] / 255, SRGBColorSpace)
-      .multiplyScalar(0.66 + 0.34 * random())
+      .multiplyScalar((0.66 + 0.34 * random()) * frameFade)
       .toArray(colors, i * 3);
   }
   return { positions, colors };

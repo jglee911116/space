@@ -311,10 +311,10 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const enterRegion = useCallback((id: string, entry?: ZoomHandoff) => navigateSpace(superclusterPath(id), entry), [navigateSpace]);
   const zoomInCosmic = useCallback(
     (entry?: ZoomHandoff) => {
-      if (region?.id === VIRGO_REGION_ID) enterLocalGroup(entry);
+      if (region?.id === VIRGO_REGION_ID) navigateSpace(localGroupPath(milkyWay.id), entry);
       else enterRegion(region ? VIRGO_REGION_ID : LANIAKEA_REGION_ID, entry);
     },
-    [enterLocalGroup, enterRegion, region],
+    [navigateSpace, enterRegion, region],
   );
   const zoomOutCosmic = useCallback(
     (entry: ZoomHandoff) => {
@@ -410,6 +410,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
           <LocalGroupScene
             key={`${pathname}:${recenter}`}
             overview={groupView}
+            centerOnGalaxy={groupView && galaxyParam === activeGalaxy.id}
             galaxy={activeGalaxy}
             entry={spaceEntry}
             reportDistance={reportDistance}
@@ -444,6 +445,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             centerEntry={centerZoom?.entry}
             onCenterZoom={zoomGalacticCenter}
             simulationDaysRef={simulationDaysRef}
+            accretionPlaybackTime={accretionPlaybackTime}
             paused={paused}
             daysPerSecond={daysPerSecond}
             demo={galacticDemo}

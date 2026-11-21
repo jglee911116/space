@@ -2,12 +2,13 @@
 
 import type { CatalogText } from '@/i18n/messages';
 import { useLanguage } from '@/i18n/language';
-import { Line, OrbitControls, Stars } from '@react-three/drei';
+import { OrbitControls, Stars } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from 'react';
-import { Box3, MathUtils, Quaternion, Vector3, type Group, type Points, type PointsMaterial } from 'three';
+import { AdditiveBlending, Box3, MathUtils, NormalBlending, Quaternion, Vector3, type Group, type Points, type PointsMaterial } from 'three';
 import { localGroup, type FeaturedObject, type Galaxy } from '@/constants/space';
-import { AU_PER_KPC, KM_PER_AU } from '@/constants/space/units';
+import { localDwarfs } from '@/constants/space/galaxies/local-dwarfs';
+import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
 import { useCursorZoom } from '../three/shared/use-cursor-zoom';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { GalaxyObservationDisk } from '../three/galaxies/galaxy-observation-disk';
@@ -16,10 +17,12 @@ import { useSurfaceMap } from '../three/shared/use-surface-map';
 import { GalaxyPreview } from '../three/galaxies/galaxy-preview';
 import { galaxyParticles } from '../three/galaxies/galaxy-structure';
 import { ProceduralGalaxy } from '../three/galaxies/procedural-galaxy';
+import { RamPressureTail } from '../three/galaxies/ram-pressure-tail';
 import { FeaturedObjectPreview } from '../three/maps/featured-object-preview';
 import { LensedStarfield } from '../three/black-holes/black-hole-lensing';
 import { pointBudget, projectedDiameter, updatePointDetail } from '../three/maps/map-detail';
 import { GalacticLabelLayer, GalacticMarker } from '../three/maps/galactic-marker';
+import { DistanceRings } from '../three/maps/distance-rings';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { ACCRETION_MODEL_EINSTEIN_RADIUS, ACCRETION_MODEL_EXIT_DISTANCE, EXTERNAL_SYSTEM_ENTRY_KPC, EXTERNAL_SYSTEM_RETURN_KPC, GALAXY_ENTRY_KPC, GALAXY_EXIT_KPC, LOCAL_GROUP_EXIT_KPC, featuredOverviewDistanceKpc, type ZoomHandoff } from '../utils/zoom';
 
@@ -31,6 +34,7 @@ type Props = {
   onSelectSystem: (id: string, entry?: ZoomHandoff) => void;
   focusId?: string;
   overview: boolean;
+  centerOnGalaxy: boolean;
   galaxy: Galaxy;
   entry?: ZoomHandoff;
   reportDistance: ReportDistanceScale;
@@ -52,12 +56,14 @@ if (reference) {
 const galaxyPositions = new Map(localGroup.galaxies.map((galaxy, index) => [galaxy.id, positions[index]]));
 const origin = new Vector3();
 const nearbyGalaxies = localGroup.galaxies.filter(({ distanceKpc }) => distanceKpc < 100);
+const dwarfIds = new Set(localDwarfs.map(({ id }) => id));
 const GROUP_CENTER = new Box3().setFromPoints(positions).getCenter(new Vector3());
 const VIEW = new Vector3(0, 0.48, 1).normalize();
 const CAMERA = { position: [0, 0, 115] as [number, number, number], fov: 45, near: 0.1, far: 10_000 };
 
 function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
   const observation = galaxy.diskObservation;
+  const diffuse = !observation && galaxy.morphology?.includes('irregular');
   const texture = useSurfaceMap(compact ? observation?.previewFile : observation?.file);
   const points = useMemo(() => {
     if (texture && observation) return galaxyObservationPoints(texture, observation, galaxy.modelRadiusKpc, compact ? 1400 : 12_000);
@@ -82,7 +88,12 @@ function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
   });
   return (
     <group rotation-x={galaxy.diskTilt ?? 0}>
-      {!observation && <ProceduralGalaxy galaxy={galaxy} compact={compact} />}
+      {(!observation || (!compact && galaxy.id === 'ngc-1566')) && (
+        <ProceduralGalaxy galaxy={galaxy} compact={compact} opacity={texture ? 0.48 : 1} blendObservation={!!texture} />
+      )}
+      {!compact && (galaxy.id === 'eso-137-001' || galaxy.id === 'eso-137-002') && (
+        <RamPressureTail radius={galaxy.modelRadiusKpc} twin={galaxy.id === 'eso-137-001'} />
+      )}
       {observation && compact && <GalaxyPreview galaxy={galaxy} texture={texture} />}
       {!compact && texture && observation && (
         <GalaxyObservationDisk texture={texture} radius={galaxy.modelRadiusKpc} center={observation.center} span={observation.span} rotation={observation.rotation} />
@@ -93,14 +104,15 @@ function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
             <bufferAttribute attach="attributes-position" args={[points.positions, 3]} />
             <bufferAttribute attach="attributes-color" args={[points.colors, 3]} />
           </bufferGeometry>
-          <pointsMaterial vertexColors size={compact ? 1.25 : 1.2} sizeAttenuation={false} transparent opacity={compact ? 0 : 0.45} depthWrite={false} />
+          <pointsMaterial vertexColors size={compact ? 1.25 : 1.2} sizeAttenuation={false} transparent opacity={compact ? 0 : diffuse ? 0.33 : 0.45}
+            blending={diffuse ? AdditiveBlending : NormalBlending} depthWrite={false} />
         </points>
       )}
     </group>
   );
 }
 
-function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitGalaxy, onExitGroup, systemMarkers, objectMarkers, accretionPlaybackTime, onSelectObject, onSelectSystem, focusId }: Props) {
+function Scene({ overview, centerOnGalaxy, galaxy, entry, reportDistance, onEnterGalaxy, onExitGalaxy, onExitGroup, systemMarkers, objectMarkers, accretionPlaybackTime, onSelectObject, onSelectSystem, focusId }: Props) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const cursorZoomRef = useCursorZoom();
   const background = useRef<Group>(null);
@@ -120,26 +132,28 @@ function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitG
   const defaultRadius = (overview ? 1250 : Math.min(112, galaxy.modelRadiusKpc * 3.8)) * Math.max(1, (0.86 * height) / Math.max(1, width));
 
   const groupExit = Math.max(LOCAL_GROUP_EXIT_KPC, defaultRadius * 1.28);
+  const overviewTarget = centerOnGalaxy ? galaxyPosition : GROUP_CENTER;
 
   useLayoutEffect(() => {
     const orbit = controls.current;
     if (!orbit) return;
     cursorZoomRef.current = false;
     const returnFromSystem = entry && !overview && focusId && focusPosition;
-    const distance = focusedObject ? (entry ? entry.distanceAu / AU_PER_KPC : objectDistance) : returnFromSystem ? EXTERNAL_SYSTEM_RETURN_KPC : entry ? (overview ? entry.distanceAu / AU_PER_KPC : Math.min(defaultRadius, entry.distanceAu / AU_PER_KPC)) : defaultRadius;
-    orbit.target.copy(overview && !entry ? GROUP_CENTER : overview ? galaxyPosition : origin);
+    const entryLimit = overview ? groupExit * 0.95 : defaultRadius;
+    const distance = focusedObject ? (entry ? entry.distanceAu / AU_PER_KPC : objectDistance) : returnFromSystem ? EXTERNAL_SYSTEM_RETURN_KPC : entry ? Math.min(entryLimit, entry.distanceAu / AU_PER_KPC) : defaultRadius;
+    orbit.target.copy(overview ? overviewTarget : origin);
     if (returnFromSystem) orbit.target.set(...focusPosition);
     if (focusedObject) orbit.target.set(...focusedObject.position);
     const direction = entry ? scratch.offset.set(...entry.direction) : VIEW;
     camera.position.copy(orbit.target).addScaledVector(direction, distance);
     orbit.update();
-  }, [camera, cursorZoomRef, defaultRadius, entry, focusId, focusPosition, focusedObject, galaxyPosition, objectDistance, overview, scratch]);
+  }, [camera, cursorZoomRef, defaultRadius, entry, focusId, focusPosition, focusedObject, groupExit, objectDistance, overview, overviewTarget, scratch]);
 
   useFrame(({ camera }) => {
     const orbit = controls.current;
     if (!orbit) return;
     const radius = orbit.getDistance();
-    if (!cursorZoomRef.current && overview) {
+    if (!cursorZoomRef.current && overview && !centerOnGalaxy) {
       const weight = MathUtils.smoothstep(radius, exitDistance, 650);
       const center = scratch.aim.copy(galaxyPosition).lerp(GROUP_CENTER, weight);
       camera.position.add(scratch.offset.subVectors(center, orbit.target));
@@ -175,29 +189,27 @@ function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitG
       </group>
       {overview ? (
         <>
-          {localGroup.galaxies.map((item, index) => (
-            <group key={item.id}>
-              {item.distanceKpc > 0 && <Line points={[origin, positions[index]]} color="#b0b9d7" transparent opacity={0.25} raycast={() => {}} />}
-              <group position={positions[index]}>
-                <GalaxyDisk galaxy={item} compact />
+          <DistanceRings outerRadius={1000} lightYearsPerUnit={(AU_PER_KPC * KM_PER_AU) / KM_PER_LIGHT_YEAR} />
+          {localGroup.galaxies.map((item, index) => {
+            const dwarf = dwarfIds.has(item.id);
+            const select = () => onEnterGalaxy(item);
+            const staggeredOffset = index % 2 === 0 ? 0.85 : -0.92;
+            const labelOffset = dwarf ? staggeredOffset : item.parentGalaxyId
+              ? 0.95 + localGroup.galaxies.filter((other) => other.parentGalaxyId === item.parentGalaxyId).indexOf(item) * 1.1
+              : item.distanceKpc < 100 ? nearbyGalaxies.indexOf(item) * -1.1 + 0.85 : staggeredOffset;
+            return (
+              <group key={item.id} position={positions[index]}>
+                {dwarf ? <GalaxyPreview galaxy={item} radius={Math.max(7, item.modelRadiusKpc)} onSelect={select} /> : <GalaxyDisk galaxy={item} compact />}
                 <GalacticMarker
                   name={item.name}
-                  priority={item.id === galaxy.id ? 3 : 0}
+                  priority={item.id === galaxy.id ? 3 : dwarf ? 0 : 1}
                   color={item.color}
-                  labelOffset={
-                    item.parentGalaxyId
-                      ? 0.95 + localGroup.galaxies.filter((other) => other.parentGalaxyId === item.parentGalaxyId).indexOf(item) * 1.1
-                      : item.distanceKpc < 100
-                        ? nearbyGalaxies.indexOf(item) * -1.1 + 0.85
-                        : index % 2 === 0
-                          ? 0.85
-                          : -0.92
-                  }
-                  onSelect={() => onEnterGalaxy(item)}
+                  labelOffset={labelOffset}
+                  onSelect={select}
                 />
               </group>
-            </group>
-          ))}
+            );
+          })}
         </>
       ) : (
         <>

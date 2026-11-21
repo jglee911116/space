@@ -31,6 +31,7 @@ type GalaxySceneProps = {
   onSelectSystem: (system: StarSystem) => void;
   target: string | null;
   simulationDaysRef: RefObject<number>;
+  accretionPlaybackTime: RefObject<number>;
   paused: boolean;
   daysPerSecond: number;
   demo: boolean;
@@ -270,7 +271,9 @@ function GalacticMap({
   cloudOpacity,
   centerLabelFade,
   focusedObjectId,
-}: Pick<GalaxySceneProps, 'anchor' | 'onSelectCenter' | 'onSelectSystem' | 'onSelectObject'> & {
+  simulationDaysRef,
+  accretionPlaybackTime,
+}: Pick<GalaxySceneProps, 'anchor' | 'onSelectCenter' | 'onSelectSystem' | 'onSelectObject' | 'simulationDaysRef' | 'accretionPlaybackTime'> & {
   activeSystemId: string;
   centerFocused: boolean;
   star: Body;
@@ -393,7 +396,12 @@ function GalacticMap({
         .filter((object) => !object.parentObjectId && (!object.galaxyId || object.galaxyId === milkyWay.id))
         .map((object, index) => (
           <group key={object.id} position={featuredPosition(object, radius)}>
-            {(object.extentLightYears > 0 || object.photosphere || object.id === focusedObjectId) && <FeaturedObjectPreview object={object} focused={object.id === focusedObjectId} />}
+            {(object.extentLightYears > 0 || object.photosphere || object.id === focusedObjectId) && <FeaturedObjectPreview
+              object={object}
+              focused={object.id === focusedObjectId}
+              playbackTime={object.id === 'cygnus-x-1' ? accretionPlaybackTime : undefined}
+              simulationDays={simulationDaysRef}
+            />}
             <GalacticMarker name={object.name} color={object.color} labelOffset={index ? -1.0 : 1.0} modelRadius={object.id === focusedObjectId ? featuredOverviewDistanceKpc(object) * 0.13 : undefined} priority={object.id === focusedObjectId ? 3 : 0} localOpacity={cloudOpacity} onSelect={() => onSelectObject(object.id)} />
           </group>
         ))}
@@ -412,6 +420,7 @@ function Scene({
   focusedObjectId,
   target,
   simulationDaysRef,
+  accretionPlaybackTime,
   paused,
   daysPerSecond,
   demo,
@@ -485,6 +494,7 @@ function Scene({
     } else if (focusedPosition) {
       orbit.target.copy(focusedPosition);
       const direction = groupEntry ? scratch.offset.set(...groupEntry.direction) : scratch.offset.copy(MAP_CAMERA).normalize();
+      if (!groupEntry && focusedObjectId === 'cygnus-x-1') direction.set(0.025, 0.38, 1).normalize();
       camera.position.copy(focusedPosition).addScaledVector(direction, groupEntry ? groupEntry.distanceAu / AU_PER_KPC : focusedDistance);
     } else if (!close && !centerFocused && ((entry && recenter === initialRecenter.current) || focusLocal)) {
       solarPosition(scratch.sun, star, simulationDaysRef.current / DAYS_PER_YEAR + demoYears.current);
@@ -500,7 +510,7 @@ function Scene({
       camera.position.copy(close ? CENTER_CAMERA : MAP_CAMERA).multiplyScalar(Math.max(1, ((close ? 0.55 : 0.85) * height) / Math.max(width, 1)));
     }
     orbit.update();
-  }, [camera, centerEntry, centerFocused, close, cursorZoomRef, entry, focusLocal, focusedDistance, focusedPosition, groupEntry, handoffRadius, height, localCenter, recenter, scratch, simulationDaysRef, star, system.id, width]);
+  }, [camera, centerEntry, centerFocused, close, cursorZoomRef, entry, focusLocal, focusedDistance, focusedObjectId, focusedPosition, groupEntry, handoffRadius, height, localCenter, recenter, scratch, simulationDaysRef, star, system.id, width]);
 
   useFrame(({ camera }, delta) => {
     if (!paused) {
@@ -581,6 +591,8 @@ function Scene({
             cloudOpacity={cloudOpacity}
             centerLabelFade={centerLabelFade}
             focusedObjectId={focusedObjectId}
+            simulationDaysRef={simulationDaysRef}
+            accretionPlaybackTime={accretionPlaybackTime}
           />
         </>
       )}

@@ -2,6 +2,8 @@ import { whirlpoolMembers, whirlpoolSource } from './galaxies/nearby-showcase';
 import { message } from '@/i18n/messages';
 import { fornaxMembers, hydraMembers, hydraSurvey, leoMembers, m81Members } from './galaxies/nearby-groups';
 import { virgoGalaxies } from './galaxies/virgo-members';
+import { normaMembers, normaStudy, normaSurvey } from './galaxies/norma-members';
+import { ngc3109Members, ngc3109Study } from './galaxies/local-dwarfs';
 import type { CatalogText } from '@/i18n/messages';
 import type { Galaxy, Source } from './types';
 
@@ -13,10 +15,35 @@ export type GalaxyAssociation = {
   summary?: CatalogText;
   members: readonly Galaxy[];
   gridRadiusMly: number;
+  volumeMembers?: boolean;
+  illustrativeDepthMly?: number;
   sources: readonly Source[];
 };
 
 export const galaxyAssociations: readonly GalaxyAssociation[] = [
+  {
+    id: 'norma',
+    mapRegionId: 'laniakea',
+    name: message('catalog.superclusters.norma-cluster.name'),
+    aliases: ['Norma Cluster', 'Abell 3627', 'ACO 3627'],
+    summary: message('catalog.norma.summary'),
+    members: normaMembers,
+    gridRadiusMly: 6.8,
+    volumeMembers: true,
+    illustrativeDepthMly: 3.2,
+    sources: [normaStudy, normaSurvey],
+  },
+  {
+    id: 'ngc-3109-association',
+    mapRegionId: 'virgo',
+    name: message('catalog.dwarf.ngc-3109-association.name'),
+    aliases: ['NGC 3109 Association', 'NGC 3109 Group'],
+    summary: message('catalog.dwarf.ngc-3109-association.summary'),
+    members: ngc3109Members,
+    gridRadiusMly: 2.4,
+    volumeMembers: true,
+    sources: [ngc3109Study],
+  },
   { id: 'virgo', mapRegionId: 'virgo', name: message('catalog.superclusters.virgo-cluster.name'), members: virgoGalaxies, gridRadiusMly: 6, sources: [] },
   {
     id: 'm81-group',

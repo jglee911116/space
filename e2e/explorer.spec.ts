@@ -75,6 +75,34 @@ test('우리은하의 태양 라벨은 항성 상세 화면을 열고 뒤로 가
   await expect(details(page).getByRole('heading', { name: '우리은하', exact: true })).toBeVisible();
 });
 
+for (const [startPage, delta, scenario] of [
+  ['/ko/superclusters/virgo', -500, '처녀자리 초은하단에서 확대'],
+  [milkyWay, 500, '우리은하에서 축소'],
+] as const) {
+  test(`${scenario}하면 국부 은하군의 화면 중심에 우리은하가 놓인다`, async ({ page }) => {
+    await page.goto(startPage);
+    await waitForRenderedMap(page);
+    const map = page.locator('main canvas');
+    const bounds = await map.boundingBox();
+    if (!bounds) throw new Error('Starting map canvas not mounted');
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+
+    await expect.poll(async () => {
+      if (new URL(page.url()).pathname !== '/ko/local-group') await page.mouse.wheel(0, delta);
+      return new URL(page.url()).pathname;
+    }, { intervals: [150], timeout: 12_000 }).toBe('/ko/local-group');
+    await expect(page).toHaveURL('/ko/local-group?galaxy=milky-way');
+    await waitForRenderedMap(page);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+
+    const groupCanvas = await map.boundingBox();
+    if (!groupCanvas) throw new Error('Local Group canvas not mounted');
+    // The Milky Way marker is anchored to the center with a fixed vertical label offset.
+    await page.mouse.click(groupCanvas.x + groupCanvas.width / 2, groupCanvas.y + groupCanvas.height / 2 - 0.85 * 30);
+    await expect(page).toHaveURL(milkyWay);
+  });
+}
+
 test('새 성단과 근거리 외계행성의 검색 결과에서 상세 화면을 연다', async ({ page }) => {
   await page.goto(milkyWay);
   await search(page, 'M45', /플레이아데스/);
@@ -90,6 +118,8 @@ const associationCases = [
   { query: 'M81 은하군', name: 'M81 은하군', member: 'M81 · NGC 3031', id: 'm81', region: 'virgo', association: 'm81-group' },
   { query: 'M96 Group', name: '사자자리 I 은하군', member: 'M96 · NGC 3368', id: 'm96', region: 'virgo', association: 'leo-i' },
   { query: 'Abell 1060', name: '바다뱀자리 I 은하단', member: 'NGC 3311', id: 'ngc-3311', region: 'laniakea', association: 'hydra-i' },
+  { query: 'Abell 3627', name: '노르마 은하단', member: 'ESO 137-001', id: 'eso-137-001', region: 'laniakea', association: 'norma' },
+  { query: 'NGC 3109 Association', name: 'NGC 3109 은하군', member: 'Leo P', id: 'leo-p', region: 'virgo', association: 'ngc-3109-association' },
 ];
 
 for (const { query, name, member, id, region, association } of associationCases) {
@@ -115,6 +145,50 @@ for (const { query, name, member, id, region, association } of associationCases)
     await expect(details(page).getByRole('heading', { name })).toBeVisible();
   });
 }
+
+test('국부 은하군의 왜소은하와 두 위성은하 계열을 검색한다', async ({ page }) => {
+  await page.goto('/ko/local-group?galaxy=wlm');
+  await expect(details(page).getByText('WLM', { exact: false }).first()).toBeVisible();
+  await waitForRenderedMap(page);
+  for (const [query, name, id] of [
+    ['바너드 은하', 'NGC 6822', 'ngc-6822'],
+    ['궁수자리 왜소구형은하', 'Sagittarius dSph', 'sagittarius-dsph'],
+    ['Cassiopeia III', 'Andromeda XXXII', 'andromeda-xxxii'],
+  ]) {
+    await search(page, query, new RegExp(name));
+    await expect(page).toHaveURL(`/ko/galaxies/${id}`);
+    await expect(details(page).getByRole('heading', { name, exact: true })).toBeVisible();
+    await waitForRenderedMap(page);
+  }
+});
+
+test('라니아케아에서 노르마 은하단 마커와 분광 관측 은하를 연다', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
+  });
+  await page.goto('/ko/superclusters/laniakea');
+  await waitForRenderedMap(page);
+  const canvas = await page.locator('main canvas').boundingBox();
+  if (!canvas) throw new Error('Laniakea canvas not mounted');
+  const camera = new PerspectiveCamera(45, canvas.width / canvas.height);
+  camera.position.set(0.29, 0.39, 1).normalize().multiplyScalar(275 * 2.65 * Math.max(1, canvas.height / canvas.width));
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld();
+  const ra = 243.76597 * Math.PI / 180;
+  const dec = -60.907114 * Math.PI / 180;
+  const projected = new Vector3(Math.cos(dec) * Math.cos(ra), Math.sin(dec), -Math.cos(dec) * Math.sin(ra)).multiplyScalar(220).project(camera);
+  await page.mouse.click(canvas.x + (projected.x + 1) * canvas.width / 2, canvas.y + (1 - projected.y) * canvas.height / 2 - 0.95 * 30);
+  await expect(page).toHaveURL('/ko/superclusters/laniakea?view=cluster&cluster=norma');
+  await waitForRenderedMap(page);
+  await details(page).getByText('분광 관측 표본 (128)', { exact: true }).click();
+  await details(page).getByRole('button', { name: 'WKK 5916', exact: true }).click();
+  await expect(page).toHaveURL('/ko/galaxies/wkk-5916');
+  await expect(details(page).getByRole('heading', { name: 'WKK 5916', exact: true })).toBeVisible();
+  await waitForRenderedMap(page);
+  expect(errors).toEqual([]);
+});
 
 test('목성과 토성의 대기 특징을 표시하고 행성 셰이더를 컴파일한다', async ({ page }) => {
   const shaderErrors: string[] = [];
@@ -264,6 +338,104 @@ test('새 천체 다섯 개를 검색해 관측 자료와 3D 장면을 연다', 
     await expect(page.locator('main canvas')).toBeVisible();
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   }
+  expect(errors).toEqual([]);
+});
+
+test('말머리 성운, WR 124, 티코 잔해의 관측 텍스처와 3D 모형을 연다', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
+  });
+  await page.goto(milkyWay);
+  for (const [id, query, name, image] of [
+    ['horsehead-nebula', 'Barnard 33', '말머리 성운', 'eso.jpg'],
+    ['wr-124', 'M1-67', 'WR 124', 'webb.jpg'],
+    ['tycho-remnant', 'SN 1572', '티코 초신성 잔해', 'chandra.jpg'],
+  ]) {
+    const texture = page.waitForResponse((response) => response.url().endsWith(`/${id}/${image}`) && response.ok());
+    await search(page, query, new RegExp(name));
+    await texture;
+    await expect(page).toHaveURL(new RegExp(`view=object&target=${id}$`));
+    await expect(details(page).getByRole('heading', { name, exact: true })).toBeVisible();
+    await expect(page.locator('main canvas')).toBeVisible();
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  }
+  expect(errors).toEqual([]);
+});
+
+test('나선 성운, SN 1006, 오메가 센타우리의 3D 장면을 연다', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
+  });
+  await page.goto(milkyWay);
+  for (const { id, query, name, image } of [
+    { id: 'ngc-7293', query: 'Caldwell 63', name: '나선 성운', image: 'hubble.jpg' },
+    { id: 'sn-1006', query: 'SN1006', name: 'SN 1006', image: 'chandra.jpg' },
+    { id: 'ngc-5139', query: 'NGC 5139', name: '오메가 센타우리' },
+  ]) {
+    const texture = image && page.waitForResponse((response) => response.url().endsWith(`/${id}/${image}`) && response.ok());
+    await search(page, query, new RegExp(name));
+    await texture;
+    await expect(page).toHaveURL(`${milkyWay}?view=object&target=${id}`);
+    await expect(details(page).getByRole('heading', { name, exact: true })).toBeVisible();
+    await expect(page.locator('main canvas')).toBeVisible();
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  }
+  expect(errors).toEqual([]);
+});
+
+test('보석벌레 성운과 판도라 은하단을 포함한 새 천체 다섯 개를 연다', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
+  });
+  await page.goto(milkyWay);
+  for (const { query, name, path, texture } of [
+    { query: 'NGC 7027', name: '보석벌레 성운', path: `${milkyWay}?view=object&target=ngc-7027`, texture: '/ngc-7027/hubble.jpg' },
+    { query: 'NGC 104', name: '47 투카나이', path: `${milkyWay}?view=object&target=ngc-104` },
+    { query: 'Spanish Dancer Galaxy', name: 'NGC 1566', path: '/ko/galaxies/ngc-1566', texture: '/ngc-1566/webb.jpg' },
+    { query: '불사조자리 왜소은하', name: 'Phoenix Dwarf', path: '/ko/galaxies/phoenix-dwarf' },
+    { query: 'Abell 2744', name: '판도라 은하단', path: '/ko/universe?target=abell-2744' },
+  ]) {
+    const image = texture && page.waitForResponse((response) => response.url().endsWith(texture) && response.ok());
+    await search(page, query, new RegExp(name));
+    await image;
+    await expect(page).toHaveURL(path);
+    await expect(details(page).getByRole('heading', { name, exact: true })).toBeVisible();
+    await expect(page.locator('main canvas')).toBeVisible();
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  }
+  await expect(details(page)).toContainText('은하 152개');
+  expect(errors).toEqual([]);
+});
+
+test('NGC 346을 검색하고 소마젤란은하 지도와 3D 장면을 오간다', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
+  });
+  await page.goto(milkyWay);
+  const image = page.waitForResponse((response) => response.url().endsWith('/ngc-346/webb.jpg') && response.ok());
+  await search(page, 'NGC346', /NGC 346/);
+  await image;
+  await expect(page).toHaveURL('/ko/galaxies/small-magellanic-cloud?view=object&target=ngc-346');
+  await expect(details(page).getByRole('heading', { name: 'NGC 346', exact: true })).toBeVisible();
+  await expect(page.locator('main canvas')).toBeVisible();
+  await page.mouse.move(720, 450);
+  await expect.poll(async () => {
+    await page.mouse.wheel(0, 550);
+    return new URL(page.url()).search;
+  }, { intervals: [130], timeout: 12_000 }).toBe('?focus=ngc-346');
+  await waitForRenderedMap(page);
+  await expect.poll(async () => {
+    await page.mouse.wheel(0, -550);
+    return new URL(page.url()).search;
+  }, { intervals: [130], timeout: 12_000 }).toBe('?view=object&target=ngc-346');
   expect(errors).toEqual([]);
 });
 
@@ -507,4 +679,27 @@ test('성운과 외부 은하의 블랙홀을 축소해도 은하 지도에서 �
       return new URL(page.url()).search;
     }, { intervals: [120], timeout: 12_000 }).toBe(`?view=object&target=${id}`);
   }
+});
+
+test('헤라클레스 성단과 백조자리 X-1의 축소 모형을 지도에서 열고 다시 확대한다', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
+  });
+  for (const id of ['m13', 'cygnus-x-1']) {
+    await page.goto(`${milkyWay}?view=object&target=${id}`);
+    await expect(page.locator('main canvas')).toBeVisible();
+    await page.mouse.move(720, 450);
+    await expect.poll(async () => {
+      await page.mouse.wheel(0, 560);
+      return new URL(page.url()).search;
+    }, { intervals: [130], timeout: 12_000 }).toBe(`?focus=${id}`);
+    await waitForRenderedMap(page);
+    await expect.poll(async () => {
+      await page.mouse.wheel(0, -560);
+      return new URL(page.url()).search;
+    }, { intervals: [130], timeout: 12_000 }).toBe(`?view=object&target=${id}`);
+  }
+  expect(errors).toEqual([]);
 });

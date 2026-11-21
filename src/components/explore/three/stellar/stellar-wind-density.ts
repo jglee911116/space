@@ -1,5 +1,7 @@
 // The parent volume uses the same normalized photosphere for all stellar winds.
 export const STELLAR_WIND_RADIUS = 3.4;
+export const STELLAR_WIND_FADE = [8.4, 12.8] as const;
+export const STELLAR_DETAIL_EXIT = 13;
 
 export const rigelWindDensity = /* glsl */ `
   vec4 density(vec3 p) {

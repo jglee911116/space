@@ -17,13 +17,6 @@ const nearbyMarkers: readonly ClusterMarker[] = nearbyShowcase.map(({ id, name, 
   color,
   ...skyPosition,
 }));
-const normaCluster = {
-  name: message('catalog.superclusters.norma-cluster.name'),
-  distanceMly: 220,
-  rightAscension: 243.35083,
-  declination: -60.75806,
-  color: '#dfb7fa',
-};
 const virgoSource = {
   label: message('catalog.superclusters.virgo-source.source.nasa-hubble-m87-and-the-virgo-cluster'),
   href: 'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/messier-87/',
@@ -57,7 +50,7 @@ export const superclusters: readonly [Supercluster, Supercluster] = [
     zoomOutMly: 980,
     zoomInMly: 750,
     summary: message('catalog.superclusters.laniakea.summary'),
-    markers: [...groupMarkers, normaCluster],
+    markers: groupMarkers,
     sources: [
       { label: message('catalog.superclusters.laniakea.source.tully-et-al-galaxy-flows-in-laniakea'), href: 'https://doi.org/10.1038/nature13674' },
       { label: message('catalog.superclusters.laniakea.source.esa-hubble-norma-cluster'), href: 'https://esahubble.org/images/heic1404a/' },

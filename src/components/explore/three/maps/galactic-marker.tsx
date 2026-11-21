@@ -35,9 +35,27 @@ function createMarkerTexture(name: string, color: string) {
   return texture;
 }
 
+function createDistanceTexture(label: string, width: number) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = 24;
+  const context = canvas.getContext('2d');
+  if (!context) return null;
+  context.font = '500 20px system-ui, sans-serif';
+  context.fillStyle = '#a9b9df';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(label, width / 2, 12);
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  return texture;
+}
+
 type Marker = {
   sprite: Sprite;
   width: number;
+  height: number;
+  opacity: number;
   priority: number;
   labelOffset: number;
   modelRadius?: number;
@@ -91,14 +109,14 @@ export function GalacticLabelLayer({ children }: { children: ReactNode }) {
       const centerY = (1 - projected.y) * height * 0.5 - offset * 30;
       bounds.left = centerX - marker.width * 0.25;
       bounds.right = centerX + marker.width * 0.25;
-      bounds.top = centerY - 15;
-      bounds.bottom = centerY + 15;
+      bounds.top = centerY - marker.height / 2;
+      bounds.bottom = centerY + marker.height / 2;
       if (bounds.right < 0 || bounds.left > width || bounds.bottom < 0 || bounds.top > height) continue;
 
       const unit = (2 * depth) / (camera.projectionMatrix.elements[5] * Math.max(height, 1));
-      sprite.center.y = 0.5 - offset;
-      sprite.material.opacity = opacity;
-      sprite.scale.set(marker.width * unit * 0.5, 30 * unit, 1);
+      sprite.center.y = 0.5 - (offset * 30) / marker.height;
+      sprite.material.opacity = opacity * marker.opacity;
+      sprite.scale.set(marker.width * unit * 0.5, marker.height * unit, 1);
       candidates.push(marker);
     }
 
@@ -134,6 +152,7 @@ export function GalacticMarker({
   wideLabelSpacing,
   priority = 0,
   guide,
+  distanceLabel = false,
 }: {
   name: CatalogText;
   onSelect?: () => void;
@@ -145,6 +164,7 @@ export function GalacticMarker({
   modelRadius?: number;
   wideLabelSpacing?: RefObject<number>;
   priority?: number;
+  distanceLabel?: boolean;
 }) {
   const { catalogText } = useLanguage();
   const label = catalogText(name);
@@ -164,7 +184,9 @@ export function GalacticMarker({
     const material: SpriteMaterial = object.material;
     const marker: Marker = {
       sprite: object,
-      width: labelWidth(label),
+      width: distanceLabel ? Math.ceil((labelWidth(label) - 66) * 20 / 28) + 14 : labelWidth(label),
+      height: distanceLabel ? 12 : 30,
+      opacity: distanceLabel ? 0.56 : 1,
       priority,
       localOpacity,
       guide,
@@ -176,7 +198,7 @@ export function GalacticMarker({
       onHover: (hovered) => hoverCallback.current?.(hovered),
       showTexture: () => {
         if (texture !== undefined) return;
-        texture = createMarkerTexture(label, color);
+        texture = distanceLabel ? createDistanceTexture(label, marker.width) : createMarkerTexture(label, color);
         material.map = texture;
         material.needsUpdate = true;
       },
@@ -190,14 +212,14 @@ export function GalacticMarker({
       material.map = null;
       texture?.dispose();
     };
-  }, [layer, label, color, priority, localOpacity, guide, labelOffset, modelRadius, wideLabelSpacing]);
+  }, [layer, label, color, priority, localOpacity, guide, labelOffset, modelRadius, wideLabelSpacing, distanceLabel]);
 
   return (
     <sprite
       ref={sprite}
       visible={false}
       raycast={function (this: Sprite, raycaster, intersections) {
-        if (this.visible) Sprite.prototype.raycast.call(this, raycaster, intersections);
+        if (this.visible && !distanceLabel) Sprite.prototype.raycast.call(this, raycaster, intersections);
       }}
       center={[0.5, 0.5]}
       onPointerOver={(event) => {

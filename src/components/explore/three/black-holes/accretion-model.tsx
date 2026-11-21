@@ -10,6 +10,7 @@ import { HelicalJets } from './helical-jets';
 import { previewVisibility } from '../maps/map-detail';
 import { spatialNoise } from '../shared/shaders';
 import { useSurfaceMap } from '../shared/use-surface-map';
+import { ACCRETION_SHADOW_RADIUS, LENSED_FLOW_DIAMETER, lensedAccretionFragment, lensedAccretionVertex } from './lensed-accretion-flow';
 
 const M87_RING_MAP = '/textures/black-holes/m87-star/eht-ring.jpg';
 const QUASAR_JET_MAP = '/textures/quasars/3c-273/hubble-jet-profile.png';
@@ -68,7 +69,9 @@ const diskFragment = /* glsl */ `
     float outer = stream(winding - phase, r);
     float flow = mix(inner, outer, smoothstep(0.25, 0.58, r));
     float softened = 1.0 - smoothstep(0.014, 0.045, fwidth(r));
+    float infall = 0.5 + 0.5 * sin(58.0 * r - 2.0 * (theta - phase) + 2.0 * phase);
     float filaments = pow(0.5 + 0.5 * sin(r * 115.0 - 4.0 * winding + 7.0 * flow), 3.0) * softened;
+    filaments *= mix(0.82, 1.12, infall);
     float rim = exp(-pow((r - 0.247 - 0.016 * (flow - 0.5)) / width, 2.0));
     float shoulder = exp(-pow((r - 0.36) / 0.23, 2.0));
     float lamplight = 0.79 + 0.21 * cos(theta + 0.9);
@@ -89,7 +92,7 @@ const diskFragment = /* glsl */ `
   }
 `;
 
-export function AccretionGeometry({ id, color, previewDiameter, time }: { id: string; color: string; previewDiameter?: number; time?: RefObject<number> }) {
+export function AccretionGeometry({ id, color, previewDiameter, time, lowDetail = false }: { id: string; color: string; previewDiameter?: number; time?: RefObject<number>; lowDetail?: boolean }) {
   const group = useRef<Group>(null);
   const disk = useRef<ShaderMaterial>(null);
   const shadow = useRef<MeshBasicMaterial>(null);
@@ -110,7 +113,7 @@ export function AccretionGeometry({ id, color, previewDiameter, time }: { id: st
     hasObservation: { value: observation !== undefined },
   }), [animated, color, contrast, observation, preview, width]);
   const diameter = previewDiameter ?? ACCRETION_MODEL_DIAMETER;
-  const segments = animated ? (previewDiameter === undefined ? 64 : 20) : 1;
+  const segments = animated ? (preview || lowDetail ? 20 : 64) : 1;
 
   useFrame(({ camera, size }) => {
     if (!disk.current) return;
@@ -134,9 +137,16 @@ export function AccretionGeometry({ id, color, previewDiameter, time }: { id: st
         <shaderMaterial ref={disk} uniforms={uniforms} vertexShader={diskVertex} fragmentShader={diskFragment} side={DoubleSide} transparent depthWrite={false} blending={AdditiveBlending} />
       </mesh>
       <mesh raycast={() => {}}>
-        <sphereGeometry args={[0.73, 32, 24]} />
+        <sphereGeometry args={[ACCRETION_SHADOW_RADIUS, 32, 24]} />
         <meshBasicMaterial ref={shadow} color="#050611" />
       </mesh>
+      {animated && !preview && !lowDetail && (
+        <mesh raycast={() => {}}>
+          <planeGeometry args={[LENSED_FLOW_DIAMETER, LENSED_FLOW_DIAMETER]} />
+          <shaderMaterial uniforms={uniforms} vertexShader={lensedAccretionVertex} fragmentShader={lensedAccretionFragment}
+            transparent depthWrite={false} blending={AdditiveBlending} />
+        </mesh>
+      )}
     </group>
   );
 }
