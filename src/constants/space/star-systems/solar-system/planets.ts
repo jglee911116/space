@@ -104,7 +104,7 @@ export const planets: Body[] = [
       { inner: 2.13, outer: 2.29, color: '#d6bd9e', opacity: 0.72 },
     ],
     ringMap: {
-      file: '/textures/galaxies/milky-way/systems/solar/saturn/rings-sss.png',
+      file: '/textures/star-systems/solar/planets/saturn/rings-sss.png',
       inner: 69_300 / 60_268,
       outer: 141_040 / 60_268,
     },

@@ -134,12 +134,13 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const extraView = cosmicView || groupView || (externalGalaxy && !selectedSystem);
   const system = selectedSystem ?? catalogSystems.solar;
   const systemId = String(system.id);
-  const galaxyObjects = useMemo(() => featuredObjects.filter((item) => (item.galaxyId ?? milkyWay.id) === activeGalaxy.id), [activeGalaxy.id]);
+  const galaxyObjects = useMemo(() => featuredObjects.filter((item) => !item.parentObjectId && (item.galaxyId ?? milkyWay.id) === activeGalaxy.id), [activeGalaxy.id]);
   const objectMarkers = useMemo(
     () => galaxyObjects.map((object) => ({ object, position: featuredGalaxyPosition(object, activeGalaxy) })),
     [activeGalaxy, galaxyObjects],
   );
-  const featuredObject = !cosmicView && !groupView && viewParam === 'object' ? galaxyObjects.find(({ id }) => id === targetParam) : undefined;
+  const parentObjectId = featuredObjects.find(({ id }) => id === targetParam)?.parentObjectId;
+  const featuredObject = !cosmicView && !groupView && viewParam === 'object' ? galaxyObjects.find(({ id }) => id === (parentObjectId ?? targetParam)) : undefined;
   const neighborhoodView = !externalGalaxy && !extraView && (viewParam === 'neighborhood' || (!pathGalaxy && !systemParam && !targetParam && !viewParam));
   const outerRegion = system.outerRegion;
   const cloud = system.oortCloud;
@@ -156,9 +157,10 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
     (wheelView ? wheelView.scene === 'galaxy' : viewParam === 'galaxy' || targetParam === milkyWay.center.id || (!!pathGalaxy && !systemParam && !targetParam && !viewParam));
   const focusGalacticCenter = galaxyView && targetParam === milkyWay.center.id;
   const focusBlackHole = focusGalacticCenter && (centerZoom?.close ?? true);
-  const viewingM87Jet = featuredObject?.id === 'm87-star' || (extraView && activeGalaxy.id === 'm87' && focus === 'm87-star');
+  const animatedAccretion = distantObject?.kind === 'quasar' || featuredObject?.kind === 'black-hole'
+    || (extraView && activeGalaxy.id === 'm87' && focus === 'm87-star');
   const featuredShape = featuredObject?.observationImage?.shape;
-  const animatedFeaturedVolume = featuredShape === 'bipolar-jet' || featuredShape === 'shocked-shell' || featuredShape === 'dust-spiral' || featuredShape === 'edge-on-disk';
+  const animatedFeaturedVolume = featuredShape === 'bipolar-jet' || featuredShape === 'shocked-shell' || featuredShape === 'dust-spiral' || featuredShape === 'edge-on-disk' || featuredShape === 'light-echo';
   const heading = region
     ? association
       ? association.name
@@ -192,7 +194,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
       ? outerBodies
       : system.bodies.filter((other) => other.parent === null || (other.parent === root.id && !other.region) || (isMultiStar(system) && other.kind === 'planet'));
   const simulationDaysRef = useRef(0);
-  const m87PlaybackTime = useRef(0);
+  const accretionPlaybackTime = useRef(0);
   const distanceBar = useRef<HTMLDivElement>(null);
   const reportDistance = useCallback(
     (kmPerPixel: number) => {
@@ -211,13 +213,13 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   const [daysPerSecond, setDaysPerSecond] = useState(REALTIME_DAYS_PER_SECOND);
   useEffect(() => {
     if (paused) return;
-    const m87Rate = Math.max(0.18, 1 + 0.32 * Math.log10(daysPerSecond / REALTIME_DAYS_PER_SECOND));
+    const accretionRate = Math.max(0.18, 1 + 0.32 * Math.log10(daysPerSecond / REALTIME_DAYS_PER_SECOND));
     let previous = performance.now();
     let frame: number;
     const tick = (now: number) => {
       const seconds = Math.max(0, now - previous) / 1000;
       simulationDaysRef.current += elapsedSimulationDays(seconds, daysPerSecond);
-      m87PlaybackTime.current += Math.min(seconds, 0.1) * m87Rate;
+      accretionPlaybackTime.current += Math.min(seconds, 0.1) * accretionRate;
       previous = now;
       frame = requestAnimationFrame(tick);
     };
@@ -330,12 +332,10 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
   );
 
   const selectFeaturedObject = useCallback((id: string) => navigateSpace(featuredObjectPath(activeGalaxy.id, id)), [activeGalaxy.id, navigateSpace]);
-  const parentObjectId = featuredObject?.parentObjectId;
   const featuredObjectId = featuredObject?.id;
   const featuredReturnDistanceAu = featuredObject ? featuredOverviewDistanceKpc(featuredObject) * AU_PER_KPC : 0;
   const leaveFeaturedObject = (direction: ZoomHandoff['direction']) => {
-    if (parentObjectId) selectFeaturedObject(parentObjectId);
-    else if (featuredObjectId) navigateSpace(galaxyFocusPath(activeGalaxy.id, featuredObjectId), { direction, distanceAu: featuredReturnDistanceAu });
+    if (featuredObjectId) navigateSpace(galaxyFocusPath(activeGalaxy.id, featuredObjectId), { direction, distanceAu: featuredReturnDistanceAu });
   };
 
   const selectSystem = useCallback((id: string) => navigateTo(null, null, id), [navigateTo]);
@@ -369,6 +369,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             onStepIn={zoomInCosmic}
             onStepOut={zoomOutCosmic}
             showCounterjet={showCounterjet}
+            accretionPlaybackTime={accretionPlaybackTime}
             focus={focus ?? undefined}
             entry={spaceEntry}
             reportDistance={reportDistance}
@@ -382,10 +383,9 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             object={featuredObject}
             reportDistance={reportDistance}
             simulationDaysRef={simulationDaysRef}
-            m87PlaybackTime={m87PlaybackTime}
+            accretionPlaybackTime={accretionPlaybackTime}
             daysPerSecond={daysPerSecond}
             paused={paused}
-            onSelectObject={selectFeaturedObject}
             onLeave={leaveFeaturedObject}
           />
         ) : extraView ? (
@@ -400,7 +400,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
             onExitGroup={leaveLocalGroup}
             systemMarkers={systemMarkers}
             objectMarkers={objectMarkers}
-            m87PlaybackTime={m87PlaybackTime}
+            accretionPlaybackTime={accretionPlaybackTime}
             onSelectObject={selectFeaturedObject}
             focusId={focus ?? undefined}
             onSelectSystem={enterMarkedSystem}
@@ -632,7 +632,7 @@ export function Explorer({ systems }: { systems: readonly StarSystem[] }) {
               {galacticDemo && <p className={styles.hint}>{t('playback.galacticDemoSpeed', [measurement(milkyWay.demoYearsPerSecond, 1e4, 0)])}</p>}
             </>
           )}
-          {!viewingM87Jet && !animatedFeaturedVolume && (distantObject || cosmicView || extraView || neighborhoodView || (featuredObject && !featuredObject.spinSeconds && !featuredObject.variabilityDays && !featuredObject.expansionPerYear)) && (
+          {!animatedAccretion && !animatedFeaturedVolume && (distantObject || cosmicView || extraView || neighborhoodView || (featuredObject && !featuredObject.spinSeconds && !featuredObject.variabilityDays && !featuredObject.expansionPerYear)) && (
             <p className={styles.hint}>{t('playback.fixedLayout')}</p>
           )}
           {!focusBlackHole && !distantObject && (!featuredObject || (featuredObject.extentLightYears > 0 && featuredObject.kind !== 'black-hole')) && (

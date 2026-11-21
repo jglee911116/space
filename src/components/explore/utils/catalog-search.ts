@@ -47,7 +47,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
       kind: 'details.supermassiveBlackHole',
       aliases: ['Sgr A*', milkyWay.center.id],
     },
-    ...featuredObjects.map(
+    ...featuredObjects.filter(({ parentObjectId }) => !parentObjectId).map(
       ({ id, name, designation, kind, galaxyId = milkyWay.id, aliases = [] }): Entry => ({
         name,
         designation,

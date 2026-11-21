@@ -1,7 +1,7 @@
 import { message } from '@/i18n/messages';
 import type { Body, Source } from '../../types';
 
-const textureRoot = '/textures/galaxies/milky-way/systems/solar';
+const assetGroup = { star: 'stars', planet: 'planets', moon: 'moons', 'dwarf-planet': 'dwarf-planets', 'small-body': 'small-bodies' } as const;
 
 const scopeSource: Source = { label: 'Solar System Scope · CC BY 4.0', href: 'https://www.solarsystemscope.com/textures/' };
 const scopePlanets = new Set(['mercury', 'venus', 'earth', 'mars', 'saturn', 'uranus', 'neptune']);
@@ -14,13 +14,15 @@ const jplMoonSystems: Record<string, string> = {
 
 export function withSolarSurfaceMap(body: Body): Body {
   const { id, sources } = body;
+  const assetDirectory = `star-systems/solar/${assetGroup[body.kind]}/${id}`;
+  const textures = `/textures/${assetDirectory}`;
   if (id === 'jupiter') {
     // The photographed Great Red Spot (u ≈ 0.364) faces +Z (sphere u = 0.25).
-    return { ...body, surfaceMap: { file: `${textureRoot}/jupiter/jupiter-cassini-pia07782.jpg`, longitudeOffset: 0.114 } };
+    return { ...body, surfaceMap: { file: `${textures}/jupiter-cassini-pia07782.jpg`, longitudeOffset: 0.114 } };
   }
-  if (scopePlanets.has(id)) return { ...body, surfaceMap: { file: `${textureRoot}/${id}/${id}-sss.jpg` }, sources: [...sources, scopeSource] };
+  if (scopePlanets.has(id)) return { ...body, surfaceMap: { file: `${textures}/${id}-sss.jpg` }, sources: [...sources, scopeSource] };
   if (id === 'moon') {
-    return { ...body, surfaceMap: { file: `${textureRoot}/moon/moon-lroc.jpg` }, sources: [...sources, { label: 'NASA SVS / LROC · Ernie Wright', href: 'https://svs.gsfc.nasa.gov/4720/' }] };
+    return { ...body, surfaceMap: { file: `${textures}/moon-lroc.jpg` }, sources: [...sources, { label: 'NASA SVS / LROC · Ernie Wright', href: 'https://svs.gsfc.nasa.gov/4720/' }] };
   }
   if (id === 'pluto' || id === 'charon') {
     const mosaic = {
@@ -31,7 +33,7 @@ export function withSolarSurfaceMap(body: Body): Body {
     return {
       ...body,
       note: message('catalog.trans-neptunian.new-horizons.surface'),
-      surfaceMap: { file: `${textureRoot}/${id}/${id}-new-horizons.jpg` },
+      surfaceMap: { file: `${textures}/${id}-new-horizons.jpg` },
       sources: [...sources, mosaic, ...(id === 'pluto' ? [colorMap] : [])],
     };
   }
@@ -39,16 +41,16 @@ export function withSolarSurfaceMap(body: Body): Body {
     const href = id === 'arrokoth'
       ? 'https://science.nasa.gov/resource/arrokoth-3d-model/'
       : `https://science.nasa.gov/resource/${id}-mars-moon-3d-model/`;
-    return { ...body, shapeModel: `${textureRoot}/${id}/${id}-nasa.glb`, sources: [...sources, { label: 'NASA · Observed 3D model', href }] };
+    return { ...body, shapeModel: `/models/${assetDirectory}/${id}-nasa.glb`, sources: [...sources, { label: 'NASA · Observed 3D model', href }] };
   }
   if (id === 'titan') {
-    return { ...body, note: message('catalog.titan.surfaceNote'), surfaceMap: { file: `${textureRoot}/titan/titan-cassini.jpg`, fillMissing: true }, sources: [...sources, {
+    return { ...body, note: message('catalog.titan.surfaceNote'), surfaceMap: { file: `${textures}/titan-cassini.jpg`, fillMissing: true }, sources: [...sources, {
       label: 'NASA/JPL-Caltech/Univ. Arizona · Cassini ISS',
       href: 'https://science.nasa.gov/resource/titan-mosaic-the-surface-under-the-haze/',
     }] };
   }
   if (id === 'enceladus') {
-    return { ...body, note: message('catalog.enceladus.surfaceNote'), surfaceMap: { file: `${textureRoot}/enceladus/enceladus-cassini.jpg`, fillMissing: true }, sources: [...sources, {
+    return { ...body, note: message('catalog.enceladus.surfaceNote'), surfaceMap: { file: `${textures}/enceladus-cassini.jpg`, fillMissing: true }, sources: [...sources, {
       label: 'NASA/JPL-Caltech/SSI/Lunar and Planetary Institute · Cassini',
       href: 'https://science.nasa.gov/photojournal/color-maps-of-enceladus-2014/',
     }, { label: 'NASA/JPL · Cassini south polar jets', href: 'https://science.nasa.gov/resource/bursting-at-the-seams-the-geyser-basin-of-enceladus/' }] };
@@ -56,7 +58,7 @@ export function withSolarSurfaceMap(body: Body): Body {
   const system = jplMoonSystems[id];
   if (system) {
     const source = { label: 'NASA/JPL · Solar System Simulator', href: `https://maps.jpl.nasa.gov/tmaps/${system}.html` };
-    return { ...body, surfaceMap: { file: `${textureRoot}/${id}/${id}-jpl.jpg`, fillMissing: true }, sources: [...sources, source] };
+    return { ...body, surfaceMap: { file: `${textures}/${id}-jpl.jpg`, fillMissing: true }, sources: [...sources, source] };
   }
   return body;
 }

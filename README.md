@@ -2,6 +2,18 @@
 
 태양계에서 관측 가능한 우주까지 탐색하는 3D 지도입니다. 한국어는 `/ko`, 영어는 `/en`에서 열립니다.
 
+## 천체 리소스 구조
+
+| 위치 | 내용 |
+| --- | --- |
+| `src/constants/space/star-systems`, `galaxies` | 항성계와 은하의 카탈로그 |
+| `src/constants/space/featured-objects` | 성단, 항성, 콤팩트 천체, 성운 카탈로그 |
+| `src/components/explore/three` | 블랙홀, 은하, 성운, 항성·성단, 행성계 렌더러와 지도·공용 코드 |
+| `public/textures` | 은하, 성운, 블랙홀, 퀘이사, 항성계의 텍스처 |
+| `public/models` | 관측 기반 3D 형상 파일 |
+
+태양계 파일은 `star-systems/solar/<분류>/<천체 ID>/`에 둡니다. 성운 이미지는 `textures/nebulae/<분류>/<천체 ID>/`에 둡니다. 소속 은하, 관측 출처 및 사용 파일은 카탈로그에서 연결합니다.
+
 ## 천체 등록
 
 1. `src/constants/space`에서 천체 유형에 맞는 카탈로그를 선택합니다. 경로에 사용하는 ID는 기존 값과 겹치지 않도록 합니다.

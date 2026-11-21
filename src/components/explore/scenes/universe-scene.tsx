@@ -4,19 +4,19 @@ import { useLanguage } from '@/i18n/language';
 import type { CatalogText } from '@/i18n/messages';
 import { Line, OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useLayoutEffect, useMemo, useRef, type ComponentRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from 'react';
 import { AdditiveBlending, Box3, MathUtils, Vector3 } from 'three';
 import { LANIAKEA_REGION_ID, VIRGO_REGION_ID } from '@/constants/space/superclusters';
 import { observableUniverse, distantObjects, galaxies, type DistantObject, superclusters, type Supercluster } from '@/constants/space';
 import { cosmologicalDistances } from '../utils/cosmology';
 import type { GalaxyAssociation } from '@/constants/space/galaxy-associations';
 import { AU_PER_KPC, KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
-import { AccretionModel } from '../three/accretion-model';
-import { NebulaVolume } from '../three/nebula-volume';
-import { useSurfaceMap } from '../three/use-surface-map';
-import { CosmicMapMarkers, type CosmicMapMarker } from '../three/cosmic-map-markers';
-import { CanvasBoundary } from '../three/canvas-boundary';
-import { GalacticLabelLayer, GalacticMarker } from '../three/galactic-marker';
+import { AccretionModel } from '../three/black-holes/accretion-model';
+import { NebulaVolume } from '../three/nebulae/nebula-volume';
+import { useSurfaceMap } from '../three/shared/use-surface-map';
+import { CosmicMapMarkers, type CosmicMapMarker } from '../three/maps/cosmic-map-markers';
+import { CanvasBoundary } from '../three/shared/canvas-boundary';
+import { GalacticLabelLayer, GalacticMarker } from '../three/maps/galactic-marker';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { LOCAL_GROUP_ENTRY_MILLION_LIGHT_YEARS, type ZoomHandoff } from '../utils/zoom';
 
@@ -29,6 +29,7 @@ type Props = {
   onStepOut: (entry: ZoomHandoff) => void;
   focus?: string;
   showCounterjet?: boolean;
+  accretionPlaybackTime: RefObject<number>;
   entry?: ZoomHandoff;
   reportDistance: ReportDistanceScale;
 
@@ -83,7 +84,7 @@ function MapMarker({
   );
 }
 
-function UniverseMap({ focus, entry, region, association, reportDistance, onStepIn, onStepOut, onSelectDistantObject, onSelectGalaxy, onSelectCluster }: Props) {
+function UniverseMap({ focus, entry, region, association, reportDistance, onStepIn, onStepOut, onSelectDistantObject, onSelectGalaxy, onSelectCluster, accretionPlaybackTime }: Props) {
   const { t } = useLanguage();
   const previousRegionId = region?.id === VIRGO_REGION_ID ? undefined : region ? VIRGO_REGION_ID : LANIAKEA_REGION_ID;
   const previousRegion = superclusters.find(({ id }) => id === previousRegionId);
@@ -187,7 +188,7 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
           )}
         </group>
       ))}
-      <CosmicMapMarkers markers={bodies} referenceDepth={preset} />
+      <CosmicMapMarkers markers={bodies} referenceDepth={preset} accretionTime={region ? undefined : accretionPlaybackTime} />
       {!association && <GalacticMarker name={innerName} priority={2} color="#ffd195" labelOffset={-0.92} onSelect={() => onStepIn()} />}
       {markers.map(({ name, position, color, galaxyId, clusterId }, index) => (
         <MapMarker
@@ -306,7 +307,7 @@ export default function UniverseScene(props: Props) {
         aria-label={object ? t('canvas.namedObjectModel', [catalogText(object.name)]) : t('canvas.namedMap', [catalogText(props.association?.name ?? props.region?.name ?? observableUniverse.name)])}
       >
         {object?.kind === 'quasar' ? (
-          <AccretionModel object={object} showCounterjet={props.showCounterjet} onExit={exit} />
+          <AccretionModel object={object} showCounterjet={props.showCounterjet} onExit={exit} time={props.accretionPlaybackTime} />
         ) : object ? (
           <DistantGalaxyModel object={object} onExit={exit} />
         ) : (

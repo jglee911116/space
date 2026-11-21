@@ -9,7 +9,7 @@ import type { StarSystem } from '@/constants/space';
 import { KM_PER_LIGHT_YEAR } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { nearbyPositions } from '../utils/nearby-positions';
-import { CanvasBoundary } from '../three/canvas-boundary';
+import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import styles from '../explore.module.scss';
 
 function createMarkers(systems: readonly StarSystem[]) {

@@ -27,7 +27,7 @@ export const ceres: Body = {
     periodDays,
   },
   note: message('catalog.ceres.note'),
-  surfaceMap: { file: '/textures/galaxies/milky-way/systems/solar/ceres/ceres-dawn.jpg', fillMissing: true },
+  surfaceMap: { file: '/textures/star-systems/solar/dwarf-planets/ceres/ceres-dawn.jpg', fillMissing: true },
   sources: [
     { label: 'NASA · Ceres', href: 'https://science.nasa.gov/dwarf-planets/ceres/facts/' },
     { label: 'JPL Small-Body Database · 1 Ceres', href: 'https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=1' },

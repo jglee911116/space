@@ -1,0 +1,65 @@
+import { message } from '@/i18n/messages';
+import type { FeaturedObject } from '../types';
+
+export const betelgeuse: FeaturedObject = {
+  id: 'betelgeuse',
+  name: message('catalog.featured-objects.betelgeuse.name'),
+  designation: message('catalog.featured-objects.betelgeuse.designation'),
+  description: message('catalog.featured-objects.betelgeuse.description'),
+  kind: 'supergiant',
+  observationStatus: 'observed',
+  distanceLightYears: 548,
+  rightAscension: 88.79294,
+  declination: 7.40706,
+  extentLightYears: 0,
+  color: '#ff8457',
+  aliases: ['Alpha Orionis', 'α Orionis'],
+  radiusSolar: 764,
+  radiusBasis: 'estimate',
+  photosphere: { dark: '#662119', bright: '#ffcc8c', cellScale: 4 },
+  sources: [{ label: 'Joyce et al. · Betelgeuse', href: 'https://arxiv.org/abs/2006.09837' }],
+};
+
+export const rigelA: FeaturedObject = {
+  id: 'rigel-a',
+  name: message('catalog.featured-objects.rigel-a.name'),
+  designation: message('catalog.featured-objects.rigel-a.designation'),
+  description: message('catalog.featured-objects.rigel-a.description'),
+  kind: 'supergiant',
+  observationStatus: 'observed',
+  photosphere: { dark: '#426daf', bright: '#e0edff', cellScale: 23 },
+  distanceLightYears: 860,
+  rightAscension: 78.63447,
+  declination: -8.20164,
+  extentLightYears: 0,
+  radiusSolar: 78.9,
+  radiusUncertaintySolar: 7.4,
+  radiusBasis: 'estimate',
+  color: '#9fbdff',
+  sources: [{ label: message('catalog.featured-objects.rigel-a.source.vega-chara-rigel-interferometry'), href: 'https://doi.org/10.1051/0004-6361/201014509' }],
+};
+
+export const uyScuti: FeaturedObject = {
+  id: 'uy-scuti',
+  aliases: ['UY Sct'],
+  name: message('catalog.featured-objects.uy-scuti.name'),
+  designation: message('catalog.featured-objects.uy-scuti.designation'),
+  description: message('catalog.featured-objects.uy-scuti.description'),
+  kind: 'supergiant',
+  observationStatus: 'observed',
+  photosphere: { dark: '#6b211d', bright: '#ffd08c', cellScale: 5 },
+  distanceLightYears: 9500,
+  rightAscension: 276.90222,
+  declination: -12.46635,
+  extentLightYears: 0,
+  radiusSolar: 1708,
+  radiusUncertaintySolar: 192,
+  radiusBasis: 'estimate',
+  distanceAssumed: true,
+  variabilityDays: 740,
+  color: '#ff7743',
+  sources: [
+    { label: message('catalog.featured-objects.uy-scuti.source.vlti-radius-and-distance-estimates'), href: 'https://doi.org/10.1051/0004-6361/201220920' },
+    { label: message('catalog.featured-objects.uy-scuti.source.gcvs-representative-variability-period'), href: 'https://www.kusastro.kyoto-u.ac.jp/vsnet/gcvs2/SCTUY.html' },
+  ],
+};

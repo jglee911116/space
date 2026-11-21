@@ -13,7 +13,7 @@ export const sun: Body = {
   displayRadius: 1,
   colors: ['#b01102', '#ffd152', '#ffb460'],
   focusScale: 4.65,
-  surfaceMap: { file: '/textures/galaxies/milky-way/systems/solar/sun/sun-sss.jpg' },
+  surfaceMap: { file: '/textures/star-systems/solar/stars/sun/sun-sss.jpg' },
   mass: '1.988 × 10³⁰ kg',
   spinNote: message('catalog.sun.sun.spinNote'),
   stellar: {

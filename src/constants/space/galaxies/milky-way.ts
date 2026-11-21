@@ -36,8 +36,8 @@ export const milkyWay: HostGalaxy = {
     massSolar: 4_000_000,
     shadowDiameterMicroarcseconds: 51.8,
     observationMaps: {
-      intensity: '/textures/galaxies/milky-way/objects/sgr-a/eht-2022.jpg',
-      polarization: '/textures/galaxies/milky-way/objects/sgr-a/eht-polarized-2024.jpg',
+      intensity: '/textures/black-holes/sgr-a/eht-2022.jpg',
+      polarization: '/textures/black-holes/sgr-a/eht-polarized-2024.jpg',
     },
     sources: [
       { label: 'EHT Collaboration · 2022', href: 'https://www.eso.org/public/images/eso2208-eht-mwa/' },

@@ -3,6 +3,7 @@ import type { Body, StarSystem } from '../../types';
 import { SOLAR_LUMINOSITY_W, SOLAR_RADIUS_KM } from '../../units';
 
 const ARCHIVE = { label: 'NASA Exoplanet Archive · ε Eridani', href: 'https://exoplanetarchive.ipac.caltech.edu/overview/eps%20Eri' };
+const ORBIT = { label: 'Thompson et al. · ε Eridani b orbit', href: 'https://doi.org/10.3847/1538-3881/ae0cbd' };
 const star: Body = {
   id: 'epsilon-eridani-star',
   name: message('catalog.epsilon-eridani.epsilon-eridani-star.name'),
@@ -28,7 +29,7 @@ export const epsilonEridani: StarSystem = {
   id: 'epsilon-eridani',
   name: message('catalog.epsilon-eridani.epsilon-eridani-star.name'),
   neighborhood: { distanceLightYears: 10.45, rightAscension: 53.23258, declination: -9.45817, source: ARCHIVE },
-  overviewDistance: 125,
+  overviewDistance: 103,
   summary: message('catalog.epsilon-eridani.epsilon-eridani.summary'),
   bodies: [
     star,
@@ -45,7 +46,7 @@ export const epsilonEridani: StarSystem = {
       orbit: { axisAu: 3.53, eccentricity: 0.06, inclination: 0, ascendingNode: 0, perihelionLongitude: 0, meanLongitude: 35, periodDays: 2680 },
       mass: message('catalog.epsilon-eridani.epsilon-eridani-b.mass'),
       note: message('catalog.epsilon-eridani.epsilon-eridani-b.note'),
-      sources: [ARCHIVE],
+      sources: [ARCHIVE, ORBIT],
     },
   ],
   sources: [ARCHIVE],

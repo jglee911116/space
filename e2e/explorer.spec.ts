@@ -18,8 +18,9 @@ async function waitForRenderedMap(page: Page) {
 
 test('검색 결과와 언어 전환은 선택한 천체를 유지한다', async ({ page }) => {
   await page.goto(milkyWay);
-  await search(page, 'PSR B0531+21', /게 펄서/);
-  await expect(details(page).getByRole('heading', { name: '게 펄서' })).toBeVisible();
+  await search(page, 'PSR B0531+21', /게성운/);
+  await expect(details(page).getByRole('heading', { name: '게성운' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /게 펄서.*확대/ })).toHaveCount(0);
   const language = page.getByRole('button', { name: '언어 한국어' });
   const choices = page.getByRole('group', { name: '언어', exact: true });
   await language.focus();
@@ -30,9 +31,9 @@ test('검색 결과와 언어 전환은 선택한 천체를 유지한다', async
   await expect(language).toBeFocused();
   await language.click();
   await choices.getByRole('button', { name: 'English' }).click();
-  await expect(page).toHaveURL(/\/en\/galaxies\/milky-way\?view=object&target=crab-pulsar$/);
+  await expect(page).toHaveURL(/\/en\/galaxies\/milky-way\?view=object&target=crab-nebula$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(details(page).getByRole('heading', { name: 'Crab Pulsar' })).toBeVisible();
+  await expect(details(page).getByRole('heading', { name: 'Crab Nebula' })).toBeVisible();
 });
 
 test('우리은하의 태양 라벨은 항성 상세 화면을 열고 뒤로 가면 지도로 돌아온다', async ({ page }) => {
@@ -107,7 +108,7 @@ test('목성과 토성의 대기 특징을 표시하고 행성 셰이더를 컴�
   });
 
   const saturnRings = page.waitForResponse((response) => response.url().endsWith('/saturn/rings-sss.png') && response.ok());
-  const jupiterMap = page.waitForResponse((response) => response.url().endsWith('/textures/galaxies/milky-way/systems/solar/jupiter/jupiter-cassini-pia07782.jpg') && (response.ok() || response.status() === 304));
+  const jupiterMap = page.waitForResponse((response) => response.url().endsWith('/textures/star-systems/solar/planets/jupiter/jupiter-cassini-pia07782.jpg') && (response.ok() || response.status() === 304));
   await page.goto(`${milkyWay}?system=solar&target=jupiter`);
   await Promise.all([jupiterMap, saturnRings]);
   await expect(details(page)).toContainText('남위 약 22°에 대적점');
@@ -128,14 +129,14 @@ test('태양 코로나와 새 행성·위성 표면의 설명을 열고 WebGL �
     }
   });
 
-  for (const [target, description, asset] of [
-    ['sun', '아치형 홍염', 'sun-sss.jpg'],
-    ['mars', '올림푸스산', 'mars-sss.jpg'],
-    ['neptune', '보이저 2호가 1989년', 'neptune-sss.jpg'],
-    ['io', '어두운 화산 지대', 'io-jpl.jpg'],
-    ['europa', '길게 교차하는 균열', 'europa-jpl.jpg'],
+  for (const [target, description, directory, asset] of [
+    ['sun', '아치형 홍염', 'stars', 'sun-sss.jpg'],
+    ['mars', '올림푸스산', 'planets', 'mars-sss.jpg'],
+    ['neptune', '보이저 2호가 1989년', 'planets', 'neptune-sss.jpg'],
+    ['io', '어두운 화산 지대', 'moons', 'io-jpl.jpg'],
+    ['europa', '길게 교차하는 균열', 'moons', 'europa-jpl.jpg'],
   ]) {
-    const map = asset && page.waitForResponse((response) => response.url().endsWith(`/textures/galaxies/milky-way/systems/solar/${target}/${asset}`) && (response.ok() || response.status() === 304));
+    const map = page.waitForResponse((response) => response.url().endsWith(`/textures/star-systems/solar/${directory}/${target}/${asset}`) && (response.ok() || response.status() === 304));
     await page.goto(`${milkyWay}?system=solar&target=${target}`);
     await map;
     await expect(details(page)).toContainText(description);
@@ -154,8 +155,8 @@ test('태양계 밖 성운의 관측 텍스처를 로드한다', async ({ page }
     }
   });
 
-  for (const target of ['m57', 'pillars-of-creation', 'crab-nebula']) {
-    const image = page.waitForResponse((response) => response.url().endsWith(`/objects/${target}/webb.jpg`) && response.ok());
+  for (const [target, category] of [['m57', 'planetary'], ['pillars-of-creation', 'star-forming'], ['crab-nebula', 'supernova-remnants']]) {
+    const image = page.waitForResponse((response) => response.url().endsWith(`/textures/nebulae/${category}/${target}/webb.jpg`) && response.ok());
     await page.goto(`${milkyWay}?view=object&target=${target}`);
     await image;
     await expect(details(page)).toContainText('3D 가스 모형');
@@ -182,13 +183,13 @@ test('새 Webb 천체 네 개를 검색하고 관측 텍스처와 3D 모형을 �
     if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) shaderErrors.push(message.text());
   });
   await page.goto(milkyWay);
-  for (const [id, query, name] of [
-    ['l1527-irs', 'LDN 1527', '원시별 L1527 IRS'],
-    ['hh-211', 'HH211', '헤르빅–아로 211'],
-    ['cassiopeia-a', 'CasA', '카시오페이아 A'],
-    ['ngc-3132', 'C74', '남쪽고리성운'],
+  for (const [id, query, name, category] of [
+    ['l1527-irs', 'LDN 1527', '원시별 L1527 IRS', 'star-forming'],
+    ['hh-211', 'HH211', '헤르빅–아로 211', 'star-forming'],
+    ['cassiopeia-a', 'CasA', '카시오페이아 A', 'supernova-remnants'],
+    ['ngc-3132', 'C74', '남쪽고리성운', 'planetary'],
   ]) {
-    const image = page.waitForResponse((response) => response.url().endsWith(`/objects/${id}/webb.jpg`) && response.ok());
+    const image = page.waitForResponse((response) => response.url().endsWith(`/textures/nebulae/${category}/${id}/webb.jpg`) && response.ok());
     await search(page, query, new RegExp(name));
     await image;
     await expect(page).toHaveURL(new RegExp(`view=object&target=${id}$`));

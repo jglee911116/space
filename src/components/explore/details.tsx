@@ -404,7 +404,7 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
         )}
       </dl>
       <p>{catalogText(object.description)}</p>
-      {object.observationImage && <p>{t('details.nebulaObservationVolume')}</p>}
+      {object.observationImage && <p>{t(object.observationImage.telescope === 'hubble' ? 'details.hubbleObservationVolume' : 'details.nebulaObservationVolume')}</p>}
       {radiusRatio !== undefined && (
         <div className={styles.radiusComparison}>
           <h3>{t('details.compareSolarRadius')}</h3>

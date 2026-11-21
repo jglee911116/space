@@ -1,26 +1,26 @@
 'use client';
 
 import { useLanguage } from '@/i18n/language';
-import { Line, OrbitControls, Stars } from '@react-three/drei';
+import { OrbitControls, Stars } from '@react-three/drei';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react';
-import { Color, DoubleSide, Points, Vector3, MathUtils, Mesh, type Group, type PointsMaterial, type MeshBasicMaterial, type ShaderMaterial } from 'three';
+import { Color, DoubleSide, Points, Vector3, MathUtils, Mesh, type Group, type LineLoop, type PointsMaterial, type MeshBasicMaterial, type ShaderMaterial } from 'three';
 import { KM_PER_AU } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import type { Body, StarSystem } from '@/constants/space';
-import { createMotions, isSatellite, rotationPhase, setWorldPosition, stellarTextureShear, UNITS_PER_AU } from '../utils/orbit';
-import { OortCloudModel } from '../three/oort-cloud';
+import { createMotions, isSatellite, rotationPhase, setWorldPosition, stellarTextureShear, writeOrbitVertices, UNITS_PER_AU } from '../utils/orbit';
+import { OortCloudModel } from '../three/planetary-systems/oort-cloud';
 import styles from '../explore.module.scss';
-import { IcePlumes } from '../three/ice-plumes';
-import { ObservedBodyModel } from '../three/observed-body-model';
-import { PlanetMaterial, PlanetRings } from '../three/planet-surface';
-import { PlanetGeometry } from '../three/outer-solar-surface';
-import { JUPITER_RED_SPOT_LATITUDE, surfaceFragment, surfaceVertex } from '../three/shaders';
-import { SolarProminences } from '../three/solar-prominences';
-import { StellarGlow } from '../three/stellar-glow';
-import { useSurfaceMap } from '../three/use-surface-map';
-import { useCursorZoom } from '../three/use-cursor-zoom';
-import { CanvasBoundary } from '../three/canvas-boundary';
+import { IcePlumes } from '../three/planetary-systems/ice-plumes';
+import { ObservedBodyModel } from '../three/planetary-systems/observed-body-model';
+import { PlanetMaterial, PlanetRings } from '../three/planetary-systems/planet-surface';
+import { PlanetGeometry } from '../three/planetary-systems/outer-solar-surface';
+import { JUPITER_RED_SPOT_LATITUDE, surfaceFragment, surfaceVertex } from '../three/shared/shaders';
+import { SolarProminences } from '../three/stellar/solar-prominences';
+import { StellarGlow } from '../three/stellar/stellar-glow';
+import { useSurfaceMap } from '../three/shared/use-surface-map';
+import { useCursorZoom } from '../three/shared/use-cursor-zoom';
+import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { systemHandoffDistanceAu, oortRadius, zoomLayers, type ZoomHandoff, type ZoomScale } from '../utils/zoom';
 
 /** 선택된 천체 id. null 은 계 전체 보기. */
@@ -50,7 +50,7 @@ const SPIN_AXIS = new Vector3(0, 1, 0);
 const RED_SPOT_LATITUDE = MathUtils.degToRad(JUPITER_RED_SPOT_LATITUDE);
 
 const DEFAULT_FOCUS_SCALE = 6.75;
-const ORBIT_OPACITY = 0.19;
+const ORBIT_OPACITY = 0.34;
 const SELECTED_ORBIT_OPACITY = 0.6;
 const HOVERED_ORBIT_OPACITY = 0.72;
 
@@ -177,6 +177,10 @@ function Scene({
   showTitanSurface,
 }: SceneProps & { farOverview: number; showTitanSurface: boolean }) {
   const motions = useMemo(() => createMotions(system), [system]);
+  const orbitPaths = useMemo(() => Object.fromEntries(system.bodies.map((body) => [
+    body.id,
+    { vertices: new Float32Array(motions[body.id].points), origin: new Vector3() },
+  ])), [system, motions]);
   const illumination = useMemo(() => {
     const hosts: Record<string, string> = {};
     return Object.fromEntries(
@@ -238,9 +242,23 @@ function Scene({
       const group = bodies.current[body.id];
       if (!group) continue;
       const parent = body.parent ? bodies.current[body.parent] : undefined;
-      motions[body.id].setLocalPosition(group.position, days.current);
+      const motion = motions[body.id];
+      motion.setLocalPosition(group.position, days.current);
+      const anchor = orbitAnchors.current[body.id];
+      if (anchor) {
+        const path = orbitPaths[body.id];
+        const line = anchor.children[0] as LineLoop | undefined;
+        if (line && body.id === target && group.position.distanceToSquared(path.origin) > (body.displayRadius * 32) ** 2) {
+          // Subtract in double precision before uploading positions. A wide orbit's
+          // barycentric coordinates can otherwise lose visible precision at body scale.
+          path.origin.copy(group.position);
+          writeOrbitVertices(motion.points, path.vertices, path.origin);
+          line.geometry.attributes.position.needsUpdate = true;
+          line.geometry.boundingSphere = null;
+        }
+        anchor.position.copy(parent?.position ?? ORIGIN).add(path.origin);
+      }
       if (parent) group.position.add(parent.position);
-      orbitAnchors.current[body.id]?.position.copy(parent?.position ?? ORIGIN);
       const light = illumination[body.id];
       light.offset.subVectors(bodies.current[light.host]?.position ?? ORIGIN, group.position);
 
@@ -303,7 +321,7 @@ function Scene({
       const anchor = orbitAnchors.current[body.id];
       if (anchor) {
         anchor.visible = show;
-        const line = anchor.children[0] as Mesh | undefined;
+        const line = anchor.children[0] as LineLoop | undefined;
         if (line && !Array.isArray(line.material)) {
           const opacity = body.id === hoveredTarget ? HOVERED_ORBIT_OPACITY : body.id === target ? SELECTED_ORBIT_OPACITY : ORBIT_OPACITY;
           line.material.opacity = opacity * layers.systemOpacity;
@@ -370,7 +388,12 @@ function Scene({
               }}
               visible={bodyVisible(body)}
             >
-              <Line points={motions[body.id].points} color={body.colors[2]} transparent depthWrite={false} opacity={ORBIT_OPACITY} lineWidth={1} raycast={() => {}} />
+              <lineLoop raycast={() => {}}>
+                <bufferGeometry>
+                  <bufferAttribute attach="attributes-position" args={[orbitPaths[body.id].vertices, 3]} />
+                </bufferGeometry>
+                <lineBasicMaterial color={body.colors[2]} transparent depthWrite={false} opacity={ORBIT_OPACITY} />
+              </lineLoop>
             </group>
           )}
           <group

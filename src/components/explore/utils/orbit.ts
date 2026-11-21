@@ -30,7 +30,7 @@ export type Motion = {
   /** 자전축 방향(궤도면 + 기울기). */
   orientation: Quaternion;
   /** 부모 기준 궤도선. 궤도가 없으면 빈 배열. */
-  points: Vector3[];
+  points: Float64Array;
   /** 부모 기준 위치. */
   setLocalPosition(position: Vector3, days: number): Vector3;
 };
@@ -49,7 +49,7 @@ function createMotion(body: Body, scale: number, parentOrientation?: Quaternion)
   if (!body.orbit) {
     return {
       orientation: new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), radians(body.tilt)),
-      points: [],
+      points: new Float64Array(),
       setLocalPosition: (position) => position.set(0, 0, 0),
     };
   }
@@ -69,9 +69,18 @@ function createMotion(body: Body, scale: number, parentOrientation?: Quaternion)
     return position.set(axis * (Math.cos(anomaly) - eccentricity), 0, -minorAxis * Math.sin(anomaly)).applyMatrix4(rotation);
   }
 
+  // Keep the orbit's chord error below a fraction of the rendered body radius,
+  // including when tiny bodies on very wide orbits are viewed up close.
+  const segments = MathUtils.clamp(Math.ceil(Math.PI * Math.sqrt(axis / (0.16 * body.displayRadius))), 256, 8192);
+  const points = new Float64Array(segments * 3);
+  const point = new Vector3();
+  for (let index = 0; index < segments; index++) {
+    setPoint(point, index * 2 * Math.PI / segments).toArray(points, index * 3);
+  }
+
   return {
     orientation: new Quaternion().setFromUnitVectors(NORTH, NORTH.clone().applyMatrix4(axialRotation)),
-    points: Array.from({ length: 257 }, (_, index) => setPoint(new Vector3(), (index * Math.PI) / 128)),
+    points,
     setLocalPosition(position, days) {
       const cycle = Math.PI * 2;
       const mean = MathUtils.euclideanModulo(meanAtEpoch + ((days % periodDays) * cycle) / periodDays + Math.PI, cycle) - Math.PI;
@@ -89,6 +98,14 @@ function createMotion(body: Body, scale: number, parentOrientation?: Quaternion)
 /** 위성 = 부모가 항성이 아닌 천체. */
 export function isSatellite(system: StarSystem, body: Body) {
   return body.parent !== null && system.bodies.find((other) => other.id === body.parent)?.kind !== 'star';
+}
+
+export function writeOrbitVertices(source: Float64Array, output: Float32Array, origin: Vector3) {
+  for (let index = 0; index < source.length; index += 3) {
+    output[index] = source[index] - origin.x;
+    output[index + 1] = source[index + 1] - origin.y;
+    output[index + 2] = source[index + 2] - origin.z;
+  }
 }
 
 export function createMotions(system: StarSystem) {

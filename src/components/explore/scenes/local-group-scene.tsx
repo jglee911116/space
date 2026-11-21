@@ -8,25 +8,25 @@ import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } f
 import { Box3, MathUtils, Quaternion, Vector3, type Group, type Points, type PointsMaterial } from 'three';
 import { localGroup, type FeaturedObject, type Galaxy } from '@/constants/space';
 import { AU_PER_KPC, KM_PER_AU } from '@/constants/space/units';
-import { useCursorZoom } from '../three/use-cursor-zoom';
-import { CanvasBoundary } from '../three/canvas-boundary';
-import { GalaxyObservationDisk } from '../three/galaxy-observation-disk';
-import { galaxyObservationPoints } from '../three/galaxy-observation-points';
-import { useSurfaceMap } from '../three/use-surface-map';
-import { GalaxyPreview } from '../three/galaxy-preview';
-import { galaxyParticles } from '../three/galaxy-structure';
-import { ProceduralGalaxy } from '../three/procedural-galaxy';
-import { FeaturedObjectPreview } from '../three/featured-object-preview';
-import { LensedStarfield } from '../three/black-hole-lensing';
-import { pointBudget, projectedDiameter, updatePointDetail } from '../three/map-detail';
-import { GalacticLabelLayer, GalacticMarker } from '../three/galactic-marker';
+import { useCursorZoom } from '../three/shared/use-cursor-zoom';
+import { CanvasBoundary } from '../three/shared/canvas-boundary';
+import { GalaxyObservationDisk } from '../three/galaxies/galaxy-observation-disk';
+import { galaxyObservationPoints } from '../three/galaxies/galaxy-observation-points';
+import { useSurfaceMap } from '../three/shared/use-surface-map';
+import { GalaxyPreview } from '../three/galaxies/galaxy-preview';
+import { galaxyParticles } from '../three/galaxies/galaxy-structure';
+import { ProceduralGalaxy } from '../three/galaxies/procedural-galaxy';
+import { FeaturedObjectPreview } from '../three/maps/featured-object-preview';
+import { LensedStarfield } from '../three/black-holes/black-hole-lensing';
+import { pointBudget, projectedDiameter, updatePointDetail } from '../three/maps/map-detail';
+import { GalacticLabelLayer, GalacticMarker } from '../three/maps/galactic-marker';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { ACCRETION_MODEL_EINSTEIN_RADIUS, ACCRETION_MODEL_EXIT_DISTANCE, EXTERNAL_SYSTEM_ENTRY_KPC, EXTERNAL_SYSTEM_RETURN_KPC, GALAXY_ENTRY_KPC, GALAXY_EXIT_KPC, LOCAL_GROUP_EXIT_KPC, featuredOverviewDistanceKpc, type ZoomHandoff } from '../utils/zoom';
 
 type Props = {
   systemMarkers: readonly { id: string; name: CatalogText; position: readonly [number, number, number] }[];
   objectMarkers: readonly { object: FeaturedObject; position: readonly [number, number, number] }[];
-  m87PlaybackTime: RefObject<number>;
+  accretionPlaybackTime: RefObject<number>;
   onSelectObject: (id: string) => void;
   onSelectSystem: (id: string, entry?: ZoomHandoff) => void;
   focusId?: string;
@@ -100,7 +100,7 @@ function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
   );
 }
 
-function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitGalaxy, onExitGroup, systemMarkers, objectMarkers, m87PlaybackTime, onSelectObject, onSelectSystem, focusId }: Props) {
+function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitGalaxy, onExitGroup, systemMarkers, objectMarkers, accretionPlaybackTime, onSelectObject, onSelectSystem, focusId }: Props) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const cursorZoomRef = useCursorZoom();
   const background = useRef<Group>(null);
@@ -218,7 +218,7 @@ function Scene({ overview, galaxy, entry, reportDistance, onEnterGalaxy, onExitG
           {objectMarkers.map(({ object, position }) => (
             <group key={object.id} position={[...position]}>
               {(object.extentLightYears > 0 || object.photosphere || object.id === focusId) && (
-                <FeaturedObjectPreview object={object} focused={object.id === focusId} playbackTime={object.id === 'm87-star' ? m87PlaybackTime : undefined} />
+                <FeaturedObjectPreview object={object} focused={object.id === focusId} playbackTime={object.id === 'm87-star' ? accretionPlaybackTime : undefined} />
               )}
               <GalacticMarker name={object.name} color={object.color} labelOffset={-1.0} modelRadius={object.id === focusId ? objectDistance * 0.13 : undefined} priority={object.id === focusId ? 3 : 0} onSelect={() => onSelectObject(object.id)} />
             </group>

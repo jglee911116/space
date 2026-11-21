@@ -154,7 +154,7 @@ export type LocalGroup = {
   source: Source;
 };
 
-/** 은하 안의 성운·잔해·블랙홀 등. galaxyId 가 없으면 우리은하. parentObjectId 는 확대해 들어가는 상위 천체. */
+/** 은하 안의 성운·잔해·블랙홀 등. galaxyId 가 없으면 우리은하. parentObjectId 는 함께 표시되는 상위 천체. */
 export type ObservationStatus = 'observed' | 'candidate';
 
 export type FeaturedObject = {
@@ -169,6 +169,7 @@ export type FeaturedObject = {
     | 'ring-remnant'
     | 'star-forming-region'
     | 'wind-binary'
+    | 'light-echo'
     | 'open-cluster'
     | 'globular-cluster'
     | 'planetary-nebula'
@@ -187,7 +188,11 @@ export type FeaturedObject = {
   radiusKm?: number;
   spinSeconds?: number;
   variabilityDays?: number;
-  observationImage?: { file: string; shape: 'crab' | 'ring' | 'pillars' | 'ejecta' | 'nursery' | 'hourglass' | 'bipolar-jet' | 'shocked-shell' | 'southern-ring' | 'dust-spiral' | 'edge-on-disk' };
+  observationImage?: {
+    file: string;
+    telescope?: 'hubble';
+    shape: 'crab' | 'ring' | 'pillars' | 'ejecta' | 'nursery' | 'hourglass' | 'bipolar-jet' | 'shocked-shell' | 'southern-ring' | 'dust-spiral' | 'edge-on-disk' | 'homunculus' | 'light-echo' | 'cats-eye';
+  };
   photosphere?: { dark: string; bright: string; cellScale: number };
   expansionPerYear?: number;
   blackHoleMassSolar?: number;

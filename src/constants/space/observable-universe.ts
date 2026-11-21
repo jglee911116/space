@@ -43,6 +43,7 @@ export const distantObjects: readonly DistantObject[] = [
     visibleJet: true,
     summary: message('catalog.observable-universe.3c-273.summary'),
     sources: [
+      { label: 'ESA/Hubble & NASA · Optical jet brightness profile', href: 'https://esahubble.org/images/potw1346a/' },
       { label: message('catalog.observable-universe.3c-273.source.nasa-hubble-3c-273'), href: 'https://science.nasa.gov/asset/hubble/quasar-3c-273-2/' },
       { label: message('catalog.observable-universe.3c-273.source.lofar-3c-273-jet-observations'), href: 'https://doi.org/10.1051/0004-6361/202141579' },
       { label: message('catalog.observable-universe.3c-273.source.redshift-and-coordinate-study'), href: 'https://doi.org/10.1088/0004-6256/138/5/1428' },

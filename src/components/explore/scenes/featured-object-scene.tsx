@@ -1,20 +1,21 @@
 'use client';
 
 import { useLanguage } from '@/i18n/language';
-import { Line, OrbitControls, Stars } from '@react-three/drei';
+import { OrbitControls, Stars } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useCallback, useMemo, useRef, type ComponentRef, type RefObject } from 'react';
-import { AdditiveBlending, Color, Vector3, type Group, type ShaderMaterial } from 'three';
-import { featuredObjects, type FeaturedObject } from '@/constants/space';
+import { useMemo, useRef, type ComponentRef, type RefObject } from 'react';
+import { AdditiveBlending, Color, type Group, type ShaderMaterial } from 'three';
+import type { FeaturedObject } from '@/constants/space';
 import { DAYS_PER_YEAR, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
-import styles from '../explore.module.scss';
-import { AccretionModel } from '../three/accretion-model';
-import { CrabPulsarWind } from '../three/crab-pulsar-wind';
-import { CanvasBoundary } from '../three/canvas-boundary';
-import { surfaceVertex, supergiantFragment } from '../three/shaders';
-import { NebulaVolume } from '../three/nebula-volume';
-import { useSurfaceMap } from '../three/use-surface-map';
-import { StellarGlow } from '../three/stellar-glow';
+import { AccretionModel } from '../three/black-holes/accretion-model';
+import { CrabPulsarWind } from '../three/nebulae/crab-pulsar-wind';
+import { CanvasBoundary } from '../three/shared/canvas-boundary';
+import { surfaceVertex, supergiantFragment } from '../three/shared/shaders';
+import { NebulaVolume } from '../three/nebulae/nebula-volume';
+import { PleiadesCluster } from '../three/stellar/pleiades-cluster';
+import { MagnetarSurface } from '../three/stellar/magnetar-surface';
+import { useSurfaceMap } from '../three/shared/use-surface-map';
+import { StellarGlow } from '../three/stellar/stellar-glow';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { REALTIME_DAYS_PER_SECOND } from '../utils/orbit';
 
@@ -219,22 +220,18 @@ function nebulaParticles(object: FeaturedObject) {
   return { positions: new Float32Array(positions), colors: new Float32Array(colors), sizes: new Float32Array(sizes), expansionMask: new Float32Array(expansionMask) };
 }
 
-type PlaceChildButton = (x: number, y: number, visible: boolean) => void;
-
-// 중심에서 확대해 들어갈 하위 천체(예: 게 성운 → 게 펄서).
-function childObject(object: FeaturedObject) {
-  return featuredObjects.find(({ parentObjectId }) => parentObjectId === object.id);
-}
-
-function Scene({ object, reportDistance, simulationDaysRef, paused, daysPerSecond, onLeave, placeChildButton }: Props & { placeChildButton: PlaceChildButton }) {
-  const center = useMemo(() => new Vector3(), []);
+function Scene({ object, reportDistance, simulationDaysRef, paused, daysPerSecond, onLeave }: Props) {
+  const pleiades = object.id === 'm45';
   const scale = object.kind === 'pillars' || object.kind === 'supernova-remnant' ? 1 : object.extentLightYears / 6;
   const backgroundScale = Math.max(1, scale);
   const image = object.observationImage;
   const southernRing = image?.shape === 'southern-ring';
+  const centralRadius = object.kind === 'planetary-nebula' && !southernRing ? scale * 0.047
+    : image?.shape === 'ejecta' ? 0.036
+      : image?.shape === 'light-echo' || image?.shape === 'homunculus' ? scale * 0.13 : 0;
   const texture = useSurfaceMap(image?.file);
   const uniforms = useMemo(() => ({ particleScale: { value: scale }, expansion: { value: 0 }, particleOpacity: { value: texture ? 0.29 : 1 } }), [scale, texture]);
-  const particles = useMemo(() => nebulaParticles(object), [object]);
+  const particles = useMemo(() => pleiades ? undefined : nebulaParticles(object), [object, pleiades]);
   const material = useRef<ShaderMaterial>(null);
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const start = useRef(0);
@@ -246,14 +243,13 @@ function Scene({ object, reportDistance, simulationDaysRef, paused, daysPerSecon
     }
     const distance = controls.current?.getDistance();
     if (distance) reportDistance(kmPerPixel(camera, size.height, distance, KM_PER_LIGHT_YEAR));
-    center.set(0, 0, 0).project(camera);
-    placeChildButton((center.x + 1) * size.width * 0.5, (1 - center.y) * size.height * 0.5, Math.abs(center.z) <= 1);
   });
   return (
     <>
       <Stars radius={46 * backgroundScale} depth={23 * backgroundScale} count={1800} factor={3} saturation={0} fade speed={0} />
+      {pleiades && <PleiadesCluster radius={object.extentLightYears * 0.61} />}
       {image && <NebulaVolume texture={texture} radius={object.extentLightYears * (image.shape === 'crab' ? 0.71 : 0.61)} shape={image.shape} paused={paused} daysPerSecond={daysPerSecond} />}
-      <points scale={scale} visible={!image || image.shape === 'crab' || image.shape === 'ejecta'}>
+      {particles && <points scale={scale} visible={!image || image.shape === 'crab' || image.shape === 'ejecta'}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[particles.positions, 3]} />
           <bufferAttribute attach="attributes-color" args={[particles.colors, 3]} />
@@ -261,7 +257,7 @@ function Scene({ object, reportDistance, simulationDaysRef, paused, daysPerSecon
           <bufferAttribute attach="attributes-expanding" args={[particles.expansionMask, 1]} />
         </bufferGeometry>
         <shaderMaterial ref={material} uniforms={uniforms} vertexShader={vertexShader} fragmentShader={fragmentShader} vertexColors transparent depthWrite={false} blending={AdditiveBlending} />
-      </points>
+      </points>}
       {object.embeddedCluster?.map(([x, y, z], index) => (
         <group key={index} position={[x * scale, y * scale, z * scale]}>
           <mesh>
@@ -289,13 +285,14 @@ function Scene({ object, reportDistance, simulationDaysRef, paused, daysPerSecon
           </group>
         </>
       )}
-      {(image?.shape === 'crab' || image?.shape === 'ejecta' || (!southernRing && object.kind === 'planetary-nebula')) && (
+      {image?.shape === 'crab' && <CrabPulsarWind paused={paused} daysPerSecond={daysPerSecond} texture={texture} scale={object.extentLightYears * 0.048} />}
+      {centralRadius > 0 && (
         <>
           <mesh>
-            <sphereGeometry args={[object.kind === 'planetary-nebula' ? scale * 0.047 : 0.036, 16, 12]} />
-            <meshBasicMaterial color="#f7fcff" />
+            <sphereGeometry args={[centralRadius, 16, 12]} />
+            <meshBasicMaterial color={image?.shape === 'light-echo' ? '#ffbf79' : '#f7fcff'} />
           </mesh>
-          <StellarGlow radius={object.kind === 'planetary-nebula' ? scale * 0.047 : 0.036} color="#a4d8ff" strength={0.65} />
+          <StellarGlow radius={centralRadius} color={image?.shape === 'light-echo' ? '#ff9d60' : '#a4d8ff'} strength={0.65} />
         </>
       )}
       <OrbitControls
@@ -322,33 +319,11 @@ type Props = {
   object: FeaturedObject;
   reportDistance: ReportDistanceScale;
   simulationDaysRef: RefObject<number>;
-  m87PlaybackTime: RefObject<number>;
+  accretionPlaybackTime: RefObject<number>;
   daysPerSecond: number;
   paused: boolean;
-  onSelectObject: (id: string) => void;
   onLeave: (direction: [number, number, number]) => void;
 };
-
-function MagnetarField({ color }: { color: string }) {
-  const lines = useMemo(
-    () =>
-      [1.65, 2.35, 3.1].flatMap((shell) =>
-        Array.from({ length: 6 }, (_, index) => {
-          const longitude = (index * TAU) / 6;
-          const edge = Math.asin(Math.sqrt(1 / shell));
-          return Array.from({ length: 48 }, (_, step): [number, number, number] => {
-            const theta = edge + (step / 47) * (Math.PI - 2 * edge);
-            const radius = shell * Math.sin(theta) ** 2;
-            const plane = radius * Math.sin(theta);
-            return [plane * Math.cos(longitude), radius * Math.cos(theta), plane * Math.sin(longitude)];
-          });
-        }),
-      ),
-    [],
-  );
-
-  return lines.map((points, index) => <Line key={index} points={points} color={color} lineWidth={1} transparent opacity={0.32} depthWrite={false} raycast={() => {}} />);
-}
 
 function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeave }: Props) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
@@ -357,7 +332,7 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
   const surface = useRef<ShaderMaterial>(null);
   const brightness = useRef(1);
   const { photosphere } = object;
-  const crabPulsar = object.id === 'crab-pulsar';
+  const magnetar = object.kind === 'magnetar';
   const surfaceUniforms = useMemo(
     () =>
       photosphere && {
@@ -384,9 +359,7 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
   return (
     <>
       <Stars radius={46} depth={23} count={1500} factor={3} saturation={0} fade speed={0} />
-      {crabPulsar ? (
-        <CrabPulsarWind paused={paused} daysPerSecond={daysPerSecond} />
-      ) : (
+      {!magnetar && (
         <>
           <mesh>
             <sphereGeometry args={[1, 64, 40]} />
@@ -395,12 +368,12 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
           <StellarGlow radius={1} color={object.color} strength={photosphere ? 1.15 : 0.65} brightness={brightness} paused={paused || !photosphere} />
         </>
       )}
-      {spinPeriod && !crabPulsar && (
+      {spinPeriod && (
         <>
           <group ref={beams}>
             <group rotation-z={tilt}>
               {object.kind === 'magnetar' ? (
-                <MagnetarField color={object.color} />
+                <MagnetarSurface color={object.color} paused={paused} />
               ) : object.kind === 'neutron-star' ? (
                 <mesh position={[0, 0.98, 0]}>
                   <sphereGeometry args={[0.16, 24, 16]} />
@@ -443,20 +416,11 @@ export default function FeaturedObjectScene(props: Props) {
   const blackHole = object.kind === 'black-hole';
   const stellar = object.kind === 'pulsar' || object.kind === 'neutron-star' || object.kind === 'magnetar' || object.kind === 'supergiant';
   const distance = object.extentLightYears * (object.observationImage?.shape === 'hourglass' ? 2.15 : 1.75);
-  // drei <Html> 은 React 19 StrictMode 에서 내부 root 가 언마운트돼 비므로, 캔버스 밖 DOM 버튼을 매 프레임 투영 위치로 옮긴다.
-  const childButton = useRef<HTMLButtonElement>(null);
-  const child = blackHole || stellar ? undefined : childObject(object);
-  const placeChildButton = useCallback<PlaceChildButton>((x, y, visible) => {
-    const button = childButton.current;
-    if (!button) return;
-    button.style.visibility = visible ? 'visible' : 'hidden';
-    button.style.transform = `translate(${x}px, ${y}px) translateX(-50%)`;
-  }, []);
   return (
     <CanvasBoundary>
       <Canvas
         camera={{
-          position: blackHole ? [5, 5.6, 13] : object.id === 'crab-pulsar' ? [0, 4.5, 8] : stellar ? [0, 1.5, object.photosphere ? 5.7 : 8] : [distance * 0.023, distance * 0.063, distance],
+          position: blackHole ? [5, 5.6, 13] : stellar ? [0, 1.5, object.photosphere ? 5.7 : 8] : [distance * 0.023, distance * 0.063, distance],
           fov: 45,
           near: stellar || blackHole ? 0.05 : Math.min(0.05, object.extentLightYears * 0.015),
           far: Math.max(170, object.extentLightYears * 32),
@@ -466,21 +430,16 @@ export default function FeaturedObjectScene(props: Props) {
       >
         {blackHole ? (
           <AccretionModel
-            object={{ color: object.color, visibleJet: true }}
+            object={{ id: object.id, color: object.color, visibleJet: true }}
             onExit={props.onLeave}
-            helicalJetTime={object.id === 'm87-star' ? props.m87PlaybackTime : undefined}
+            time={props.accretionPlaybackTime}
           />
         ) : stellar ? (
           <StellarModel {...props} />
         ) : (
-          <Scene {...props} placeChildButton={placeChildButton} />
+          <Scene {...props} />
         )}
       </Canvas>
-      {child && (
-        <button ref={childButton} className={styles.sceneObjectButton} type="button" style={{ visibility: 'hidden' }} onClick={() => props.onSelectObject(child.id)}>
-          {t('navigation.zoomInto', [catalogText(child.name)])}
-        </button>
-      )}
     </CanvasBoundary>
   );
 }
