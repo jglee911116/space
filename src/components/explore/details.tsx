@@ -22,6 +22,7 @@ import { createDistanceStore, useDistance, type DistanceStore } from './utils/di
 const emptyDistanceStore = createDistanceStore();
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { KM_PER_AU, SOLAR_RADIUS_KM, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
+import { formatLightYearDistance } from './utils/distance-scale';
 import { bodySize, formatAxis, formatPeriod, formatSpin, kindLabel } from './utils/format';
 import type { Target } from './scenes/system-scene';
 import styles from './explore.module.scss';
@@ -483,8 +484,11 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
   );
 }
 
-export function UniverseDetails({ object, showCounterjet, onCounterjetChange }: { object?: DistantObject; showCounterjet: boolean; onCounterjetChange: (visible: boolean) => void }) {
-  const { t, catalogText, number, measurement } = useLanguage();
+type ClusterLayer = import('@/constants/space').ClusterLayer;
+const clusterLayers = ['galaxies', 'gas', 'mass'] as const satisfies readonly ClusterLayer[];
+
+export function UniverseDetails({ object, showCounterjet, onCounterjetChange, clusterLayer, onClusterLayerChange }: { object?: DistantObject; showCounterjet: boolean; onCounterjetChange: (visible: boolean) => void; clusterLayer: ClusterLayer; onClusterLayerChange: (layer: ClusterLayer) => void }) {
+  const { t, catalogText, locale, number, measurement } = useLanguage();
   if (!object) {
     return (
       <section className={styles.details} aria-labelledby="body-name">
@@ -503,7 +507,7 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange }: 
         <ObservationRow status={object.observationStatus} />
         <div>
           <dt>{t('details.type')}</dt>
-          <dd>{t(object.kind === 'quasar' ? 'details.quasar' : object.kind === 'ring-galaxy' ? 'details.ringGalaxy' : object.kind === 'galaxy-cluster' ? 'details.galaxyCluster' : object.kind === 'galaxy-group' ? 'details.galaxyGroup' : 'details.earlyGalaxy')}</dd>
+          <dd>{t(object.kind === 'quasar' ? 'details.quasar' : object.kind === 'ring-galaxy' ? 'details.ringGalaxy' : object.kind === 'galaxy-cluster' ? 'details.galaxyCluster' : object.kind === 'galaxy-group' ? 'details.galaxyGroup' : object.kind === 'galaxy-merger' ? 'details.galaxyMerger' : 'details.earlyGalaxy')}</dd>
         </div>
         <div>
           <dt>{t('details.redshift')}</dt>
@@ -529,6 +533,12 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange }: 
             <dd>{t('units.approxParsecs', [number(object.ultravioletHalfLightRadiusParsecs, 0)])}</dd>
           </div>
         )}
+        {object.observationScale && (
+          <div>
+            <dt>{t(object.observationScale.reference === 'ring' ? 'details.outerRingDiameter' : 'details.observationFieldWidth')}</dt>
+            <dd>{formatLightYearDistance(object.observationScale.lightYears, locale, number)}</dd>
+          </div>
+        )}
       </dl>
       <p>{catalogText(object.summary)}</p>
       {object.kind === 'quasar' && object.visibleJet && (
@@ -539,9 +549,20 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange }: 
       )}
       {object.kind === 'ring-galaxy' && <p>{t('details.webbRingGalaxyModel')}</p>}
       {object.kind === 'galaxy-group' && <p>{t('details.quintetModel')}</p>}
-      {object.kind === 'galaxy-cluster' && <p>{t('details.pandoraModel')}</p>}
+      {object.kind === 'galaxy-cluster' && (object.clusterModel === 'bullet' ? (
+        <>
+          <p>{t('details.bulletModel')}</p>
+          <div className={styles.clusterLayers} role="group" aria-label={t('details.clusterLayers')}>
+            {clusterLayers.map((layer) => (
+              <button key={layer} type="button" aria-pressed={clusterLayer === layer} onClick={() => onClusterLayerChange(layer)}>
+                {t(`details.clusterLayer.${layer}`)}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : <p>{t(object.clusterModel === 'macs-j0416' ? 'details.macsModel' : 'details.pandoraModel')}</p>)}
       <ModelNotes>
-        {object.kind === 'quasar' ? t('details.accretionModel') : t('details.galaxyModel')} {object.kind === 'quasar' && <>{t('details.blackHoleLensing')} </>}{t('details.cosmicModelScale')}
+        {object.kind === 'quasar' ? t('details.accretionModel') : t('details.galaxyModel')} {object.kind === 'quasar' && <>{t('details.blackHoleLensing')} </>}{t(object.observationScale ? 'details.calibratedGalaxyScale' : 'details.cosmicModelScale')}
       </ModelNotes>
       <DetailSources sources={[...object.sources, observableUniverse.sources[1]]} />
     </section>
@@ -553,11 +574,15 @@ export function SuperclusterDetails({
   association,
   onSelectCluster,
   onSelectGalaxy,
+  showFlows,
+  onFlowsChange,
 }: {
   region: Supercluster;
   association?: GalaxyAssociation;
   onSelectCluster: (id: string) => void;
   onSelectGalaxy: (id: string) => void;
+  showFlows: boolean;
+  onFlowsChange: (visible: boolean) => void;
 }) {
   const { t, catalogText, measurement } = useLanguage();
   if (association) {
@@ -585,6 +610,12 @@ export function SuperclusterDetails({
       <h2 id="body-name">{catalogText(region.name)}</h2>
       <p>{t('details.superclusterSpan', [measurement(region.spanMly * 1e6, 1e8)])}</p>
       <p>{catalogText(region.summary)}</p>
+      {region.flowModel && (
+        <label className={styles.counterjetToggle}>
+          <input type="checkbox" checked={showFlows} onChange={(event) => onFlowsChange(event.currentTarget.checked)} />
+          {t('details.showSuperclusterFlows')}
+        </label>
+      )}
       <p>
         {galaxyAssociations
           .filter((item) => item.mapRegionId === region.id)
@@ -594,7 +625,7 @@ export function SuperclusterDetails({
             </button>
           ))}
       </p>
-      <ModelNotes>{t('details.superclusterBoundaries')} {t('details.cosmicMapSymbols')}</ModelNotes>
+      <ModelNotes>{t(region.flowModel ? 'details.laniakeaFlowModel' : 'details.superclusterBoundaries')} {t('details.cosmicMapSymbols')}</ModelNotes>
       <DetailSources sources={region.sources} />
     </section>
   );

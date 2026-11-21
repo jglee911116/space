@@ -16,6 +16,65 @@ async function waitForRenderedMap(page: Page) {
   await expect(page.getByRole('group', { name: '화면 거리 축척' })).toContainText('화면 축척');
 }
 
+test('물병자리 R, HH 46/47, M94, IC 1623 및 MACS J0416을 탐색한다', async ({ page }) => {
+  test.setTimeout(90_000);
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
+  });
+  await page.goto(milkyWay);
+  const objects = [
+    { query: 'R Aquarii', name: '물병자리 R', url: `${milkyWay}?view=object&target=r-aquarii`, image: '/r-aquarii/hubble.jpg' },
+    { query: 'HH 46', name: '헤르빅–아로 46/47', url: `${milkyWay}?view=object&target=hh-46-47`, image: '/hh-46-47/webb.jpg' },
+    { query: 'NGC 4736', name: 'M94 · NGC 4736', url: '/ko/galaxies/m94', image: '/m94/hubble.jpg' },
+    { query: 'VV 114', name: 'IC 1623', url: '/ko/universe?target=ic-1623', image: '/ic-1623/webb.jpg' },
+    { query: 'MACS J0416', name: 'MACS J0416.1−2403', url: '/ko/universe?target=macs-j0416' },
+  ];
+  for (const { query, name, url, image } of objects) {
+    const observation = image && page.waitForResponse((response) => response.url().endsWith(image) && response.ok());
+    await search(page, query, new RegExp(name.replaceAll('.', '\\.')));
+    if (observation) await observation;
+    await expect(page).toHaveURL(url);
+    await expect(details(page).getByRole('heading', { name, exact: true })).toBeVisible();
+    await expect(page.locator('main canvas')).toBeVisible();
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  }
+  expect(errors).toEqual([]);
+});
+
+test('거품 성운, NGC 1512, AR Scorpii, G292 및 총알 은하단을 탐색한다', async ({ page }) => {
+  test.setTimeout(90_000);
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
+  });
+  await page.goto(milkyWay);
+  const objects = [
+    { query: 'NGC7635', result: /거품 성운/, name: '거품 성운', image: '/ngc-7635/hubble.jpg' },
+    { query: 'G292', result: /G292\.0\+1\.8/, name: 'G292.0+1.8', image: '/g292/chandra.jpg' },
+    { query: 'NGC1512', result: /NGC 1512/, name: 'NGC 1512', image: '/ngc-1512/webb.jpg' },
+    { query: 'AR Scorpii', result: /^AR Scorpii (?!백색왜성|적색왜성)/, name: 'AR Scorpii' },
+    { query: 'Bullet Cluster', result: /총알 은하단/, name: '총알 은하단', image: '/bullet-cluster/webb-sources.webp' },
+  ];
+  for (const { query, result, name, image } of objects) {
+    const observation = image && page.waitForResponse((response) => response.url().endsWith(image) && response.ok());
+    await search(page, query, result);
+    if (observation) await observation;
+    await expect(details(page).getByRole('heading', { name, exact: true })).toBeVisible();
+    await expect(page.locator('main canvas')).toBeVisible();
+  }
+  const layers = page.getByRole('group', { name: '은하단 보기' });
+  for (const name of ['고온 가스', '렌즈로 추정한 질량', '은하']) {
+    const button = layers.getByRole('button', { name, exact: true });
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  }
+  expect(errors).toEqual([]);
+});
+
 test('검색어 지우기 버튼은 팝업을 유지하고 검색창에 포커스를 돌려준다', async ({ page }) => {
   await page.goto(milkyWay);
   await page.getByRole('button', { name: '천체 검색' }).click();
@@ -170,10 +229,14 @@ test('라니아케아에서 노르마 은하단 마커와 분광 관측 은하�
   });
   await page.goto('/ko/superclusters/laniakea');
   await waitForRenderedMap(page);
+  await expect(details(page)).toContainText('5.2억 광년');
+  const flows = details(page).getByRole('checkbox', { name: '은하 흐름선 보기' });
+  await flows.check();
+  await expect(flows).toBeChecked();
   const canvas = await page.locator('main canvas').boundingBox();
   if (!canvas) throw new Error('Laniakea canvas not mounted');
   const camera = new PerspectiveCamera(45, canvas.width / canvas.height);
-  camera.position.set(0.29, 0.39, 1).normalize().multiplyScalar(275 * 2.65 * Math.max(1, canvas.height / canvas.width));
+  camera.position.set(0.29, 0.39, 1).normalize().multiplyScalar(275 * 3.18 * Math.max(1, canvas.height / canvas.width));
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld();
   const ra = 243.76597 * Math.PI / 180;
@@ -188,6 +251,19 @@ test('라니아케아에서 노르마 은하단 마커와 분광 관측 은하�
   await expect(details(page).getByRole('heading', { name: 'WKK 5916', exact: true })).toBeVisible();
   await waitForRenderedMap(page);
   expect(errors).toEqual([]);
+});
+
+test('오중주와 수레바퀴 은하 상세의 관측 기준과 광년 축척이 표시된다', async ({ page }) => {
+  const objects = [
+    { id: 'stephans-quintet', label: '관측 영상 시야 폭', value: '62만 광년' },
+    { id: 'cartwheel-galaxy', label: '바깥 고리 지름', value: '15만 광년' },
+  ];
+  for (const { id, label, value } of objects) {
+    await page.goto(`/ko/universe?target=${id}`);
+    await waitForRenderedMap(page);
+    await expect(details(page)).toContainText(label);
+    await expect(details(page)).toContainText(value);
+  }
 });
 
 test('목성과 토성의 대기 특징을 표시하고 행성 셰이더를 컴파일한다', async ({ page }) => {

@@ -43,6 +43,24 @@ export const whirlpoolMembers = [
 
 export const nearbyShowcase = [
   {
+    id: 'm94', name: 'M94 · NGC 4736', aliases: ['M 94', 'Messier 94', 'NGC 4736'],
+    summary: message('catalog.next.m94.summary'), superclusterId: 'virgo',
+    distanceKpc: 16 * KPC_PER_MLY, skyPosition: { rightAscension: 192.721, declination: 41.121 },
+    modelRadiusKpc: 15, morphology: 'open-spiral', diskTilt: 0.43, color: '#e3bb94',
+    structure: { winding: 2.05, ring: 0.21, core: 0.12, asymmetry: 0.17, dust: 0.55 },
+    diskObservation: { file: '/textures/galaxies/m94/hubble.jpg', previewFile: '/textures/galaxies/m94/hubble.jpg',
+      center: [0.49, 0.51], span: [1.3, 1.3], blendProcedural: true },
+    sources: [{ label: 'ESA/Hubble & NASA · Messier 94', href: 'https://esahubble.org/images/potw1542a/' }],
+  },
+  {
+    id: 'ngc-1512', name: 'NGC 1512', summary: message('catalog.additions.ngc1512.summary'), superclusterId: 'virgo',
+    distanceKpc: 30 * KPC_PER_MLY, skyPosition: { rightAscension: 60.97617, declination: -43.34886 },
+    modelRadiusKpc: 13, morphology: 'barred-spiral', diskTilt: 0.70, color: '#ecb88c',
+    structure: { winding: 1.8, bar: 0.52, ring: 0.24, core: 0.14, asymmetry: 0.28 },
+    diskObservation: { file: '/textures/galaxies/ngc-1512/webb.jpg', previewFile: '/textures/galaxies/ngc-1512/webb.jpg', center: [0.52, 0.49], span: [0.52, 0.80], blendProcedural: true },
+    sources: [{ label: 'NASA, ESA, CSA, STScI & PHANGS · Webb', href: 'https://esawebb.org/images/weic2403i/' }],
+  },
+  {
     id: 'ngc-1566', name: 'NGC 1566', aliases: ['Spanish Dancer Galaxy', '스페인 무희 은하'],
     structure: { winding: -1.65, phase: -1.95, axis: 0.96, core: 0.16 },
     summary: message('catalog.nearby-showcase.ngc-1566.summary'), superclusterId: 'virgo',

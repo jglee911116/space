@@ -1,4 +1,5 @@
 import type { FeaturedObject } from '../types';
+import { rAquarii, hh46 } from './stellar-outflows';
 import { pleiades, herculesCluster, omegaCentauri, tucanae47 } from './star-clusters';
 import { betaPictoris, betelgeuse, rigelA, uyScuti, wr124, apep, etaCarinae, v838Monocerotis } from './stars';
 import { j0740Pulsar, crabPulsar, rxJ1856, sgr1806, m87Star, velaPulsar, cygnusX1 } from './compact-objects';
@@ -22,9 +23,13 @@ import {
   ngc7027,
   ngc6302,
   ngc6543,
+  bubbleNebula,
+  g292Remnant,
 } from './nebulae';
 
 export const featuredObjects: readonly FeaturedObject[] = [
+  rAquarii,
+  hh46,
   pleiades,
   herculesCluster,
   omegaCentauri,
@@ -63,4 +68,6 @@ export const featuredObjects: readonly FeaturedObject[] = [
   betaPictoris,
   velaPulsar,
   cygnusX1,
+  bubbleNebula,
+  g292Remnant,
 ];

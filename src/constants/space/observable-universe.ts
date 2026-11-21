@@ -15,7 +15,24 @@ export const observableUniverse: ObservableUniverse = {
 
 export const distantObjects: readonly DistantObject[] = [
   {
-    id: 'abell-2744', kind: 'galaxy-cluster', name: message('catalog.observable-universe.abell-2744.name'),
+    id: 'macs-j0416', kind: 'galaxy-cluster', clusterModel: 'macs-j0416', name: 'MACS J0416.1−2403',
+    aliases: ['MACS0416', 'MACS J0416', 'MACS J0416.1-2403', 'Christmas Tree Galaxy Cluster'],
+    observationStatus: 'observed', redshift: 0.396, rightAscension: 64.038, declination: -24.067,
+    color: '#e6c6a8', summary: message('catalog.next.macs.summary'),
+    sources: [
+      { label: 'NASA, ESA, CSA & STScI · Hubble and Webb', href: 'https://esawebb.org/images/weic2327a/' },
+      { label: 'Bergamini et al. · Strong-lensing model and catalogs', href: 'https://www.fe.infn.it/astro/lensing/M0416_Bergamini22/' },
+    ],
+  },
+  {
+    id: 'ic-1623', kind: 'galaxy-merger', name: 'IC 1623', aliases: ['IC1623', 'VV 114', 'Arp 236'],
+    observationStatus: 'observed', redshift: 0.0201, rightAscension: 16.9466, declination: -17.5055,
+    color: '#d6bac8', observationImage: '/textures/galaxies/ic-1623/webb.jpg',
+    summary: message('catalog.next.ic1623.summary'),
+    sources: [{ label: 'NASA, ESA, CSA, L. Armus & A. Evans · Webb', href: 'https://esawebb.org/images/potm2210a/' }],
+  },
+  {
+    id: 'abell-2744', kind: 'galaxy-cluster', clusterModel: 'pandora', name: message('catalog.observable-universe.abell-2744.name'),
     aliases: ['Abell 2744', 'ACO 2744', 'A2744', 'Pandora Cluster'], observationStatus: 'observed',
     redshift: 0.306, rightAscension: 3.583458, declination: -30.388278, color: '#e8c7ad',
     summary: message('catalog.observable-universe.abell-2744.summary'),
@@ -25,7 +42,19 @@ export const distantObjects: readonly DistantObject[] = [
     ],
   },
   {
+    id: 'bullet-cluster', kind: 'galaxy-cluster', clusterModel: 'bullet',
+    name: message('catalog.additions.bullet.name'), aliases: ['Bullet Cluster', '1E 0657−56', '1E 0657-56'],
+    observationStatus: 'observed', redshift: 0.296, rightAscension: 104.64708, declination: -55.94897,
+    color: '#ddc1aa', summary: message('catalog.additions.bullet.summary'),
+    sources: [
+      { label: 'NASA Webb · Bullet Cluster', href: 'https://science.nasa.gov/missions/webb/nasa-webb-pierces-bullet-cluster-refines-its-mass/' },
+      { label: 'Webb NIRCam · NASA, ESA, CSA, STScI, J. Jee, S. Cha & K. Finner (CC BY 4.0)', href: 'https://esawebb.org/images/bullet-cluster/' },
+      { label: 'Chung (2011) · Spectroscopic catalog, Table A-1', href: 'https://ufdcimages.uflib.ufl.edu/uf/e0/04/28/23/00001/chung_s.pdf' },
+    ],
+  },
+  {
     id: 'stephans-quintet',
+    observationScale: { lightYears: 620_000, spanInModelRadii: 1 / 0.48, reference: 'field' },
     kind: 'galaxy-group',
     name: message('catalog.observable-universe.stephans-quintet.name'),
     aliases: ['Stephan Quintet', 'Hickson 92', 'HCG 92', 'NGC 7318', '스테판 오중주'],
@@ -38,11 +67,13 @@ export const distantObjects: readonly DistantObject[] = [
     summary: message('catalog.observable-universe.stephans-quintet.summary'),
     sources: [
       { label: 'NASA, ESA, CSA & STScI · Webb NIRCam and MIRI mosaic', href: 'https://esawebb.org/images/weic2208a/' },
+      { label: 'NASA Webb · Field of view', href: 'https://science.nasa.gov/asset/webb/stephans-quintet-nircam-and-miri-composite-image/' },
       { label: 'WEAVE First Light · Stephan’s Quintet shock front', href: 'https://doi.org/10.1093/mnras/stae2235' },
     ],
   },
   {
     id: 'cartwheel-galaxy',
+    observationScale: { lightYears: 150_000, spanInModelRadii: 2 * 0.91 * 0.95, reference: 'ring' },
     kind: 'ring-galaxy',
     observationStatus: 'observed',
     name: message('catalog.observable-universe.cartwheel-galaxy.name'),
@@ -55,6 +86,7 @@ export const distantObjects: readonly DistantObject[] = [
     summary: message('catalog.observable-universe.cartwheel-galaxy.summary'),
     sources: [
       { label: 'NASA, ESA, CSA, STScI · CC BY 4.0', href: 'https://esawebb.org/images/weic2211a/' },
+      { label: 'NASA Hubble · Outer ring diameter', href: 'https://science.nasa.gov/asset/hubble/cartwheel-galaxy-2/' },
       { label: 'Hosseinzadeh et al. · JWST Cartwheel imaging and redshift', href: 'https://real.mtak.hu/174910/1/Hosseinzadeh_2023_ApJL_942_L18.pdf' },
     ],
   },

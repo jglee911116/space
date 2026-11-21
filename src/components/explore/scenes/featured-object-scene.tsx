@@ -292,6 +292,13 @@ function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTim
         </>
       )}
       {image?.shape === 'crab' && <CrabPulsarWind paused={paused} daysPerSecond={daysPerSecond} texture={texture} scale={object.extentLightYears * 0.048} />}
+      {object.remnantPulsar && <group position={object.remnantPulsar.position.map((value) => value * object.extentLightYears * 0.61) as [number, number, number]}>
+        <StellarGlow radius={object.extentLightYears * 0.012} color={object.remnantPulsar.color} strength={0.65} paused={paused} />
+        <mesh raycast={() => {}}>
+          <sphereGeometry args={[object.extentLightYears * 0.003, 12, 8]} />
+          <meshBasicMaterial color={object.remnantPulsar.color} />
+        </mesh>
+      </group>}
       {centralRadius > 0 && (
         <>
           <mesh>

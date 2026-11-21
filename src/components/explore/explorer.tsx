@@ -35,6 +35,7 @@ import { galaxyFocusPath, readExplorerQuery, universeFocusPath, updateSystemLoca
 import { elapsedSimulationDays, REALTIME_DAYS_PER_SECOND } from './utils/orbit';
 import type { Overview, Target } from './scenes/system-scene';
 import { AU_PER_KPC } from '@/constants/space/units';
+import type { ClusterLayer } from '@/constants/space';
 import { featuredOverviewDistanceKpc, type ZoomHandoff, type ZoomScale } from './utils/zoom';
 import styles from './explore.module.scss';
 
@@ -123,6 +124,8 @@ export function Explorer() {
   const distantObject = universeView ? distantObjects.find(({ id }) => id === targetParam) : undefined;
   const [showCenterPolarization, setShowCenterPolarization] = useState(false);
   const [showCounterjet, setShowCounterjet] = useState(false);
+  const [showSuperclusterFlows, setShowSuperclusterFlows] = useState(false);
+  const [clusterLayer, setClusterLayer] = useState<ClusterLayer>('galaxies');
   const groupView = pathname === LOCAL_GROUP_PATH;
   const pathGalaxy = galaxies.find(({ id }) => pathname === galaxyPath(id));
   const activeGalaxy = pathGalaxy ?? (groupView ? localGroup.galaxies.find(({ id }) => galaxyParam === id) : undefined) ?? milkyWay;
@@ -395,6 +398,8 @@ export function Explorer() {
             onStepIn={zoomInCosmic}
             onStepOut={zoomOutCosmic}
             showCounterjet={showCounterjet}
+            showSuperclusterFlows={showSuperclusterFlows}
+            clusterLayer={clusterLayer}
             accretionPlaybackTime={accretionPlaybackTime}
             focus={focus ?? undefined}
             entry={spaceEntry}
@@ -667,9 +672,9 @@ export function Explorer() {
           {!animatedAccretion && !animatedFeaturedVolume && (distantObject || cosmicView || extraView || neighborhoodView || (featuredObject && !featuredObject.spinSeconds && !featuredObject.variabilityDays && !featuredObject.expansionPerYear)) && (
             <p className={styles.hint}>{t('playback.fixedLayout')}</p>
           )}
-          {!focusBlackHole && !distantObject && (!featuredObject || (featuredObject.extentLightYears > 0 && featuredObject.kind !== 'black-hole')) && (
+          {!focusBlackHole && (!distantObject || distantObject.observationScale) && (!featuredObject || (featuredObject.extentLightYears > 0 && featuredObject.kind !== 'black-hole')) && (
             <div
-              key={featuredObject?.id ?? (extraView ? pathname : neighborhoodView ? 'neighborhood' : galaxyView ? 'galaxy' : system.id)}
+              key={distantObject?.id ?? featuredObject?.id ?? (extraView ? pathname : neighborhoodView ? 'neighborhood' : galaxyView ? 'galaxy' : system.id)}
               ref={distanceBar}
               className={styles.distanceBar}
               role="group"
@@ -693,9 +698,10 @@ export function Explorer() {
           )}
         </div>
         {region ? (
-          <SuperclusterDetails region={region} association={association} onSelectCluster={enterAssociation} onSelectGalaxy={selectCatalogGalaxy} />
+          <SuperclusterDetails region={region} association={association} onSelectCluster={enterAssociation} onSelectGalaxy={selectCatalogGalaxy}
+            showFlows={showSuperclusterFlows} onFlowsChange={setShowSuperclusterFlows} />
         ) : universeView ? (
-          <UniverseDetails object={distantObject} showCounterjet={showCounterjet} onCounterjetChange={setShowCounterjet} />
+          <UniverseDetails object={distantObject} showCounterjet={showCounterjet} onCounterjetChange={setShowCounterjet} clusterLayer={clusterLayer} onClusterLayerChange={setClusterLayer} />
         ) : featuredObject ? (
           <FeaturedObjectDetails object={featuredObject} />
         ) : groupView ? (

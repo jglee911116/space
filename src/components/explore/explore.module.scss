@@ -558,6 +558,25 @@
   content: '';
 }
 
+.clusterLayers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.clusterLayers button {
+  border: 1px solid currentColor;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  padding: 0.25rem 0.45rem;
+  cursor: pointer;
+}
+
+.clusterLayers button[aria-pressed='true'] {
+  background: rgb(120 151 226 / 24%);
+}
+
 .counterjetToggle {
   display: flex;
   align-items: center;

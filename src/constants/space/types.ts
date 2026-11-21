@@ -1,6 +1,7 @@
 import type { CatalogText } from '@/i18n/messages';
 
 export type BodyKind = 'star' | 'planet' | 'dwarf-planet' | 'small-body' | 'moon';
+export type ClusterLayer = 'galaxies' | 'gas' | 'mass';
 
 export type BodySilhouette = 'irregular' | 'lobed' | 'rounded-box';
 
@@ -67,6 +68,7 @@ export type Body = {
   focusScale?: number;
   mass?: CatalogText;
   spinNote?: CatalogText;
+  stellarPulseSeconds?: number;
   stellar?: {
     evolutionaryStage: CatalogText;
     spectralType: CatalogText;
@@ -229,7 +231,7 @@ export type FeaturedObject = {
   observationImage?: {
     file: string;
     telescope?: 'hubble' | 'chandra' | 'eso';
-    shape: 'crab' | 'ring' | 'pillars' | 'ejecta' | 'nursery' | 'hourglass' | 'bipolar-jet' | 'shocked-shell' | 'southern-ring' | 'dust-spiral' | 'edge-on-disk' | 'homunculus' | 'light-echo' | 'cats-eye' | 'debris-disk' | 'vela-wind' | 'butterfly' | 'horsehead' | 'wolf-rayet-ejecta' | 'tycho-shell' | 'helix' | 'sn-1006-shell' | 'ngc-346-ridges' | 'jewel-bug';
+    shape: 'crab' | 'ring' | 'pillars' | 'ejecta' | 'nursery' | 'hourglass' | 'bipolar-jet' | 'shocked-shell' | 'southern-ring' | 'dust-spiral' | 'edge-on-disk' | 'homunculus' | 'light-echo' | 'cats-eye' | 'debris-disk' | 'vela-wind' | 'butterfly' | 'horsehead' | 'wolf-rayet-ejecta' | 'tycho-shell' | 'helix' | 'sn-1006-shell' | 'ngc-346-ridges' | 'jewel-bug' | 'wind-bubble' | 'oxygen-remnant' | 'symbiotic-outflow' | 'protostar-bows';
   };
   photosphere?: { dark: string; bright: string; cellScale: number };
   expansionPerYear?: number;
@@ -241,6 +243,7 @@ export type FeaturedObject = {
   color: string;
   /** 성운 속 성단 별 위치(장면 scale 비율). 있으면 중심이 밝게 열린 성운으로 그린다. */
   embeddedCluster?: readonly (readonly [number, number, number])[];
+  remnantPulsar?: { position: readonly [number, number, number]; color: string };
   /** 성단 별 분포 모델. 없으면 kind 기본 모양. */
   clusterModel?: 'pleiades' | '47-tucanae' | 'omega-centauri';
   /** 항성풍 볼륨 모양과 따뜻한(적색) 헤일로 여부. */
@@ -278,6 +281,7 @@ export type GalaxyAssociation = {
 
 export type Supercluster = {
   id: string;
+  flowModel?: 'laniakea';
   name: CatalogText;
   spanMly: number;
   gridRadiusMly: number;
@@ -291,6 +295,7 @@ export type ObservableUniverse = { name: CatalogText; radiusMillionLightYears: n
 
 type DistantObjectFields = {
   id: string;
+  observationScale?: { lightYears: number; spanInModelRadii: number; reference: 'field' | 'ring' };
   aliases?: readonly string[];
   name: CatalogText;
   observationStatus?: ObservationStatus;
@@ -307,5 +312,6 @@ export type DistantObject = DistantObjectFields & (
   | { kind: 'early-galaxy'; ultravioletHalfLightRadiusParsecs: number }
   | { kind: 'ring-galaxy'; observationImage: string }
   | { kind: 'galaxy-group'; observationImage: string }
-  | { kind: 'galaxy-cluster' }
+  | { kind: 'galaxy-cluster'; clusterModel: 'pandora' | 'bullet' | 'macs-j0416' }
+  | { kind: 'galaxy-merger'; observationImage: string }
 );

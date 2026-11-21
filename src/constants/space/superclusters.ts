@@ -23,6 +23,7 @@ export const superclusters: readonly [Supercluster, Supercluster] = [
   },
   {
     id: LANIAKEA_REGION_ID,
+    flowModel: 'laniakea',
     name: message('catalog.superclusters.laniakea.name'),
     spanMly: 520,
     gridRadiusMly: 275,
@@ -31,6 +32,8 @@ export const superclusters: readonly [Supercluster, Supercluster] = [
     summary: message('catalog.superclusters.laniakea.summary'),
     sources: [
       { label: message('catalog.superclusters.laniakea.source.tully-et-al-galaxy-flows-in-laniakea'), href: 'https://doi.org/10.1038/nature13674' },
+      { label: 'NASA APOD · Laniakea flow visualization', href: 'https://apod.nasa.gov/apod/ap140910.html' },
+      { label: 'Valade et al. · Cosmicflows-4 basins of attraction', href: 'https://www.nature.com/articles/s41550-024-02370-0' },
       { label: message('catalog.superclusters.laniakea.source.esa-hubble-norma-cluster'), href: 'https://esahubble.org/images/heic1404a/' },
       virgoSource,
     ],

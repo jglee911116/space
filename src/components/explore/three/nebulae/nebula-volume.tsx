@@ -10,7 +10,10 @@ import { horseheadDensity, tychoShellDensity, wolfRayetDensity } from './observe
 import { helixDensity, sn1006ShellDensity } from './helix-and-sn1006-density';
 import { ngc346Density } from './ngc-346-density';
 import { jewelBugDensity } from './jewel-bug-density';
+import { windBubbleDensity, oxygenRemnantDensity } from './wind-and-oxygen-density';
 import { quintetDensity } from '../galaxies/quintet-density';
+import { galaxyMergerDensity } from '../galaxies/merger-density';
+import { protostarBowsDensity, symbioticOutflowDensity } from './stellar-outflow-density';
 import { betelgeusePlumeDensity } from '../stellar/betelgeuse-plume';
 import { STELLAR_WIND_FADE, STELLAR_WIND_RADIUS, rigelWindDensity, solarWindDensity } from '../stellar/stellar-wind-density';
 import { spatialNoise } from '../shared/shaders';
@@ -171,7 +174,12 @@ const densityByShape = {
   'sn-1006-shell': sn1006ShellDensity,
   'ngc-346-ridges': ngc346Density,
   'jewel-bug': jewelBugDensity,
+  'wind-bubble': windBubbleDensity,
+  'oxygen-remnant': oxygenRemnantDensity,
   quintet: quintetDensity,
+  merger: galaxyMergerDensity,
+  'symbiotic-outflow': symbioticOutflowDensity,
+  'protostar-bows': protostarBowsDensity,
   'betelgeuse-plume': betelgeusePlumeDensity,
   'rigel-wind': rigelWindDensity,
   'solar-wind': solarWindDensity,
@@ -282,7 +290,7 @@ export function NebulaVolume({ texture, radius, shape, preview = false, paused =
       mesh.current.visible = visibility > 0;
       material.current.uniforms.visibility.value = visibility;
       material.current.uniforms.motion.value = motion.current;
-    } else if (!preview && (shape === 'bipolar-jet' || shape === 'shocked-shell' || shape === 'dust-spiral' || shape === 'edge-on-disk' || shape === 'light-echo' || shape === 'vela-wind')) {
+    } else if (!preview && (shape === 'bipolar-jet' || shape === 'shocked-shell' || shape === 'dust-spiral' || shape === 'edge-on-disk' || shape === 'light-echo' || shape === 'vela-wind' || shape === 'symbiotic-outflow' || shape === 'protostar-bows')) {
       if (!paused) {
         const elapsed = motion.current + Math.min(delta, 0.1) * rate;
         if (shape === 'shocked-shell') motion.current = Math.min(elapsed, 18);

@@ -76,7 +76,7 @@ function distantDistance(system: StarSystem) {
 
 function cameraClipping(system: StarSystem, radius: number, cloudOpacity: number, farOverview: number) {
   return {
-    near: MathUtils.clamp(radius * 0.001, 0.035, 1200),
+    near: MathUtils.clamp(radius * 0.001, Math.min(0.035, system.overviewDistance * 0.02), 1200),
     far: Math.max(6500, farOverview * 4, radius * 1.3 + (cloudOpacity > 0 ? oortRadius(system) * 1.2 : 0)),
   };
 }
@@ -114,6 +114,7 @@ function Star({
 }) {
   const surface = useRef<ShaderMaterial>(null);
   const activityDays = useRef(0.043);
+  const pulse = useRef<import('three').MeshBasicMaterial>(null);
   const previousDays = useRef(days.current);
   const texture = useSurfaceMap(body.surfaceMap?.file);
   const isSun = body.stellar?.prominences === true;
@@ -132,6 +133,10 @@ function Star({
   }));
   useFrame((_, delta) => {
     const time = days.current;
+    if (pulse.current && body.stellarPulseSeconds) {
+      const angle = time * 86_400 / body.stellarPulseSeconds * Math.PI * 2;
+      pulse.current.opacity = 0.04 + 0.52 * Math.pow(0.5 + 0.5 * Math.cos(angle), 5);
+    }
     if ((isSun || (photosphere && photosphere.granuleScale > 0)) && !paused && delta > 0) {
       // Keep the activity preview legible across the orbital playback speeds.
       const rate = MathUtils.clamp((time - previousDays.current) / delta, 1 / 1440, 1 / 120);
@@ -164,6 +169,12 @@ function Star({
         <shaderMaterial ref={surface} uniforms={uniforms} vertexShader={surfaceVertex} fragmentShader={surfaceFragment} />
       </mesh>
       <StellarGlow radius={body.displayRadius} color={body.stellar?.emissionColor ?? body.colors[2]} strength={body.stellar?.glowStrength} paused={paused} activityDays={isSun ? activityDays : undefined} />
+      {body.stellarPulseSeconds && (
+        <mesh raycast={() => {}}>
+          <sphereGeometry args={[body.displayRadius * 1.003, 48, 32]} />
+          <meshBasicMaterial ref={pulse} color="#fff0cc" transparent opacity={0.5} depthWrite={false} />
+        </mesh>
+      )}
       {isSun && <SolarProminences radius={body.displayRadius} days={days} activityDays={activityDays} spinDays={body.spinDays} poleSpinDays={body.stellar?.poleSpinDays} />}
       {isSun && focused && <NebulaVolume shape="solar-wind" radius={body.displayRadius * STELLAR_WIND_RADIUS} activityDays={activityDays} />}
     </>

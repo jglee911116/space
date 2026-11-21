@@ -14,4 +14,7 @@ import type { Galaxy } from './types';
 const galaxies: Galaxy[] = [...localGroup.galaxies, ...nearbyShowcase, ...galaxyAssociations.flatMap(({ members }) => members)];
 
 export type * from './types';
+export { bulletMembers } from './bullet-survey';
+export { bulletWebbSources } from './bullet-webb-sources';
+export { macsImages, macsMembers } from './macs-j0416-survey';
 export { distantObjects, featuredObjects, galaxies, galaxyAssociations, localGroup, milkyWay, observableUniverse, pandoraArcs, pandoraMembers, superclusters, systems };

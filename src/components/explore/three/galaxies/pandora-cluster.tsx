@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AdditiveBlending, BackSide, DoubleSide, MathUtils } from 'three';
 import type { Galaxy } from '@/constants/space';
-import { pandoraArcs, pandoraMembers } from '@/constants/space';
+import { macsImages, macsMembers, pandoraArcs, pandoraMembers } from '@/constants/space';
 import { GalacticLabelLayer, GalacticMarker } from '../maps/galactic-marker';
 import { GalaxyPreview } from './galaxy-preview';
 
@@ -40,6 +40,32 @@ const arcs = pandoraArcs.map(([id, ra, dec, major, minor, theta]) => ({
   length: MathUtils.clamp(major * 4300, 0.23, 0.72),
   width: MathUtils.clamp(minor * 3100, 0.095, 0.18),
 }));
+
+const macsPosition = (ra: number, dec: number, depth: number): [number, number, number] => [
+  (64.038 - ra) * 180, (dec + 24.067) * 197, depth,
+];
+const macsGalaxies = macsMembers.map(([id, ra, dec, magnitude]) => {
+  const brightness = 1 - MathUtils.smoothstep(magnitude, 17, 24);
+  const galaxy: Galaxy = {
+    id: String(id), name: `MACS0416 ${id}`, summary: '', distanceKpc: 0, sources: [],
+    modelRadiusKpc: MathUtils.lerp(0.12, 0.46, brightness ** 1.35),
+    morphology: 'compact-elliptical', color: ['#f1cb9f', '#ecd6b9', '#d1c7dc'][id % 3],
+  };
+  return {
+    galaxy, position: macsPosition(ra, dec, ((id * 317) % 997 / 997 - 0.5) * 2.8),
+    opacity: MathUtils.lerp(0.61, 1, brightness), rotation: id * 2.39996,
+    axis: MathUtils.lerp(0.55, 0.95, id % 11 / 10),
+  };
+});
+// Draw a sample of the cataloged image centers; the arc sizes and curvature are illustrative.
+const macsArcs = macsImages.filter((_, index) => index % 3 !== 2).map(([id, ra, dec, redshift], index) => {
+  const position = macsPosition(ra, dec, -1.45 - (index % 7) * 0.12);
+  const center = position[1] < -0.9 ? macsPosition(64.031967, -24.077426, 0) : macsPosition(64.038101, -24.067485, 0);
+  return {
+    id, position, rotation: Math.atan2(position[1] - center[1], position[0] - center[0]) + Math.PI / 2,
+    length: 0.16 + (index % 9) * 0.023, width: 0.056 + redshift * 0.003,
+  };
+});
 
 const arcVertex = /* glsl */ `
   varying vec2 point;
@@ -87,15 +113,18 @@ const haloFragment = /* glsl */ `
   }
 `;
 
-export function PandoraCluster() {
+export function SurveyCluster({ profile }: { profile: 'pandora' | 'macs-j0416' }) {
   const [selected, setSelected] = useState<string>();
+  const macs = profile === 'macs-j0416';
+  const galaxies = macs ? macsGalaxies : members;
+  const lensedImages = macs ? macsArcs : arcs;
   return (
     <GalacticLabelLayer>
       <mesh position={[0.05, -0.1, -0.15]} scale={[6.1, 5.5, 2.8]} raycast={() => {}}>
         <sphereGeometry args={[1, 32, 24]} />
         <shaderMaterial vertexShader={haloVertex} fragmentShader={haloFragment} side={BackSide} transparent depthWrite={false} blending={AdditiveBlending} />
       </mesh>
-      {members.map(({ galaxy, position, rotation, axis, opacity }) => (
+      {galaxies.map(({ galaxy, position, rotation, axis, opacity }) => (
         <group key={galaxy.id} position={position}>
           <group rotation-z={rotation} scale={[axis, 1, 1]}>
             <GalaxyPreview galaxy={galaxy} opacity={selected === galaxy.id ? 1 : opacity} onSelect={() => setSelected(galaxy.id)} />
@@ -103,7 +132,7 @@ export function PandoraCluster() {
           {selected === galaxy.id && <GalacticMarker name={galaxy.name} labelOffset={0.9} priority={2} />}
         </group>
       ))}
-      {arcs.map(({ id, position, rotation, length, width }) => (
+      {lensedImages.map(({ id, position, rotation, length, width }) => (
         <mesh key={id} position={position} rotation-z={rotation} scale={[length, width, 1]} raycast={() => {}}>
           <planeGeometry args={[1, 1, 12, 1]} />
           <shaderMaterial vertexShader={arcVertex} fragmentShader={arcFragment} side={DoubleSide} transparent depthWrite={false} blending={AdditiveBlending} />
