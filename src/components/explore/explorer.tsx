@@ -139,7 +139,7 @@ export function Explorer() {
     setInfoPreference(false);
     infoButton.current?.focus();
   };
-  const [showGaia, setShowGaia] = useState(false);
+  const [showGaia, setShowGaia] = useState(true);
   const [showCenterPolarization, setShowCenterPolarization] = useState(false);
   const [showCounterjet, setShowCounterjet] = useState(false);
   const [showSuperclusterFlows, setShowSuperclusterFlows] = useState(false);
@@ -282,10 +282,11 @@ export function Explorer() {
     setWheelView({ scene: 'galaxy', entry });
     recordView(locale, null, 'galaxy', systemId, DEFAULT_SYSTEM_ID, milkyWay.id);
   }, [locale, systemId, setHovered, setComparison]);
-  const enterSolarSystem = useCallback((entry: ZoomHandoff) => {
+  const enterZoomedSystem = useCallback((entry: ZoomHandoff) => {
     setHovered(null);
-    setWheelView({ scene: 'system', entry });
-    recordView(locale, null, null, systemId, DEFAULT_SYSTEM_ID, milkyWay.id);
+    const next = systemId === DEFAULT_SYSTEM_ID ? 'neighborhood' : null;
+    setWheelView(next ? null : { scene: 'system', entry });
+    recordView(locale, null, next, systemId, DEFAULT_SYSTEM_ID, milkyWay.id);
   }, [locale, systemId, setHovered]);
 
   const navigateTo = useCallback(
@@ -458,7 +459,13 @@ export function Explorer() {
             onSelectSystem={enterMarkedSystem}
           />
         ) : neighborhoodView ? (
-          <NeighborhoodScene showGaia={showGaia} systems={galaxySystems} onSelect={selectSystem} reportDistance={reportDistance} />
+          <NeighborhoodScene
+            showGaia={showGaia}
+            systems={galaxySystems}
+            onSelect={selectSystem}
+            onExit={enterGalaxy}
+            reportDistance={reportDistance}
+          />
         ) : galaxyView && galaxyAnchor ? (
           <GalaxyScene
             anchor={galaxyAnchor}
@@ -469,7 +476,7 @@ export function Explorer() {
             onSelectObject={selectFeaturedObject}
             focusedObjectId={focus ?? undefined}
             entry={wheelView?.entry}
-            onZoomIn={enterSolarSystem}
+            onZoomIn={enterZoomedSystem}
             onZoomOut={enterLocalGroup}
             groupEntry={spaceEntry}
             target={focusGalacticCenter ? milkyWay.center.id : target}

@@ -6,6 +6,11 @@ export function isNearbySystem(system: StarSystem) {
   return system.id === milkyWay.systemId || system.neighborhood !== undefined;
 }
 
+export function neighborhoodOverviewDistance(systems: readonly StarSystem[], aspect: number) {
+  const radius = Math.max(1, ...systems.map(({ neighborhood }) => neighborhood?.distanceLightYears ?? 0));
+  return (radius * 3.65) / MathUtils.clamp(aspect, 0.35, 1);
+}
+
 export function nearbyPositions(systems: readonly StarSystem[]) {
   return systems.filter(isNearbySystem).map((system) => {
     const { distanceLightYears, rightAscension, declination } = system.neighborhood ?? { distanceLightYears: 0, rightAscension: 0, declination: 0 };

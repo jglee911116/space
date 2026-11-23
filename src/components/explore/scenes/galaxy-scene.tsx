@@ -20,7 +20,7 @@ import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { OortCloudModel } from '../three/planetary-systems/oort-cloud';
 import { AU_PER_KPC, DAYS_PER_YEAR, KM_PER_KPC, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
-import { galacticOrbitColor, nearbyPositions } from '../utils/nearby-positions';
+import { galacticOrbitColor, nearbyPositions, neighborhoodOverviewDistance } from '../utils/nearby-positions';
 import { BLACK_HOLE_EXIT_DISTANCE, GALACTIC_CENTER_ENTRY_KPC, GALACTIC_CENTER_RETURN_KPC, GALAXY_EXIT_KPC, featuredOverviewDistanceKpc, galaxyHandoffDistanceAu, type ZoomHandoff } from '../utils/zoom';
 import { seededRandom } from '../utils/random';
 
@@ -622,8 +622,12 @@ function Scene({
             if (zoomingIn && radius <= GALACTIC_CENTER_ENTRY_KPC) onCenterZoom(true, handoff);
           } else if (focusedObject) {
             if (zoomingIn && radius <= focusedDistance * 0.72) onSelectObject(focusedObject.id);
-          } else if (zoomingIn && radius <= handoffRadius * 0.88) {
-            onZoomIn(handoff);
+          } else if (zoomingIn) {
+            const { width, height } = getState().size;
+            const entryRadius = system.id === anchor.id
+              ? neighborhoodOverviewDistance(systems, width / Math.max(1, height)) / LIGHT_YEARS_PER_KPC
+              : handoffRadius * 0.88;
+            if (radius <= entryRadius) onZoomIn(handoff);
           }
         }}
       />

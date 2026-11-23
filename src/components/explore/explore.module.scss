@@ -534,6 +534,41 @@
   pointer-events: none;
 }
 
+.gaiaSource {
+  position: absolute;
+  top: max(7.5rem, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: grid;
+  gap: 0.3rem;
+  width: max-content;
+  max-width: calc(100% - 2rem);
+  padding: 0.65rem 2.5rem 0.65rem 0.8rem;
+  border: 1px solid #a8c3e35c;
+  border-radius: 0.55rem;
+  background: #101119f5;
+  color: $space-fg;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+
+  button {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  a {
+    color: #a8c3e3;
+  }
+}
+
 .nearbyAnchor {
   position: absolute;
   visibility: hidden;

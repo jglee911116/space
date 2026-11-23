@@ -868,6 +868,8 @@ test('모바일 핀치로 태양계에서 우주까지 이동하고 뒤로 돌�
     await pinchTo(/\/superclusters\/virgo$/, 22, 145);
     await pinchTo(/\/local-group\?galaxy=milky-way$/, 22, 145);
     await pinchTo(/\/galaxies\/milky-way$/, 22, 145);
+    await pinchTo(/\/ko\?view=neighborhood$/, 22, 145);
+    await expect(page.getByLabel('태양계 이웃 3D 거리 지도')).toBeVisible();
     await pinchTo(/\/milky-way\?system=solar$/, 22, 145);
     await expect(page.getByLabel('회전하고 확대할 수 있는 태양계 3D 모델')).toBeVisible();
   } finally {
@@ -890,35 +892,74 @@ test('태양계는 가까이 보거나 선택한 천체의 텍스처를 로드�
   await expect(details(page).getByRole('heading', { name: '수성', exact: true })).toBeVisible();
 });
 
-test('Gaia 표본은 켜면 밝은 타일을 읽고 확대할 때 상세 타일을 추가한다', async ({ page }) => {
+test('Gaia 표본은 확대할 때 타일을 읽고 축소 후 재사용한다', async ({ page }) => {
   const catalogRequests: string[] = [];
   page.on('request', (request) => {
-    if (request.url().includes('/catalog/gaia-dr3-nearby/')) catalogRequests.push(request.url());
+    const path = new URL(request.url()).pathname;
+    if (path.includes('/catalog/gaia-dr3-nearby/')) catalogRequests.push(path);
   });
 
   await page.goto('/ko');
   await waitForRenderedMap(page);
-  const layer = details(page).getByRole('checkbox', { name: 'Gaia DR3 관측원 보기' });
-  await expect(layer).not.toBeChecked();
-  expect(catalogRequests).toHaveLength(0);
-  const bright = page.waitForResponse((response) => response.url().endsWith('.bright.bin') && response.ok());
-  await layer.check();
-  await bright;
-  expect(catalogRequests.filter((url) => url.endsWith('.bright.bin')).length).toBeLessThanOrEqual(16);
-  expect(catalogRequests.some((url) => url.endsWith('.detail.bin'))).toBe(false);
+  const layer = details(page).getByRole('checkbox', { name: '확대할 때 Gaia DR3 관측원 보기' });
+  await expect(layer).toBeChecked();
+  expect(catalogRequests.filter((path) => path.endsWith('.bin'))).toHaveLength(0);
 
   const canvas = page.locator('main canvas');
   const bounds = await canvas.boundingBox();
   if (!bounds) throw new Error('Neighborhood canvas not mounted');
-  const detailLoaded = page.waitForResponse((response) => response.url().endsWith('.detail.bin') && response.ok(), { timeout: 12_000 });
-  await expect.poll(async () => {
-    if (!catalogRequests.some((url) => url.endsWith('.detail.bin'))) {
-      await canvas.dispatchEvent('wheel', { deltaY: -300, clientX: bounds.x + bounds.width / 2, clientY: bounds.y + bounds.height / 2, bubbles: true, cancelable: true });
-    }
-    return catalogRequests.some((url) => url.endsWith('.detail.bin'));
-  }, { timeout: 10_000, intervals: [190] }).toBe(true);
-  await detailLoaded;
-  await expect(layer).toBeChecked();
+  const zoom = (deltaY: number) => canvas.dispatchEvent('wheel', {
+    deltaY, clientX: bounds.x + bounds.width / 2, clientY: bounds.y + bounds.height / 2, bubbles: true, cancelable: true,
+  });
+  const bright = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith('.bright.bin') && response.ok());
+  for (let step = 0; step < 5; step++) await zoom(-100);
+  await bright;
+  expect(catalogRequests.filter((path) => path.endsWith('.bright.bin')).length).toBeLessThanOrEqual(16);
+  expect(catalogRequests.some((path) => path.endsWith('.detail.bin'))).toBe(false);
+  const detail = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith('.detail.bin') && response.ok());
+  for (let step = 0; step < 7; step++) await zoom(-100);
+  await detail;
+
+  for (let step = 0; step < 12; step++) await zoom(100);
+  await expect(page).toHaveURL('/ko');
+  // Allow the periodic visibility update to unmount the point geometries.
+  await page.waitForTimeout(350);
+  const requestCount = catalogRequests.length;
+  for (let step = 0; step < 12; step++) await zoom(-100);
+  await page.waitForTimeout(350);
+  expect(catalogRequests).toHaveLength(requestCount);
   await layer.uncheck();
   await expect(layer).not.toBeChecked();
+});
+
+test('Gaia 점을 선택하면 64비트 관측원 식별자와 측정값을 표시한다', async ({ page }) => {
+  const sourceId = BigInt('4683897617110115200');
+  const tile = Buffer.alloc(24);
+  tile.writeFloatLE(6.5, 12);
+  tile.writeBigUInt64LE(sourceId, 16);
+  await page.route('**/catalog/gaia-dr3-nearby/manifest.json?*', (route) => route.fulfill({
+    json: { tileSize: 40, tiles: [{ id: '0_0_0', center: [0, 0, 0], bright: 1, detail: 0 }] },
+  }));
+  await page.route('**/catalog/gaia-dr3-nearby/0_0_0.bright.bin?*', (route) => route.fulfill({
+    body: tile, contentType: 'application/octet-stream',
+  }));
+  await page.goto('/ko');
+  await waitForRenderedMap(page);
+  const canvas = page.locator('main canvas');
+  const bounds = await canvas.boundingBox();
+  if (!bounds) throw new Error('Neighborhood canvas not mounted');
+  const x = bounds.x + bounds.width / 2;
+  const y = bounds.y + bounds.height / 2;
+  const loaded = page.waitForResponse((response) => response.url().includes('0_0_0.bright.bin'));
+  for (let step = 0; step < 5; step++) {
+    await canvas.dispatchEvent('wheel', { deltaY: -100, clientX: x, clientY: y, bubbles: true, cancelable: true });
+  }
+  await loaded;
+  const info = page.getByRole('complementary', { name: 'Gaia DR3 관측원' });
+  await expect.poll(async () => {
+    await page.mouse.click(x, y);
+    return info.isVisible();
+  }).toBe(true);
+  await expect(info).toContainText(`Gaia DR3 ${sourceId}`);
+  await expect(info).toContainText('G 6.5');
 });

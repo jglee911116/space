@@ -3,14 +3,15 @@
 import { useLanguage } from '@/i18n/language';
 import { Line, OrbitControls, PerspectiveCamera, Stars } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { MathUtils, Quaternion, Vector3 } from 'three';
 import type { StarSystem } from '@/constants/space';
-import { KM_PER_LIGHT_YEAR } from '@/constants/space/units';
+import { KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
-import { nearbyPositions } from '../utils/nearby-positions';
-import { GaiaPreview } from '../three/maps/gaia-preview';
+import { nearbyPositions, neighborhoodOverviewDistance } from '../utils/nearby-positions';
+import { GaiaPreview, type GaiaSource } from '../three/maps/gaia-preview';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
+import type { ZoomHandoff } from '../utils/zoom';
 import styles from '../explore.module.scss';
 
 function createMarkers(systems: readonly StarSystem[]) {
@@ -49,18 +50,31 @@ const LABEL_OFFSETS = [
   [0, 3],
 ];
 
-function Map({ markers, rotation, showGaia, projectLabels, reportDistance }: ReturnType<typeof createMarkers> & { showGaia: boolean; projectLabels: ProjectLabels; reportDistance: ReportDistanceScale }) {
-  const aspect = useThree((state) => state.size.width / Math.max(1, state.size.height));
-  const { center, radius } = useMemo(() => {
-    const center = markers.reduce((sum, { position }) => sum.add(position), new Vector3()).divideScalar(Math.max(1, markers.length));
-    return { center, radius: Math.max(1, ...markers.map(({ position }) => position.distanceTo(center))) };
-  }, [markers]);
-  const projected = useMemo(() => new Vector3(), []);
-  const distance = (radius * 3.65) / Math.min(1, Math.max(0.35, aspect));
+type MapActions = {
+  onSource: (source: GaiaSource | null) => void;
+  onExit: (entry: ZoomHandoff) => void;
+  onEnterSolar: () => void;
+};
 
-  useFrame(({ camera, size }) => {
+function Map({ systems, markers, rotation, showGaia, projectLabels, reportDistance, onSource, onExit, onEnterSolar }: ReturnType<typeof createMarkers> & MapActions & { systems: readonly StarSystem[]; showGaia: boolean; projectLabels: ProjectLabels; reportDistance: ReportDistanceScale }) {
+  const aspect = useThree((state) => state.size.width / Math.max(1, state.size.height));
+  const distance = neighborhoodOverviewDistance(systems, aspect);
+  const center = useMemo(() => new Vector3(), []);
+  const camera = useThree((state) => state.camera);
+  const zoomStart = useRef(0);
+  const clearSource = useCallback(() => onSource(null), [onSource]);
+  const projected = useMemo(() => new Vector3(), []);
+
+  const minDistance = Math.min(24, distance * 0.25);
+  const maxDistance = distance * 2.4;
+  const cameraPosition = useMemo<[number, number, number]>(() => [center.x, center.y, center.z + distance], [center, distance]);
+
+  useFrame(({ camera, size, raycaster }) => {
     camera.updateMatrixWorld();
-    reportDistance(kmPerPixel(camera, size.height, camera.position.distanceTo(center), KM_PER_LIGHT_YEAR));
+    const distanceToCenter = camera.position.distanceTo(center);
+    const projection = kmPerPixel(camera, size.height, distanceToCenter, 1);
+    if (raycaster.params.Points) raycaster.params.Points.threshold = 7 * projection;
+    reportDistance(projection * KM_PER_LIGHT_YEAR);
     const screenMarkers = markers.map(({ system, position }) => {
       projected.copy(position).project(camera);
       return {
@@ -75,9 +89,24 @@ function Map({ markers, rotation, showGaia, projectLabels, reportDistance }: Ret
 
   return (
     <>
-      <PerspectiveCamera makeDefault fov={44} position={[center.x, center.y, center.z + distance]} />
-      <OrbitControls target={center} enablePan={false} minDistance={showGaia ? Math.min(radius * 2.6, 100) : radius * 2.6} maxDistance={radius * 16} />
-      {showGaia && <GaiaPreview center={center} rotation={rotation} overviewDistance={distance} />}
+      <PerspectiveCamera makeDefault fov={44} far={maxDistance + distance} position={cameraPosition} />
+      <OrbitControls
+        target={center}
+        enablePan={false}
+        minDistance={minDistance}
+        maxDistance={maxDistance}
+        onStart={() => { zoomStart.current = camera.position.distanceTo(center); }}
+        onEnd={() => {
+          const offset = projected.copy(camera.position).sub(center);
+          const current = offset.length();
+          if (current > zoomStart.current && current >= maxDistance * 0.99) {
+            onExit({ direction: offset.normalize().toArray(), distanceAu: current * KM_PER_LIGHT_YEAR / KM_PER_AU });
+          } else if (current < zoomStart.current && current <= minDistance * 1.01) {
+            onEnterSolar();
+          }
+        }}
+      />
+      {showGaia && <GaiaPreview center={center} rotation={rotation} overviewDistance={distance} onSelect={onSource} onExit={clearSource} />}
       <Stars radius={100} depth={50} count={1800} factor={6} saturation={0} fade speed={0} />
       {markers.map(({ system, distanceLightYears, position }) => (
         <group key={system.id}>
@@ -92,8 +121,10 @@ function Map({ markers, rotation, showGaia, projectLabels, reportDistance }: Ret
   );
 }
 
-export default function NeighborhoodScene({ systems, onSelect, reportDistance, showGaia }: { systems: readonly StarSystem[]; onSelect: (id: string) => void; reportDistance: ReportDistanceScale; showGaia: boolean }) {
+export default function NeighborhoodScene({ systems, onSelect, reportDistance, showGaia, onExit }: { systems: readonly StarSystem[]; onSelect: (id: string) => void; reportDistance: ReportDistanceScale; showGaia: boolean; onExit: MapActions['onExit'] }) {
   const { t, catalogText, number } = useLanguage();
+  const [source, setSource] = useState<GaiaSource | null>(null);
+  const enterSolar = useCallback(() => onSelect('solar'), [onSelect]);
   const { markers, rotation } = useMemo(() => createMarkers(systems), [systems]);
   const labels = useRef<Record<string, HTMLDivElement>>({});
   const projectLabels = useCallback<ProjectLabels>((screenMarkers, width, height) => {
@@ -126,10 +157,18 @@ export default function NeighborhoodScene({ systems, onSelect, reportDistance, s
   return (
     <>
       <CanvasBoundary>
-        <Canvas dpr={[1, 1.5]} aria-label={t('canvas.solarNeighborhood')}>
-          <Map markers={markers} rotation={rotation} showGaia={showGaia} projectLabels={projectLabels} reportDistance={reportDistance} />
+        <Canvas dpr={[1, 1.5]} aria-label={t('canvas.solarNeighborhood')} onPointerMissed={() => setSource(null)}>
+          <Map systems={systems} markers={markers} rotation={rotation} showGaia={showGaia} projectLabels={projectLabels} reportDistance={reportDistance} onSource={setSource} onExit={onExit} onEnterSolar={enterSolar} />
         </Canvas>
       </CanvasBoundary>
+      {showGaia && source && (
+        <aside className={styles.gaiaSource} aria-label={t('details.gaiaSource')}>
+          <button type="button" aria-label={t('details.close')} onClick={() => setSource(null)}>×</button>
+          <strong>Gaia DR3 {source.id}</strong>
+          <span>{t('units.lightYears', [number(source.distance, 2)])} · G {number(source.magnitude, 2)}</span>
+          <a href="https://gea.esac.esa.int/archive/" target="_blank" rel="noreferrer">ESA/Gaia/DPAC</a>
+        </aside>
+      )}
       <div className={styles.nearbyLabels}>
         {markers.map(({ system, distanceLightYears }) => (
           <div
