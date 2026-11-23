@@ -20,7 +20,7 @@ import { cosmologicalDistances } from './utils/cosmology';
 import { createDistanceStore, useDistance, type DistanceStore } from './utils/distance-store';
 
 const emptyDistanceStore = createDistanceStore();
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { KM_PER_AU, SOLAR_RADIUS_KM, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 import { formatLightYearDistance } from './utils/distance-scale';
 import { bodySize, formatAxis, formatPeriod, formatSpin, kindLabel } from './utils/format';
@@ -128,16 +128,14 @@ function BodyDistance({ origin, au }: { origin: Body; au: number }) {
   );
 }
 
-function DetailPanel({ name, children }: { name: CatalogText; children: ReactNode }) {
+function DetailPanel({ name, onClose, children }: { name: CatalogText; onClose: () => void; children: ReactNode }) {
   const { t, catalogText } = useLanguage();
-  const [closed, setClosed] = useState(false);
-  if (closed) return null;
 
   return (
     <section className={styles.details} aria-labelledby="body-name">
       <div className={styles.detailsHeading}>
         <h2 id="body-name">{catalogText(name)}</h2>
-        <button type="button" className={styles.closeDetails} aria-label={t('details.close')} onClick={() => setClosed(true)}>
+        <button type="button" className={styles.closeDetails} aria-label={t('details.close')} onClick={onClose}>
           <span aria-hidden="true">×</span>
         </button>
       </div>
@@ -146,7 +144,7 @@ function DetailPanel({ name, children }: { name: CatalogText; children: ReactNod
   );
 }
 
-export function BodyDetails({ system, body, onSelect }: { system: StarSystem; body: Body; onSelect: (target: Target) => void }) {
+export function BodyDetails({ system, body, onSelect, onClose }: { system: StarSystem; body: Body; onSelect: (target: Target) => void; onClose: () => void }) {
   const { t, catalogText, number, measurement } = useLanguage();
   const parent = system.bodies.find((other) => other.id === body.parent);
   const children = system.bodies.filter((other) => other.parent === body.id && (other.kind === 'moon' || isMultiStar(system)));
@@ -155,7 +153,7 @@ export function BodyDetails({ system, body, onSelect }: { system: StarSystem; bo
   const irradiance = parent?.stellar && body.orbit ? parent.stellar.luminosityWatts / (4 * Math.PI * (body.orbit.axisAu * KM_PER_AU * 1000) ** 2) : null;
 
   return (
-    <DetailPanel name={catalogText(body.name)}>
+    <DetailPanel name={catalogText(body.name)} onClose={onClose}>
       <dl>
         {size && (
           <div>
@@ -255,11 +253,11 @@ function RadiantPower({ watts }: { watts: number }) {
   );
 }
 
-export function BlackHoleDetails({ showPolarization, onPolarizationChange }: { showPolarization: boolean; onPolarizationChange: (visible: boolean) => void }) {
+export function BlackHoleDetails({ showPolarization, onPolarizationChange, onClose }: { showPolarization: boolean; onPolarizationChange: (visible: boolean) => void; onClose: () => void }) {
   const { t, catalogText, number, measurement } = useLanguage();
   const center = milkyWay.center;
   return (
-    <DetailPanel name={catalogText(center.name)}>
+    <DetailPanel name={catalogText(center.name)} onClose={onClose}>
       <dl>
         <div>
           <dt>{t('details.type')}</dt>
@@ -398,15 +396,19 @@ export function GalaxySummaryDetails({ galaxy }: { galaxy: Galaxy }) {
   );
 }
 
-export function NeighborhoodDetails() {
+export function NeighborhoodDetails({ showGaia, onGaiaChange }: { showGaia: boolean; onGaiaChange: (show: boolean) => void }) {
   const { t, catalogText } = useLanguage();
   const { neighborhood } = milkyWay;
   return (
     <section className={styles.details} aria-labelledby="body-name">
       <h2 id="body-name">{t('details.starSystemDistances')}</h2>
       <p>{t('navigation.selectStarSystemHint')}</p>
-      <ModelNotes>{catalogText(neighborhood.summary)}</ModelNotes>
-      <DetailSources sources={[neighborhood.source]} />
+      <label className={styles.counterjetToggle}>
+        <input type="checkbox" checked={showGaia} onChange={(event) => onGaiaChange(event.currentTarget.checked)} />
+        {t('details.gaiaPreview')}
+      </label>
+      <ModelNotes>{catalogText(neighborhood.summary)} {showGaia && t('details.gaiaSample')}</ModelNotes>
+      <DetailSources sources={showGaia ? [neighborhood.source, { label: 'ESA/Gaia/DPAC · Gaia DR3', href: 'https://gea.esac.esa.int/archive/' }] : [neighborhood.source]} />
     </section>
   );
 }

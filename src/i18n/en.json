@@ -1,4 +1,6 @@
 {
+  "details.gaiaPreview": "Show Gaia DR3 sources",
+  "details.gaiaSample": "This sample contains sources estimated to lie within about 25 parsecs of the Sun. Distances use inverse parallax, and fainter sources appear as you zoom in.",
   "details.showSuperclusterFlows": "Show galaxy flow lines",
   "details.laniakeaFlowModel": "The model uses the span of about 520 million light-years published in 2014. Cluster positions use observed directions and distances. The outline, filament points, and streamlines are illustrative and informed by the research visualization.",
   "details.calibratedGalaxyScale": "The screen scale is an approximation at the center of the view, calibrated to the observation. Line-of-sight depths have been adjusted for visualization.",
@@ -512,6 +514,8 @@
   "details.candidate": "Unconfirmed candidate",
   "details.catalogedMoons": "Cataloged moons",
   "details.centralEjecta": "the central ejecta",
+  "details.showInfo": "Show information",
+  "details.hideInfo": "Hide information",
   "details.close": "Close object details",
   "details.clusterModelScale": "The scale bar measures distance within the cluster model. Star positions and brightnesses are illustrative samples.",
   "details.commonScaleEnlarged": "Orbital distances share a scale. Bodies are enlarged for visibility.",

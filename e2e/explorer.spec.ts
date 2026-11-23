@@ -779,3 +779,146 @@ test('헤라클레스 성단과 백조자리 X-1의 축소 모형을 지도에�
   }
   expect(errors).toEqual([]);
 });
+
+test('모바일에서 정보 버튼으로 천체와 우주 지도 패널을 열고 닫는다', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const open = page.getByRole('button', { name: '정보 열기', exact: true });
+  const hide = page.getByRole('button', { name: '정보 닫기', exact: true });
+
+  await page.goto(`${milkyWay}?system=solar&target=earth`);
+  await expect(open).toHaveAttribute('aria-expanded', 'false');
+  await expect(details(page)).toBeHidden();
+  await open.click();
+  await expect(details(page).getByRole('heading', { name: '지구', exact: true })).toBeVisible();
+  await details(page).getByRole('button', { name: '천체 정보 닫기', exact: true }).click();
+  await expect(open).toBeFocused();
+  await expect(details(page)).toBeHidden();
+
+  await page.goto('/ko/universe');
+  await expect(open).toHaveAttribute('aria-expanded', 'false');
+  await open.click();
+  await expect(details(page).getByRole('heading', { name: '관측 가능한 우주' })).toBeVisible();
+  await hide.click();
+  await expect(details(page)).toBeHidden();
+});
+
+test('모바일 핀치로 태양계에서 우주까지 이동하고 뒤로 돌아온다', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  try {
+    const page = await context.newPage();
+    const touch = await context.newCDPSession(page);
+    const canvas = page.locator('main canvas');
+    async function pinch(from: number, to: number) {
+      const bounds = await canvas.boundingBox();
+      if (!bounds) throw new Error('Canvas not mounted');
+      const x = Math.round(bounds.x + bounds.width / 2);
+      const y = Math.round(bounds.y + bounds.height / 2);
+      const fingers = (gap: number) => [{ x: x - gap, y, id: 1 }, { x: x + gap, y, id: 2 }];
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: fingers(from) });
+      for (let step = 1; step <= 5; step++) {
+        await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: fingers(from + (to - from) * step / 5) });
+      }
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    }
+    async function pinchTo(path: RegExp, from = 145, to = 22) {
+      await expect.poll(async () => {
+        if (!path.test(page.url())) await pinch(from, to);
+        return page.url();
+      }, { intervals: [180], timeout: 15_000 }).toMatch(path);
+    }
+
+    await page.goto(`${milkyWay}?system=solar&target=earth`);
+    const scene = page.getByLabel('회전하고 확대할 수 있는 태양계 3D 모델');
+    await scene.locator('button[aria-current="true"]').waitFor();
+    const moon = scene.getByRole('button', { name: '달', exact: true });
+    await expect.poll(async () => {
+      if (!await moon.isVisible()) await pinch(105, 76);
+      return moon.isVisible();
+    }, { intervals: [150], timeout: 5000 }).toBe(true);
+    await moon.tap();
+    await expect(page).toHaveURL(/target=moon$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/target=earth$/);
+    await page.getByRole('button', { name: '정보 열기', exact: true }).tap();
+    await expect(details(page).getByRole('heading', { name: '지구', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '정보 닫기', exact: true }).tap();
+
+    await pinchTo(/\/milky-way\?view=galaxy$/);
+    await pinchTo(/\/local-group\?galaxy=milky-way$/);
+    await pinchTo(/\/superclusters\/virgo$/);
+    await pinchTo(/\/superclusters\/laniakea$/);
+    await pinchTo(/\/universe$/);
+    await pinchTo(/\/superclusters\/laniakea$/, 22, 145);
+    await page.goBack();
+    await expect(page).toHaveURL('/ko/universe');
+    await expect(details(page)).toBeHidden();
+    for (const path of [
+      /\/superclusters\/laniakea$/,
+      /\/superclusters\/virgo$/,
+      /\/local-group\?galaxy=milky-way$/,
+      /\/milky-way\?view=galaxy$/,
+      /target=earth$/,
+    ]) {
+      await page.goBack();
+      await expect(page).toHaveURL(path);
+    }
+    await page.goto('/ko/universe');
+    await waitForRenderedMap(page);
+    await pinchTo(/\/superclusters\/laniakea$/, 22, 145);
+    await pinchTo(/\/superclusters\/virgo$/, 22, 145);
+    await pinchTo(/\/local-group\?galaxy=milky-way$/, 22, 145);
+    await pinchTo(/\/galaxies\/milky-way$/, 22, 145);
+    await pinchTo(/\/milky-way\?system=solar$/, 22, 145);
+    await expect(page.getByLabel('회전하고 확대할 수 있는 태양계 3D 모델')).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test('태양계는 가까이 보거나 선택한 천체의 텍스처를 로드한다', async ({ page }) => {
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(new URL(request.url()).pathname));
+  const earth = page.waitForResponse((response) => response.url().endsWith('/earth/earth-sss.jpg') && response.ok());
+  await page.goto(`${milkyWay}?system=solar&target=earth`);
+  await earth;
+  await waitForRenderedMap(page);
+  expect(requests.some((path) => path.endsWith('/mercury/mercury-sss.jpg'))).toBe(false);
+
+  const mercury = page.waitForResponse((response) => response.url().endsWith('/mercury/mercury-sss.jpg') && response.ok());
+  await search(page, '수성', /^수성 /);
+  await mercury;
+  await expect(details(page).getByRole('heading', { name: '수성', exact: true })).toBeVisible();
+});
+
+test('Gaia 표본은 켜면 밝은 타일을 읽고 확대할 때 상세 타일을 추가한다', async ({ page }) => {
+  const catalogRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/catalog/gaia-dr3-nearby/')) catalogRequests.push(request.url());
+  });
+
+  await page.goto('/ko');
+  await waitForRenderedMap(page);
+  const layer = details(page).getByRole('checkbox', { name: 'Gaia DR3 관측원 보기' });
+  await expect(layer).not.toBeChecked();
+  expect(catalogRequests).toHaveLength(0);
+  const bright = page.waitForResponse((response) => response.url().endsWith('.bright.bin') && response.ok());
+  await layer.check();
+  await bright;
+  expect(catalogRequests.filter((url) => url.endsWith('.bright.bin')).length).toBeLessThanOrEqual(16);
+  expect(catalogRequests.some((url) => url.endsWith('.detail.bin'))).toBe(false);
+
+  const canvas = page.locator('main canvas');
+  const bounds = await canvas.boundingBox();
+  if (!bounds) throw new Error('Neighborhood canvas not mounted');
+  const detailLoaded = page.waitForResponse((response) => response.url().endsWith('.detail.bin') && response.ok(), { timeout: 12_000 });
+  await expect.poll(async () => {
+    if (!catalogRequests.some((url) => url.endsWith('.detail.bin'))) {
+      await canvas.dispatchEvent('wheel', { deltaY: -300, clientX: bounds.x + bounds.width / 2, clientY: bounds.y + bounds.height / 2, bubbles: true, cancelable: true });
+    }
+    return catalogRequests.some((url) => url.endsWith('.detail.bin'));
+  }, { timeout: 10_000, intervals: [190] }).toBe(true);
+  await detailLoaded;
+  await expect(layer).toBeChecked();
+  await layer.uncheck();
+  await expect(layer).not.toBeChecked();
+});

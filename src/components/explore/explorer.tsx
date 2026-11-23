@@ -7,7 +7,7 @@ import type { Locale } from '@/i18n/messages';
 import { CatalogSearch } from './catalog-search';
 import { LanguageSelect } from './language-select';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { galaxyAssociations, superclusters, observableUniverse, distantObjects, featuredObjects, galaxies, localGroup, milkyWay, systems, type Galaxy, type StarSystem } from '@/constants/space';
 import { featuredGalaxyPosition } from './utils/nearby-positions';
 import { SITE_NAME_KEY } from '@/constants/site';
@@ -113,6 +113,14 @@ function recordView(locale: Locale, target: Target, overview: ExplorerView, syst
   return true;
 }
 
+const infoMediaQuery = '(max-width: 560px)';
+
+function subscribeToInfoMedia(change: () => void) {
+  const media = window.matchMedia(infoMediaQuery);
+  media.addEventListener('change', change);
+  return () => media.removeEventListener('change', change);
+}
+
 export function Explorer() {
   const { t, catalogText, locale, number, measurement } = useLanguage();
   const pathname = withoutLocale(usePathname());
@@ -122,6 +130,16 @@ export function Explorer() {
   const cosmicView = universeView || !!region;
   const association = viewParam === 'cluster' ? galaxyAssociations.find((item) => item.mapRegionId === region?.id && item.id === clusterParam) : undefined;
   const distantObject = universeView ? distantObjects.find(({ id }) => id === targetParam) : undefined;
+  const infoId = useId();
+  const infoButton = useRef<HTMLButtonElement>(null);
+  const compactInfo = useSyncExternalStore(subscribeToInfoMedia, () => window.matchMedia(infoMediaQuery).matches, () => false);
+  const [infoPreference, setInfoPreference] = useState<boolean>();
+  const infoOpen = infoPreference ?? !compactInfo;
+  const closeInfo = () => {
+    setInfoPreference(false);
+    infoButton.current?.focus();
+  };
+  const [showGaia, setShowGaia] = useState(false);
   const [showCenterPolarization, setShowCenterPolarization] = useState(false);
   const [showCounterjet, setShowCounterjet] = useState(false);
   const [showSuperclusterFlows, setShowSuperclusterFlows] = useState(false);
@@ -262,11 +280,13 @@ export function Explorer() {
     setHovered(null);
     setComparison(null);
     setWheelView({ scene: 'galaxy', entry });
-  }, [setHovered, setComparison]);
+    recordView(locale, null, 'galaxy', systemId, DEFAULT_SYSTEM_ID, milkyWay.id);
+  }, [locale, systemId, setHovered, setComparison]);
   const enterSolarSystem = useCallback((entry: ZoomHandoff) => {
     setHovered(null);
     setWheelView({ scene: 'system', entry });
-  }, [setHovered]);
+    recordView(locale, null, null, systemId, DEFAULT_SYSTEM_ID, milkyWay.id);
+  }, [locale, systemId, setHovered]);
 
   const navigateTo = useCallback(
     (next: Target, nextOverview: ExplorerView = null, nextSystem = systemId) => {
@@ -438,7 +458,7 @@ export function Explorer() {
             onSelectSystem={enterMarkedSystem}
           />
         ) : neighborhoodView ? (
-          <NeighborhoodScene systems={galaxySystems} onSelect={selectSystem} reportDistance={reportDistance} />
+          <NeighborhoodScene showGaia={showGaia} systems={galaxySystems} onSelect={selectSystem} reportDistance={reportDistance} />
         ) : galaxyView && galaxyAnchor ? (
           <GalaxyScene
             anchor={galaxyAnchor}
@@ -697,32 +717,50 @@ export function Explorer() {
             </div>
           )}
         </div>
-        {region ? (
-          <SuperclusterDetails region={region} association={association} onSelectCluster={enterAssociation} onSelectGalaxy={selectCatalogGalaxy}
-            showFlows={showSuperclusterFlows} onFlowsChange={setShowSuperclusterFlows} />
-        ) : universeView ? (
-          <UniverseDetails object={distantObject} showCounterjet={showCounterjet} onCounterjetChange={setShowCounterjet} clusterLayer={clusterLayer} onClusterLayerChange={setClusterLayer} />
-        ) : featuredObject ? (
-          <FeaturedObjectDetails object={featuredObject} />
-        ) : groupView ? (
-          <LocalGroupDetails focus={activeGalaxy} />
-        ) : extraView ? (
-          <GalaxySummaryDetails galaxy={activeGalaxy} />
-        ) : neighborhoodView ? (
-          <NeighborhoodDetails />
-        ) : focusBlackHole ? (
-          <BlackHoleDetails key={recenter} showPolarization={showCenterPolarization} onPolarizationChange={setShowCenterPolarization} />
-        ) : body && !oortView && (galaxyView || target !== null) ? (
-          <BodyDetails key={`${body.id}:${recenter}`} system={system} body={body} onSelect={navigateTo} />
-        ) : galaxyView ? (
-          <GalaxyDetails systems={galaxySystems} />
-        ) : oortView && cloud ? (
-          <OortCloudDetails cloud={cloud} />
-        ) : (scale === 'outer' || scale === 'distant') && outerRegion ? (
-          <OuterRegionDetails system={system} distant={scale === 'distant'} onToggle={() => navigateTo(null, scale === 'distant' ? 'outer' : 'distant')} />
-        ) : (
-          <SystemDetails system={system} />
-        )}
+        <div className={styles.infoControls}>
+          <button
+            ref={infoButton}
+            type="button"
+            className={styles.infoTrigger}
+            aria-expanded={infoOpen}
+            aria-controls={infoId}
+            aria-label={t(infoOpen ? 'details.hideInfo' : 'details.showInfo')}
+            onClick={() => setInfoPreference(!infoOpen)}
+          >
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 11v5m0-8v.01" />
+            </svg>
+          </button>
+          <div id={infoId} className={styles.infoPanel} data-default={infoPreference === undefined || undefined} hidden={!infoOpen}>
+            {region ? (
+              <SuperclusterDetails region={region} association={association} onSelectCluster={enterAssociation} onSelectGalaxy={selectCatalogGalaxy}
+                showFlows={showSuperclusterFlows} onFlowsChange={setShowSuperclusterFlows} />
+            ) : universeView ? (
+              <UniverseDetails object={distantObject} showCounterjet={showCounterjet} onCounterjetChange={setShowCounterjet} clusterLayer={clusterLayer} onClusterLayerChange={setClusterLayer} />
+            ) : featuredObject ? (
+              <FeaturedObjectDetails object={featuredObject} />
+            ) : groupView ? (
+              <LocalGroupDetails focus={activeGalaxy} />
+            ) : extraView ? (
+              <GalaxySummaryDetails galaxy={activeGalaxy} />
+            ) : neighborhoodView ? (
+              <NeighborhoodDetails showGaia={showGaia} onGaiaChange={setShowGaia} />
+            ) : focusBlackHole ? (
+              <BlackHoleDetails key={recenter} onClose={closeInfo} showPolarization={showCenterPolarization} onPolarizationChange={setShowCenterPolarization} />
+            ) : body && !oortView && (galaxyView || target !== null) ? (
+              <BodyDetails key={`${body.id}:${recenter}`} system={system} body={body} onSelect={navigateTo} onClose={closeInfo} />
+            ) : galaxyView ? (
+              <GalaxyDetails systems={galaxySystems} />
+            ) : oortView && cloud ? (
+              <OortCloudDetails cloud={cloud} />
+            ) : (scale === 'outer' || scale === 'distant') && outerRegion ? (
+              <OuterRegionDetails system={system} distant={scale === 'distant'} onToggle={() => navigateTo(null, scale === 'distant' ? 'outer' : 'distant')} />
+            ) : (
+              <SystemDetails system={system} />
+            )}
+          </div>
+        </div>
       </footer>
     </>
   );

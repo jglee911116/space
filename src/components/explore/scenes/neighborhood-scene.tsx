@@ -9,6 +9,7 @@ import type { StarSystem } from '@/constants/space';
 import { KM_PER_LIGHT_YEAR } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { nearbyPositions } from '../utils/nearby-positions';
+import { GaiaPreview } from '../three/maps/gaia-preview';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import styles from '../explore.module.scss';
 
@@ -16,11 +17,12 @@ function createMarkers(systems: readonly StarSystem[]) {
   const markers = nearbyPositions(systems);
   // Lay the longest baseline across the initial view to leave room for its label.
   const reference = markers.reduce<(typeof markers)[number] | undefined>((farthest, marker) => (marker.distanceLightYears > (farthest?.distanceLightYears ?? 0) ? marker : farthest), undefined);
+  const rotation = new Quaternion();
   if (reference) {
-    const rotation = new Quaternion().setFromUnitVectors(reference.position.clone().normalize(), new Vector3(1, 0, 0));
+    rotation.setFromUnitVectors(reference.position.clone().normalize(), new Vector3(1, 0, 0));
     for (const { position } of markers) position.applyQuaternion(rotation);
   }
-  return markers;
+  return { markers, rotation };
 }
 
 type ProjectedMarker = { id: string; x: number; y: number; visible: boolean };
@@ -47,7 +49,7 @@ const LABEL_OFFSETS = [
   [0, 3],
 ];
 
-function Map({ markers, projectLabels, reportDistance }: { markers: ReturnType<typeof createMarkers>; projectLabels: ProjectLabels; reportDistance: ReportDistanceScale }) {
+function Map({ markers, rotation, showGaia, projectLabels, reportDistance }: ReturnType<typeof createMarkers> & { showGaia: boolean; projectLabels: ProjectLabels; reportDistance: ReportDistanceScale }) {
   const aspect = useThree((state) => state.size.width / Math.max(1, state.size.height));
   const { center, radius } = useMemo(() => {
     const center = markers.reduce((sum, { position }) => sum.add(position), new Vector3()).divideScalar(Math.max(1, markers.length));
@@ -74,7 +76,8 @@ function Map({ markers, projectLabels, reportDistance }: { markers: ReturnType<t
   return (
     <>
       <PerspectiveCamera makeDefault fov={44} position={[center.x, center.y, center.z + distance]} />
-      <OrbitControls target={center} enablePan={false} minDistance={radius * 2.6} maxDistance={radius * 16} />
+      <OrbitControls target={center} enablePan={false} minDistance={showGaia ? Math.min(radius * 2.6, 100) : radius * 2.6} maxDistance={radius * 16} />
+      {showGaia && <GaiaPreview center={center} rotation={rotation} overviewDistance={distance} />}
       <Stars radius={100} depth={50} count={1800} factor={6} saturation={0} fade speed={0} />
       {markers.map(({ system, distanceLightYears, position }) => (
         <group key={system.id}>
@@ -89,9 +92,9 @@ function Map({ markers, projectLabels, reportDistance }: { markers: ReturnType<t
   );
 }
 
-export default function NeighborhoodScene({ systems, onSelect, reportDistance }: { systems: readonly StarSystem[]; onSelect: (id: string) => void; reportDistance: ReportDistanceScale }) {
+export default function NeighborhoodScene({ systems, onSelect, reportDistance, showGaia }: { systems: readonly StarSystem[]; onSelect: (id: string) => void; reportDistance: ReportDistanceScale; showGaia: boolean }) {
   const { t, catalogText, number } = useLanguage();
-  const markers = useMemo(() => createMarkers(systems), [systems]);
+  const { markers, rotation } = useMemo(() => createMarkers(systems), [systems]);
   const labels = useRef<Record<string, HTMLDivElement>>({});
   const projectLabels = useCallback<ProjectLabels>((screenMarkers, width, height) => {
     const entries = screenMarkers.flatMap((marker) => {
@@ -124,7 +127,7 @@ export default function NeighborhoodScene({ systems, onSelect, reportDistance }:
     <>
       <CanvasBoundary>
         <Canvas dpr={[1, 1.5]} aria-label={t('canvas.solarNeighborhood')}>
-          <Map markers={markers} projectLabels={projectLabels} reportDistance={reportDistance} />
+          <Map markers={markers} rotation={rotation} showGaia={showGaia} projectLabels={projectLabels} reportDistance={reportDistance} />
         </Canvas>
       </CanvasBoundary>
       <div className={styles.nearbyLabels}>

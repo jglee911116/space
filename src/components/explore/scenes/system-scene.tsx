@@ -103,6 +103,7 @@ function Star({
   onSelect,
   visible,
   focused,
+  loadSurfaceMap,
 }: {
   body: Body;
   days: RefObject<number>;
@@ -111,12 +112,13 @@ function Star({
   onSelect: SceneProps['onSelect'];
   visible: RefObject<boolean>;
   focused: boolean;
+  loadSurfaceMap: boolean;
 }) {
   const surface = useRef<ShaderMaterial>(null);
   const activityDays = useRef(0.043);
   const pulse = useRef<import('three').MeshBasicMaterial>(null);
   const previousDays = useRef(days.current);
-  const texture = useSurfaceMap(body.surfaceMap?.file);
+  const texture = useSurfaceMap(body.surfaceMap?.file, loadSurfaceMap);
   const isSun = body.stellar?.prominences === true;
   const photosphere = body.stellar?.photosphere;
   const showDwarfFlares = focused && photosphere?.flarePreview === true;
@@ -251,6 +253,10 @@ function Scene({
   const [scratch] = useState(() => ({ offset: new Vector3(), focus: new Vector3(), previousBodyPosition: new Vector3(), translation: new Vector3() }));
   const [distanceScratch] = useState(() => ({ origin: new Vector3(), body: new Vector3(), local: new Vector3() }));
   const [labelPoint] = useState(() => new Vector3());
+  const [surfacePoint] = useState(() => new Vector3());
+  const [nearbySurfaceMaps, setNearbySurfaceMaps] = useState<ReadonlySet<string>>(() => new Set());
+  const nextSurfaceCheck = useRef(0);
+  const mappedBodies = useMemo(() => system.bodies.filter((body) => body.surfaceMap && !body.surfaceMap.hidden), [system]);
   const { width, height } = useThree((state) => state.size);
   const aspect = width / Math.max(height, 1);
   const distance = focusDistance(system, target, overview, farOverview) * Math.max(1, (target === null ? 0.92 : 0.62) / Math.max(aspect, 0.35));
@@ -371,6 +377,26 @@ function Scene({
         }
       }
     }
+    const now = performance.now();
+    if (systemVisible.current && now >= nextSurfaceCheck.current) {
+      nextSurfaceCheck.current = now + 150;
+      const candidates: string[] = [];
+      for (const body of mappedBodies) {
+        const group = bodies.current[body.id];
+        if (!group?.visible || shouldLoadSurfaceMap(body)) continue;
+
+        surfacePoint.copy(group.position).applyMatrix4(camera.matrixWorldInverse);
+        const depth = -surfacePoint.z;
+        if (depth <= 0) continue;
+        const diameter = body.displayRadius * camera.projectionMatrix.elements[5] * height / depth;
+        if (diameter < 24) continue;
+        surfacePoint.applyMatrix4(camera.projectionMatrix);
+        if (Math.abs(surfacePoint.x) <= 1 + diameter / width && Math.abs(surfacePoint.y) <= 1 + diameter / height) {
+          candidates.push(body.id);
+        }
+      }
+      if (candidates.length) setNearbySurfaceMaps((available) => new Set([...available, ...candidates]));
+    }
     if (showBodyLabels) placeLabels(camera);
 
     if (markers.current && markerMaterial.current) {
@@ -405,6 +431,11 @@ function Scene({
       if (id) onLeaveBody(id);
     },
   });
+
+  function shouldLoadSurfaceMap(body: Body) {
+    if (body.surfaceMap?.hidden) return showHiddenSurface && target === body.id;
+    return body.id === target || body.id === satelliteParent || nearbySurfaceMaps.has(body.id);
+  }
 
   function bodyVisible(body: Body) {
     return !satellites.has(body.id) || body.parent === satelliteParent;
@@ -524,7 +555,7 @@ function Scene({
             {body.kind === 'star' ? (
               <group quaternion={motions[body.id].orientation}>
                 <pointLight intensity={1.9} decay={0} />
-                <Star body={body} days={days} paused={paused} events={events} onSelect={onSelect} visible={systemVisible} focused={target === body.id} />
+                <Star body={body} days={days} paused={paused} events={events} onSelect={onSelect} visible={systemVisible} focused={target === body.id} loadSurfaceMap={shouldLoadSurfaceMap(body)} />
               </group>
             ) : (
               <group quaternion={motions[body.id].orientation}>
@@ -561,7 +592,7 @@ function Scene({
                       }}
                     >
                       <PlanetGeometry radius={body.displayRadius} body={body} />
-                      <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={body.surfaceMap?.hidden ? showHiddenSurface && target === body.id : body.kind === 'planet' || body.id === target || body.id === satelliteParent || body.parent === satelliteParent}
+                      <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={shouldLoadSurfaceMap(body)}
                         showSurfaceMap={!body.surfaceMap?.hidden || (showHiddenSurface && target === body.id)} />
                     </mesh>
                   ))}
