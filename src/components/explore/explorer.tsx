@@ -254,7 +254,8 @@ export function Explorer() {
     },
     [locale, number, t],
   );
-  const [paused, setPaused] = useState(false);
+  // 동작 줄이기 설정이면 공전을 멈춘 채 시작한다(Explorer 는 ssr:false 라 window 를 바로 읽는다).
+  const [paused, setPaused] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [galacticDemo, setGalacticDemo] = useState(false);
   const [daysPerSecond, setDaysPerSecond] = useState(REALTIME_DAYS_PER_SECOND);
   useEffect(() => {
@@ -559,7 +560,7 @@ export function Explorer() {
       <header className={styles.header}>
         <div className={styles.brand}>
           <h1>{t(SITE_NAME_KEY)}</h1>
-          <p className={styles.currentLocation}>
+          <p className={styles.currentLocation} aria-live="polite" aria-atomic="true">
             {catalogText(heading)}
             {focusBlackHole ? ` · ${catalogText(milkyWay.center.name)}` : body && (galaxyView || target !== null) ? ` · ${catalogText(body.name)}` : ''}
           </p>
@@ -701,7 +702,7 @@ export function Explorer() {
                   </>
                 ) : (
                   navigation.map((item) => (
-                    <button key={item.id} type="button" aria-pressed={target === item.id || (item !== root && body?.parent === item.id)} onClick={() => navigateTo(item.id)}>
+                    <button key={item.id} type="button" aria-pressed={target === item.id || (item !== root && body?.parent === item.id)} onClick={() => selectSystemBody(item.id)}>
                       {catalogText(item.name)}
                     </button>
                   ))

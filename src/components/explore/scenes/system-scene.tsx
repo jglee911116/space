@@ -206,6 +206,8 @@ function Scene({
   labels,
 }: SceneProps & { farOverview: number; showHiddenSurface: boolean; labels: RefObject<Record<string, HTMLButtonElement | null>> }) {
   const motions = useMemo(() => createMotions(system), [system]);
+  // 동작 줄이기 설정이면 카메라가 목표로 바로 이동한다.
+  const reduceMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, []);
   const orbitPaths = useMemo(() => Object.fromEntries(system.bodies.map((body) => [
     body.id,
     { vertices: new Float32Array(motions[body.id].points), origin: new Vector3() },
@@ -312,7 +314,7 @@ function Scene({
       revealRedSpot.current = false;
     }
     const goal = destination.current;
-    const weight = 1 - Math.exp(-5 * delta);
+    const weight = reduceMotion ? 1 : 1 - Math.exp(-5 * delta);
     // Interpolate the logarithm so presets travel at a comparable speed across every scale.
     const radius = goal === null ? currentRadius : Math.exp(MathUtils.lerp(Math.log(currentRadius), Math.log(goal), weight));
     const sparseZoom = onZoomOut && !system.oortCloud ? MathUtils.smoothstep(Math.log(radius / farOverview), Math.log(2), Math.log(12)) : 0;

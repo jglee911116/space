@@ -27,7 +27,7 @@ export const distantObjects: readonly DistantObject[] = [
   {
     id: 'ic-1623', kind: 'galaxy-merger', name: 'IC 1623', aliases: ['IC1623', 'VV 114', 'Arp 236'],
     observationStatus: 'observed', redshift: 0.0201, rightAscension: 16.9466, declination: -17.5055,
-    color: '#d6bac8', observationImage: '/textures/galaxies/ic-1623/webb.jpg',
+    color: '#d6bac8', observationImage: '/textures/galaxies/ic-1623/webb.webp',
     summary: message('catalog.next.ic1623.summary'),
     sources: [{ label: 'NASA, ESA, CSA, L. Armus & A. Evans · Webb', href: 'https://esawebb.org/images/potm2210a/' }],
   },
@@ -63,7 +63,7 @@ export const distantObjects: readonly DistantObject[] = [
     rightAscension: 339.014,
     declination: 33.964,
     color: '#e8b5ad',
-    observationImage: '/textures/galaxies/stephans-quintet/webb.jpg',
+    observationImage: '/textures/galaxies/stephans-quintet/webb.webp',
     summary: message('catalog.observable-universe.stephans-quintet.summary'),
     sources: [
       { label: 'NASA, ESA, CSA & STScI · Webb NIRCam and MIRI mosaic', href: 'https://esawebb.org/images/weic2208a/' },
@@ -82,7 +82,7 @@ export const distantObjects: readonly DistantObject[] = [
     rightAscension: 9.44295,
     declination: -33.71286,
     color: '#ffc075',
-    observationImage: '/textures/galaxies/cartwheel-galaxy/webb.jpg',
+    observationImage: '/textures/galaxies/cartwheel-galaxy/webb.webp',
     summary: message('catalog.observable-universe.cartwheel-galaxy.summary'),
     sources: [
       { label: 'NASA, ESA, CSA, STScI · CC BY 4.0', href: 'https://esawebb.org/images/weic2211a/' },

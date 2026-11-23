@@ -20,7 +20,7 @@ export const whirlpoolMembers = [
     modelRadiusKpc: 17,
     morphology: 'open-spiral',
     color: '#9cbaff',
-    diskObservation: { file: '/textures/galaxies/m51/disk-hubble.jpg', center: [0.392, 0.51], span: [0.40, 0.54] },
+    diskObservation: { file: '/textures/galaxies/m51/disk-hubble.webp', center: [0.392, 0.51], span: [0.40, 0.54] },
     sources: [
       { label: 'NASA, ESA, S. Beckwith (STScI), the Hubble Heritage Team (STScI/AURA) · CC BY 4.0', href: 'https://esahubble.org/images/heic0506a/' },
       whirlpoolSource,
@@ -48,7 +48,7 @@ export const nearbyShowcase = [
     distanceKpc: 16 * KPC_PER_MLY, skyPosition: { rightAscension: 192.721, declination: 41.121 },
     modelRadiusKpc: 15, morphology: 'open-spiral', diskTilt: 0.43, color: '#e3bb94',
     structure: { winding: 2.05, ring: 0.21, core: 0.12, asymmetry: 0.17, dust: 0.55 },
-    diskObservation: { file: '/textures/galaxies/m94/hubble.jpg', previewFile: '/textures/galaxies/m94/hubble.jpg',
+    diskObservation: { file: '/textures/galaxies/m94/hubble.webp', previewFile: '/textures/galaxies/m94/hubble.webp',
       center: [0.49, 0.51], span: [1.3, 1.3], blendProcedural: true },
     sources: [{ label: 'ESA/Hubble & NASA · Messier 94', href: 'https://esahubble.org/images/potw1542a/' }],
   },
@@ -57,7 +57,7 @@ export const nearbyShowcase = [
     distanceKpc: 30 * KPC_PER_MLY, skyPosition: { rightAscension: 60.97617, declination: -43.34886 },
     modelRadiusKpc: 13, morphology: 'barred-spiral', diskTilt: 0.70, color: '#ecb88c',
     structure: { winding: 1.8, bar: 0.52, ring: 0.24, core: 0.14, asymmetry: 0.28 },
-    diskObservation: { file: '/textures/galaxies/ngc-1512/webb.jpg', previewFile: '/textures/galaxies/ngc-1512/webb.jpg', center: [0.52, 0.49], span: [0.52, 0.80], blendProcedural: true },
+    diskObservation: { file: '/textures/galaxies/ngc-1512/webb.webp', previewFile: '/textures/galaxies/ngc-1512/webb.webp', center: [0.52, 0.49], span: [0.52, 0.80], blendProcedural: true },
     sources: [{ label: 'NASA, ESA, CSA, STScI & PHANGS · Webb', href: 'https://esawebb.org/images/weic2403i/' }],
   },
   {
@@ -66,7 +66,7 @@ export const nearbyShowcase = [
     summary: message('catalog.nearby-showcase.ngc-1566.summary'), superclusterId: 'virgo',
     distanceKpc: 17700, skyPosition: { rightAscension: 65.00159, declination: -54.93801 },
     modelRadiusKpc: 18.5, diskTilt: 0.76, morphology: 'open-spiral', color: '#ecad7c',
-    diskObservation: { file: '/textures/galaxies/ngc-1566/webb.jpg', previewFile: '/textures/galaxies/ngc-1566/webb.jpg', center: [0.486, 0.48], span: [1.57, 0.96], blendProcedural: true },
+    diskObservation: { file: '/textures/galaxies/ngc-1566/webb.webp', previewFile: '/textures/galaxies/ngc-1566/webb.webp', center: [0.486, 0.48], span: [1.57, 0.96], blendProcedural: true },
     sources: [
       { label: 'NASA, ESA, CSA, STScI & PHANGS · Webb · CC BY 4.0', href: 'https://esawebb.org/images/weic2403j/' },
       { label: 'PHANGS–MUSE · Distance and disc parameters', href: 'https://academic.oup.com/mnras/article/520/4/4902/6987280' },

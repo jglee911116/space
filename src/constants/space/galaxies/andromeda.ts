@@ -11,7 +11,7 @@ export const andromeda: Galaxy = {
   modelRadiusKpc: 34,
   color: '#ecd1aa',
   diskTilt: -0.12,
-  diskObservation: { file: '/textures/galaxies/andromeda/disk-wise.jpg', previewFile: '/textures/galaxies/andromeda/disk-wise-preview.jpg', center: [0.50, 0.502], span: [0.277, 0.089], rotation: -0.49 },
+  diskObservation: { file: '/textures/galaxies/andromeda/disk-wise.webp', previewFile: '/textures/galaxies/andromeda/disk-wise-preview.webp', center: [0.50, 0.502], span: [0.277, 0.089], rotation: -0.49 },
   sources: [
     { label: 'NASA/JPL-Caltech/UCLA · WISE infrared mosaic', href: 'https://science.nasa.gov/photojournal/our-neighbor-andromeda/' },
     {

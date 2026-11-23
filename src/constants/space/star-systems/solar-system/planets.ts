@@ -18,7 +18,7 @@ export const planets: Body[] = [
     colors: ['#827974', '#a69a91', '#b6a69b'],
     appearance: 'craters',
     orbit: { axisAu: 0.38709927, eccentricity: 0.20563593, inclination: 7.00497902, meanLongitude: 252.2503235, perihelionLongitude: 77.45779628, ascendingNode: 48.33076593, periodDays: 87.969 },
-    surfaceMap: { file: '/textures/star-systems/solar/planets/mercury/mercury-sss.jpg' },
+    surfaceMap: { file: '/textures/star-systems/solar/planets/mercury/mercury-sss.webp' },
     sources: [...sources, SOLAR_SYSTEM_SCOPE],
   },
   {
@@ -33,7 +33,7 @@ export const planets: Body[] = [
     colors: ['#9d693c', '#ddaa6d', '#fff0c9'],
     appearance: 'clouds',
     orbit: { axisAu: 0.72333566, eccentricity: 0.00677672, inclination: 3.39467605, meanLongitude: 181.9790995, perihelionLongitude: 131.60246718, ascendingNode: 76.67984255, periodDays: 224.7 },
-    surfaceMap: { file: '/textures/star-systems/solar/planets/venus/venus-sss.jpg' },
+    surfaceMap: { file: '/textures/star-systems/solar/planets/venus/venus-sss.webp' },
     sources: [...sources, SOLAR_SYSTEM_SCOPE],
   },
   {
@@ -48,7 +48,7 @@ export const planets: Body[] = [
     colors: ['#123e85', '#517649', '#bcaa77'],
     appearance: 'earth',
     orbit: { axisAu: 1.00000261, eccentricity: 0.01671123, inclination: -1.531e-5, meanLongitude: 100.46457166, perihelionLongitude: 102.93768193, ascendingNode: 0, periodDays: 365.256 },
-    surfaceMap: { file: '/textures/star-systems/solar/planets/earth/earth-sss.jpg' },
+    surfaceMap: { file: '/textures/star-systems/solar/planets/earth/earth-sss.webp' },
     sources: [...sources, SOLAR_SYSTEM_SCOPE],
   },
   {
@@ -66,7 +66,7 @@ export const planets: Body[] = [
     orbit: { axisAu: 1.52371034, eccentricity: 0.0933941, inclination: 1.84969142, meanLongitude: -4.55343205, perihelionLongitude: -23.94362959, ascendingNode: 49.55953891, periodDays: 686.98 },
     surfaceFeatures: 'mars',
     note: message('catalog.planets.mars.surface'),
-    surfaceMap: { file: '/textures/star-systems/solar/planets/mars/mars-sss.jpg' },
+    surfaceMap: { file: '/textures/star-systems/solar/planets/mars/mars-sss.webp' },
     sources: [...sources, { label: 'NASA Mars', href: 'https://science.nasa.gov/mars/facts/' }, SOLAR_SYSTEM_SCOPE],
   },
   {
@@ -85,7 +85,7 @@ export const planets: Body[] = [
     surfaceFeatures: 'jupiter',
     surfaceEffect: 'red-spot',
     // 사진 속 대적점(u ≈ 0.364)이 +Z(구 u = 0.25)를 향하게 맞춘다.
-    surfaceMap: { file: '/textures/star-systems/solar/planets/jupiter/jupiter-cassini-pia07782.jpg', longitudeOffset: 0.114 },
+    surfaceMap: { file: '/textures/star-systems/solar/planets/jupiter/jupiter-cassini-pia07782.webp', longitudeOffset: 0.114 },
     note: message('catalog.planets.jupiter.atmosphere'),
     sources: [...sources, { label: 'NASA/JPL/Space Science Institute · PIA07782', href: 'https://science.nasa.gov/photojournal/cassinis-best-maps-of-jupiter-cylindrical-map/' }],
   },
@@ -115,7 +115,7 @@ export const planets: Body[] = [
     focusScale: 9,
     surfaceFeatures: 'saturn',
     note: message('catalog.planets.saturn.atmosphere'),
-    surfaceMap: { file: '/textures/star-systems/solar/planets/saturn/saturn-sss.jpg' },
+    surfaceMap: { file: '/textures/star-systems/solar/planets/saturn/saturn-sss.webp' },
     sources: [...sources, { label: 'NASA / Cassini', href: 'https://science.nasa.gov/resource/vortex-and-rings/' }, SOLAR_SYSTEM_SCOPE],
   },
   {
@@ -131,7 +131,7 @@ export const planets: Body[] = [
     appearance: 'ice',
     orbit: { axisAu: 19.18916464, eccentricity: 0.04725744, inclination: 0.77263783, meanLongitude: 313.23810451, perihelionLongitude: 170.9542763, ascendingNode: 74.01692503, periodDays: 30589 },
     rings: [{ inner: 1.63, outer: 1.66, color: '#9ebabd', opacity: 0.35 }],
-    surfaceMap: { file: '/textures/star-systems/solar/planets/uranus/uranus-sss.jpg' },
+    surfaceMap: { file: '/textures/star-systems/solar/planets/uranus/uranus-sss.webp' },
     sources: [...sources, SOLAR_SYSTEM_SCOPE],
   },
   {
@@ -149,7 +149,7 @@ export const planets: Body[] = [
     rings: [{ inner: 1.7, outer: 1.74, color: '#8a97b8', opacity: 0.24 }],
     surfaceFeatures: 'neptune',
     note: message('catalog.planets.neptune.surface'),
-    surfaceMap: { file: '/textures/star-systems/solar/planets/neptune/neptune-sss.jpg' },
+    surfaceMap: { file: '/textures/star-systems/solar/planets/neptune/neptune-sss.webp' },
     sources: [...sources, { label: 'NASA / Voyager 2', href: 'https://science.nasa.gov/neptune/neptune-facts/' }, SOLAR_SYSTEM_SCOPE],
   },
 ];

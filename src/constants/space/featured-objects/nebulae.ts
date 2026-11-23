@@ -6,7 +6,7 @@ export const bubbleNebula: FeaturedObject = {
   aliases: ['Bubble Nebula', '거품성운'], description: message('catalog.additions.bubble.summary'),
   kind: 'star-forming-region', observationStatus: 'observed', distanceLightYears: 8000,
   rightAscension: 350.18, declination: 61.20, extentLightYears: 10, color: '#8dcada',
-  observationImage: { file: '/textures/nebulae/star-forming/ngc-7635/hubble.jpg', telescope: 'hubble', shape: 'wind-bubble' },
+  observationImage: { file: '/textures/nebulae/star-forming/ngc-7635/hubble.webp', telescope: 'hubble', shape: 'wind-bubble' },
   embeddedCluster: [[-0.48, 0.36, 0.18]],
   sources: [{ label: 'NASA, ESA & Hubble Heritage Team', href: 'https://esahubble.org/images/heic1608a/' }],
 };
@@ -16,7 +16,7 @@ export const g292Remnant: FeaturedObject = {
   aliases: ['G292', 'G292 초신성 잔해'], description: message('catalog.additions.g292.summary'),
   kind: 'supernova-remnant', observationStatus: 'observed', distanceLightYears: 20000,
   rightAscension: 171.15, declination: -59.26667, extentLightYears: 50, color: '#91cbcc',
-  observationImage: { file: '/textures/nebulae/supernova-remnants/g292/chandra.jpg', telescope: 'chandra', shape: 'oxygen-remnant' },
+  observationImage: { file: '/textures/nebulae/supernova-remnants/g292/chandra.webp', telescope: 'chandra', shape: 'oxygen-remnant' },
   remnantPulsar: { position: [0.06, -0.29, 0.18], color: '#a5d5ff' },
   sources: [
     { label: 'NASA/CXC/Penn State/S. Park et al. · Chandra', href: 'https://chandra.si.edu/photo/2007/g292/' },
@@ -37,7 +37,7 @@ export const horseheadNebula: FeaturedObject = {
   declination: -2.45837,
   extentLightYears: 1.6,
   color: '#df8490',
-  observationImage: { file: '/textures/nebulae/star-forming/horsehead-nebula/eso.jpg', telescope: 'eso', shape: 'horsehead' },
+  observationImage: { file: '/textures/nebulae/star-forming/horsehead-nebula/eso.webp', telescope: 'eso', shape: 'horsehead' },
   sources: [
     { label: 'ESO / VLT · Optical silhouette · CC BY 4.0', href: 'https://www.eso.org/public/images/eso0202b/' },
     { label: 'ESA/Webb, NASA, CSA · NIRCam illuminated edge', href: 'https://esawebb.org/images/weic2411a/' },
@@ -58,7 +58,7 @@ export const tychoRemnant: FeaturedObject = {
   declination: 64.14361,
   extentLightYears: 30,
   color: '#ab8efa',
-  observationImage: { file: '/textures/nebulae/supernova-remnants/tycho-remnant/chandra.jpg', telescope: 'chandra', shape: 'tycho-shell' },
+  observationImage: { file: '/textures/nebulae/supernova-remnants/tycho-remnant/chandra.webp', telescope: 'chandra', shape: 'tycho-shell' },
   sources: [
     { label: 'NASA/CXC/Rutgers/K. Eriksen et al. · Chandra X-ray image', href: 'https://chandra.si.edu/photo/2011/tycho/' },
     { label: 'Eriksen et al. · X-ray stripes in Tycho', href: 'https://arxiv.org/abs/1101.1454' },
@@ -78,7 +78,7 @@ export const helixNebula: FeaturedObject = {
   declination: -20.837,
   extentLightYears: 5.1,
   color: '#7ecdc8',
-  observationImage: { file: '/textures/nebulae/planetary/ngc-7293/hubble.jpg', telescope: 'hubble', shape: 'helix' },
+  observationImage: { file: '/textures/nebulae/planetary/ngc-7293/hubble.webp', telescope: 'hubble', shape: 'helix' },
   sources: [
     { label: 'NASA, ESA, C.R. O’Dell, M. Meixner, P. McCullough and G. Bacon · Hubble/CTIO · CC BY 4.0', href: 'https://esahubble.org/images/opo0432d/' },
     { label: 'NASA Hubble · Caldwell 63', href: 'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-caldwell-catalog/caldwell-63/' },
@@ -98,7 +98,7 @@ export const sn1006: FeaturedObject = {
   declination: -41.92357,
   extentLightYears: 70,
   color: '#958ffd',
-  observationImage: { file: '/textures/nebulae/supernova-remnants/sn-1006/chandra.jpg', telescope: 'chandra', shape: 'sn-1006-shell' },
+  observationImage: { file: '/textures/nebulae/supernova-remnants/sn-1006/chandra.webp', telescope: 'chandra', shape: 'sn-1006-shell' },
   sources: [
     { label: 'NASA/CXC/Middlebury College/F. Winkler et al. · Chandra X-ray image', href: 'https://chandra.si.edu/photo/2013/sn1006/' },
     { label: 'NASA/CXC/SAO (Chandra) · SN 1006', href: 'https://chandra.si.edu/photo/2023/sn1006/' },
@@ -118,7 +118,7 @@ export const ringNebula: FeaturedObject = {
   extentLightYears: 1.6,
   color: '#71c9c3',
   aliases: ['Messier 57'],
-  observationImage: { file: '/textures/nebulae/planetary/m57/webb.jpg', shape: 'ring' },
+  observationImage: { file: '/textures/nebulae/planetary/m57/webb.webp', shape: 'ring' },
   sources: [
     { label: 'ESA/Webb, NASA, CSA, M. Barlow, N. Cox, R. Wesson · CC BY 4.0', href: 'https://esawebb.org/images/weic2320b/' },
     { label: 'NASA Hubble · Ring Nebula', href: 'https://science.nasa.gov/asset/hubble/the-ring-nebula-m57/' },
@@ -137,7 +137,7 @@ export const pillarsOfCreation: FeaturedObject = {
   declination: -13.82,
   extentLightYears: 5,
   color: '#e5a176',
-  observationImage: { file: '/textures/nebulae/star-forming/pillars-of-creation/webb.jpg', shape: 'pillars' },
+  observationImage: { file: '/textures/nebulae/star-forming/pillars-of-creation/webb.webp', shape: 'pillars' },
   sources: [
     { label: 'NASA, ESA, CSA, STScI, J. DePasquale, A. Koekemoer, A. Pagan · CC BY 4.0', href: 'https://esawebb.org/images/weic2216a/' },
     { label: message('catalog.featured-objects.pillars-of-creation.source.nasa-pillars-of-creation-observations'), href: 'https://science.nasa.gov/asset/hubble/eagle-nebula-pillars-of-creation/' },
@@ -159,7 +159,7 @@ export const crabNebula: FeaturedObject = {
   declination: 22.0145,
   extentLightYears: 6,
   color: '#70cddd',
-  observationImage: { file: '/textures/nebulae/supernova-remnants/crab-nebula/webb.jpg', shape: 'crab' },
+  observationImage: { file: '/textures/nebulae/supernova-remnants/crab-nebula/webb.webp', shape: 'crab' },
   sources: [
     { label: 'NASA, ESA, CSA, STScI, T. Temim (Princeton University) · CC BY 4.0', href: 'https://esawebb.org/images/weic2326a/' },
     { label: message('catalog.featured-objects.crab-nebula.source.nasa-crab-nebula-observations'), href: 'https://science.nasa.gov/asset/hubble/crab-nebula-2/' },
@@ -182,7 +182,7 @@ export const sn1987a: FeaturedObject = {
   declination: -69.27028,
   extentLightYears: 2.6,
   color: '#f9a473',
-  observationImage: { file: '/textures/nebulae/supernova-remnants/sn-1987a/webb.jpg', shape: 'ejecta' },
+  observationImage: { file: '/textures/nebulae/supernova-remnants/sn-1987a/webb.webp', shape: 'ejecta' },
   sources: [
     { label: 'NASA, ESA, CSA, M. Matsuura, R. Arendt, C. Fransson, J. Larsson, A. Pagan (STScI) · CC BY 4.0', href: 'https://esawebb.org/images/SN1987a-1/' },
     { label: message('catalog.featured-objects.sn-1987a.source.nasa-webb-sn-1987a'), href: 'https://science.nasa.gov/missions/webb/webb-reveals-new-structures-within-iconic-supernova/' },
@@ -204,7 +204,7 @@ export const ngc604: FeaturedObject = {
   declination: 30.78306,
   extentLightYears: 1300,
   color: '#f3a787',
-  observationImage: { file: '/textures/nebulae/star-forming/ngc-604/webb.jpg', shape: 'nursery' },
+  observationImage: { file: '/textures/nebulae/star-forming/ngc-604/webb.webp', shape: 'nursery' },
   sources: [
     { label: 'NASA, ESA, CSA, STScI · CC BY 4.0', href: 'https://esawebb.org/images/weic2407a/' },
     { label: message('catalog.featured-objects.ngc-604.source.nasa-webb-ngc-604'), href: 'https://science.nasa.gov/missions/webb/peering-into-the-tendrils-of-ngc-604-with-nasas-webb/' },
@@ -231,7 +231,7 @@ export const orionNebula: FeaturedObject = {
     [0.14, -0.07, 0.1],
     [-0.06, -0.11, 0.14],
   ],
-  observationImage: { file: '/textures/nebulae/star-forming/orion-nebula/webb.jpg', shape: 'nursery' },
+  observationImage: { file: '/textures/nebulae/star-forming/orion-nebula/webb.webp', shape: 'nursery' },
   sources: [
     { label: 'ESA/Webb, NASA, CSA, M. Zamani, PDRs4All ERS Team · CC BY 4.0', href: 'https://esawebb.org/images/weic2315b/' },
     { label: message('catalog.featured-objects.orion-nebula.source.nasa-hubble-orion-nebula-and-trapezium'), href: 'https://science.nasa.gov/asset/hubble/orion-nebula/' },
@@ -265,7 +265,7 @@ export const ngc346: FeaturedObject = {
     [1.49, 0.97, -0.46],
     [1.18, 0.65, 0.33],
   ],
-  observationImage: { file: '/textures/nebulae/star-forming/ngc-346/webb.jpg', shape: 'ngc-346-ridges' },
+  observationImage: { file: '/textures/nebulae/star-forming/ngc-346/webb.webp', shape: 'ngc-346-ridges' },
   sources: [
     { label: 'NASA, ESA, CSA, STScI, A. Pagan (STScI) · CC BY 4.0', href: 'https://esawebb.org/images/weic2301a/' },
     { label: 'ESA/Webb · NGC 346 star formation', href: 'https://esawebb.org/news/sciann23003/' },
@@ -285,7 +285,7 @@ export const hh30: FeaturedObject = {
   declination: 18.206675,
   extentLightYears: 0.023,
   color: '#99aaf0',
-  observationImage: { file: '/textures/nebulae/star-forming/hh-30/webb.jpg', shape: 'edge-on-disk' },
+  observationImage: { file: '/textures/nebulae/star-forming/hh-30/webb.webp', shape: 'edge-on-disk' },
   sources: [
     { label: 'ESA/Webb, NASA & CSA, Tazaki et al. · CC BY 4.0', href: 'https://esawebb.org/images/potm2501a/' },
     { label: 'ESA/Webb · HH 30 multiwavelength comparison', href: 'https://esawebb.org/images/potm2501b/' },
@@ -305,7 +305,7 @@ export const l1527Irs: FeaturedObject = {
   declination: 26.05247,
   extentLightYears: 0.28,
   color: '#e9a27e',
-  observationImage: { file: '/textures/nebulae/star-forming/l1527-irs/webb.jpg', shape: 'hourglass' },
+  observationImage: { file: '/textures/nebulae/star-forming/l1527-irs/webb.webp', shape: 'hourglass' },
   sources: [
     { label: 'NASA, ESA, CSA, STScI, J. DePasquale (STScI) · CC BY 4.0', href: 'https://esawebb.org/images/weic2219a/' },
     { label: 'NASA Webb · L1527 IRS 3D', href: 'https://science.nasa.gov/asset/webb/webb-reveals-the-protostar-l1527-irs/' },
@@ -325,7 +325,7 @@ export const hh211: FeaturedObject = {
   declination: 32.01374,
   extentLightYears: 0.52,
   color: '#da9d9f',
-  observationImage: { file: '/textures/nebulae/star-forming/hh-211/webb.jpg', shape: 'bipolar-jet' },
+  observationImage: { file: '/textures/nebulae/star-forming/hh-211/webb.webp', shape: 'bipolar-jet' },
   sources: [
     { label: 'ESA/Webb, NASA, CSA, T. Ray (DIAS) · CC BY 4.0', href: 'https://esawebb.org/images/weic2322a/' },
     { label: 'ESA/Webb · HH 211', href: 'https://esawebb.org/news/weic2322/' },
@@ -345,7 +345,7 @@ export const cassiopeiaA: FeaturedObject = {
   declination: 58.81815,
   extentLightYears: 10,
   color: '#f08e86',
-  observationImage: { file: '/textures/nebulae/supernova-remnants/cassiopeia-a/webb.jpg', shape: 'shocked-shell' },
+  observationImage: { file: '/textures/nebulae/supernova-remnants/cassiopeia-a/webb.webp', shape: 'shocked-shell' },
   sources: [
     { label: 'NASA, ESA, CSA, D. Milisavljevic, T. Temim, I. De Looze, J. DePasquale · CC BY 4.0', href: 'https://esawebb.org/images/weic2311a/' },
     { label: 'ESA/Webb · Hubble and Webb', href: 'https://esawebb.org/images/comparisons/weic2311a/' },
@@ -365,7 +365,7 @@ export const ngc3132: FeaturedObject = {
   declination: -40.43643,
   extentLightYears: 0.5,
   color: '#68bbd3',
-  observationImage: { file: '/textures/nebulae/planetary/ngc-3132/webb.jpg', shape: 'southern-ring' },
+  observationImage: { file: '/textures/nebulae/planetary/ngc-3132/webb.webp', shape: 'southern-ring' },
   sources: [
     { label: 'NASA, ESA, CSA, STScI, Webb ERO Production Team · CC BY 4.0', href: 'https://esawebb.org/images/weic2207b/' },
     { label: 'NASA Webb · NIRCam / MIRI', href: 'https://science.nasa.gov/asset/webb/southern-ring-nebula-nircam-and-miri-images-side-by-side/' },
@@ -385,7 +385,7 @@ export const ngc7027: FeaturedObject = {
   declination: 42.23636,
   extentLightYears: 0.85,
   color: '#8dcfef',
-  observationImage: { file: '/textures/nebulae/planetary/ngc-7027/hubble.jpg', shape: 'jewel-bug', telescope: 'hubble' },
+  observationImage: { file: '/textures/nebulae/planetary/ngc-7027/hubble.webp', shape: 'jewel-bug', telescope: 'hubble' },
   sources: [{ label: 'NASA, ESA & J. Kastner (RIT) · Hubble', href: 'https://esahubble.org/images/heic2011c/' }],
 };
 
@@ -402,7 +402,7 @@ export const ngc6302: FeaturedObject = {
   declination: -37.103,
   extentLightYears: 2.8,
   color: '#de987c',
-  observationImage: { file: '/textures/nebulae/planetary/ngc-6302/hubble.jpg', shape: 'butterfly', telescope: 'hubble' },
+  observationImage: { file: '/textures/nebulae/planetary/ngc-6302/hubble.webp', shape: 'butterfly', telescope: 'hubble' },
   sources: [
     { label: 'NASA, ESA & the Hubble SM4 ERO Team', href: 'https://esahubble.org/images/heic0910h/' },
     { label: 'NASA Hubble · Caldwell 69', href: 'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-caldwell-catalog/caldwell-69/' },
@@ -422,7 +422,7 @@ export const ngc6543: FeaturedObject = {
   declination: 66.63319,
   extentLightYears: 1.1,
   color: '#8dbdf1',
-  observationImage: { file: '/textures/nebulae/planetary/ngc-6543/hubble.jpg', shape: 'cats-eye', telescope: 'hubble' },
+  observationImage: { file: '/textures/nebulae/planetary/ngc-6543/hubble.webp', shape: 'cats-eye', telescope: 'hubble' },
   sources: [
     { label: 'ESA/Hubble & NASA, Z. Tsvetanov · Cat’s Eye Nebula', href: 'https://esahubble.org/images/potm2602b/' },
     { label: 'NASA Hubble · Caldwell 6', href: 'https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-caldwell-catalog/caldwell-6/' },

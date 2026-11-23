@@ -19,7 +19,8 @@ async function getGalaxy(params: Props['params']) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const galaxy = await getGalaxy(params);
-  return { title: translate(await getLocale(params), galaxy.name) };
+  const locale = await getLocale(params);
+  return { title: translate(locale, galaxy.name), description: galaxy.summary ? translate(locale, galaxy.summary) : undefined };
 }
 
 export default async function Page({ params }: Props) {

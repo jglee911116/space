@@ -10,8 +10,8 @@ export const milkyWay: HostGalaxy = {
   morphology: 'barred-spiral',
   color: '#a7bdff',
   diskObservation: {
-    file: '/textures/galaxies/milky-way/disk-spitzer.jpg',
-    previewFile: '/textures/galaxies/milky-way/disk-spitzer-preview.jpg',
+    file: '/textures/galaxies/milky-way/disk-spitzer.webp',
+    previewFile: '/textures/galaxies/milky-way/disk-spitzer-preview.webp',
     center: [0.496, 0.50],
     span: [0.49, 0.49],
     rotation: 1.05,
@@ -35,8 +35,8 @@ export const milkyWay: HostGalaxy = {
     massSolar: 4_000_000,
     shadowDiameterMicroarcseconds: 51.8,
     observationMaps: {
-      intensity: '/textures/black-holes/sgr-a/eht-2022.jpg',
-      polarization: '/textures/black-holes/sgr-a/eht-polarized-2024.jpg',
+      intensity: '/textures/black-holes/sgr-a/eht-2022.webp',
+      polarization: '/textures/black-holes/sgr-a/eht-polarized-2024.webp',
     },
     sources: [
       { label: 'EHT Collaboration · 2022', href: 'https://www.eso.org/public/images/eso2208-eht-mwa/' },

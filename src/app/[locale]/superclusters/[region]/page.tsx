@@ -18,7 +18,8 @@ async function getRegion(params: Props['params']) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  return { title: translate(await getLocale(params), (await getRegion(params)).name) };
+  const [locale, region] = await Promise.all([getLocale(params), getRegion(params)]);
+  return { title: translate(locale, region.name), description: translate(locale, region.summary) };
 }
 
 export default async function Page({ params }: Props) {

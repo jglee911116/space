@@ -15,7 +15,7 @@ export const velaPulsar: FeaturedObject = {
   extentLightYears: 1.8,
   spinSeconds: 0.089,
   color: '#72bdff',
-  observationImage: { file: '/textures/nebulae/pulsar-wind/vela-pulsar/chandra.jpg', shape: 'vela-wind', telescope: 'chandra' },
+  observationImage: { file: '/textures/nebulae/pulsar-wind/vela-pulsar/chandra.webp', shape: 'vela-wind', telescope: 'chandra' },
   sources: [
     { label: 'NASA/CXC/Univ. of Toronto/M. Durant et al. · X-ray time series', href: 'https://chandra.si.edu/photo/2013/vela/' },
     { label: 'Chandra · Vela Pulsar in 3D', href: 'https://chandra.si.edu/deadstar/vela.html' },
@@ -143,7 +143,7 @@ export const m87Star: FeaturedObject = {
   extentLightYears: 0.017,
   blackHoleMassSolar: 6.5e9,
   color: '#ffc386',
-  accretionDisk: { rate: 0.46, width: 0.092, contrast: 0.88, observationMap: '/textures/black-holes/m87-star/eht-ring.jpg' },
+  accretionDisk: { rate: 0.46, width: 0.092, contrast: 0.88, observationMap: '/textures/black-holes/m87-star/eht-ring.webp' },
   sources: [
     {
       label: message('catalog.featured-objects.m87-star.source.eht-first-black-hole-image'),

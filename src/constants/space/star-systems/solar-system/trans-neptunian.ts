@@ -66,7 +66,7 @@ export const transNeptunianBodies: Body[] = [
     colors: ['#583a31', '#aa806a', '#f5e1bd'],
     orbit: orbit([39.5712615, 0.2494485, 17.235653, 110.03994, 115.178666, 14.143655, 90921.851], J2000),
     note: message('catalog.trans-neptunian.new-horizons.surface'),
-    surfaceMap: { file: '/textures/star-systems/solar/dwarf-planets/pluto/pluto-new-horizons.jpg' },
+    surfaceMap: { file: '/textures/star-systems/solar/dwarf-planets/pluto/pluto-new-horizons.webp' },
     sources: [PLUTO_FACTS, HORIZONS, newHorizonsMosaic('pluto'), { label: 'NASA/JHUAPL/SwRI · Pluto color map', href: 'https://science.nasa.gov/resource/pluto-global-color-map/' }],
   },
   {
@@ -252,7 +252,7 @@ export const transNeptunianMoons: Body[] = [
       [JPL_SATELLITE_PHYSICAL, JPL_SATELLITE_ELEMENTS, PLUTO_FACTS, newHorizonsMosaic('charon')],
     ),
     note: message('catalog.trans-neptunian.new-horizons.surface'),
-    surfaceMap: { file: '/textures/star-systems/solar/moons/charon/charon-new-horizons.jpg' },
+    surfaceMap: { file: '/textures/star-systems/solar/moons/charon/charon-new-horizons.webp' },
   },
   outerMoon(
     {

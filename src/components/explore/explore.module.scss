@@ -472,7 +472,7 @@
   color: #a5abbe;
   font: inherit;
   font-size: 0.72rem;
-  opacity: 0.66;
+  opacity: 0.8;
 }
 
 .solarBodyLabel[aria-current='true'],
@@ -847,9 +847,17 @@
   .searchPanel .controls button,
   .searchPanel .searchResults button,
   .searchClose,
-  .searchAll summary {
+  .searchAll summary,
+  .playback button,
+  .speed select,
+  .languageTrigger {
     min-height: 2.75rem;
     box-sizing: border-box;
+  }
+
+  .details .closeDetails {
+    flex-basis: 2.75rem;
+    height: 2.75rem;
   }
 }
 
