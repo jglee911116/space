@@ -15,6 +15,7 @@ const galaxies: Galaxy[] = [...localGroup.galaxies, ...nearbyShowcase, ...galaxy
 
 export type * from './types';
 export { bulletMembers } from './bullet-survey';
+export { gaiaCounterparts } from './gaia-counterparts';
 export { bulletWebbSources } from './bullet-webb-sources';
 export { macsImages, macsMembers } from './macs-j0416-survey';
 export { distantObjects, featuredObjects, galaxies, galaxyAssociations, localGroup, milkyWay, observableUniverse, pandoraArcs, pandoraMembers, superclusters, systems };

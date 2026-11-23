@@ -10,7 +10,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { galaxyAssociations, superclusters, observableUniverse, distantObjects, featuredObjects, galaxies, localGroup, milkyWay, systems, type Galaxy, type StarSystem } from '@/constants/space';
 import { gaiaCounterpartsBySource, gaiaCounterpartsForSystem } from './utils/gaia-counterparts';
-import { readGaiaNeighborRadius, readGaiaSourceId, useGaiaNeighbors, useGaiaSource, type GaiaNeighborRadius } from './utils/gaia-catalog';
+import { gaiaNeighborRadii, gaiaSampleRadiusLightYears, readGaiaNeighborRadius, readGaiaSourceId, useGaiaNeighbors, useGaiaSource, type GaiaNeighborRadius } from './utils/gaia-catalog';
 import { nearbyPositions, featuredGalaxyPosition } from './utils/nearby-positions';
 import { SITE_NAME_KEY } from '@/constants/site';
 import {
@@ -138,7 +138,11 @@ export function Explorer() {
   const infoId = useId();
   const infoButton = useRef<HTMLButtonElement>(null);
   const compactInfo = useSyncExternalStore(subscribeToInfoMedia, () => window.matchMedia(infoMediaQuery).matches, () => false);
-  const [infoPreference, setInfoPreference] = useState<boolean>();
+  // 정보 패널 열림/닫힘 선택은 지금 보는 화면에만 적용한다(이동하거나 뒤로 가면 기본값으로).
+  const viewKey = `${pathname}?${searchParams}`;
+  const [infoChoice, setInfoChoice] = useState<{ viewKey: string; open: boolean }>();
+  const infoPreference = infoChoice?.viewKey === viewKey ? infoChoice.open : undefined;
+  const setInfoPreference = (open: boolean) => setInfoChoice({ viewKey, open });
   const neighborsByDefault = viewParam === 'neighborhood' && !!aroundParam;
   const infoOpen = infoPreference ?? (neighborsByDefault || !compactInfo);
   const closeInfo = () => {
@@ -189,6 +193,8 @@ export function Explorer() {
   const root = system.bodies[0];
   const galaxyAnchor = systems.find((item) => item.id === milkyWay.systemId);
   const hasGalaxy = !externalGalaxy && !!galaxyAnchor && isNearbySystem(system);
+  // 가장 넓은 반경으로도 Gaia 표본(약 163광년)에 닿지 않는 계는 주변 관측원 버튼을 숨긴다.
+  const gaiaReachable = hasGalaxy && (system.neighborhood?.distanceLightYears ?? 0) - Math.max(...gaiaNeighborRadii) <= gaiaSampleRadiusLightYears;
   const [centerZoom, setCenterZoom] = useState<{ close: boolean; entry: ZoomHandoff } | null>(null);
   const [wheelView, setWheelView] = useState<{ scene: 'system' | 'galaxy'; entry: ZoomHandoff } | null>(null);
   const galaxyView =
@@ -328,18 +334,17 @@ export function Explorer() {
       setCenterZoom(null);
       setSpaceEntry(entry);
       setShowCounterjet(false);
+      setClusterLayer('galaxies');
       const current = new URL(window.location.href);
       const destination = new URL(withLocale(url, locale), current);
       if (current.href !== destination.href) window.history.pushState(null, '', destination);
       else setRecenter((revision) => revision + 1);
     },
-    [locale, setHovered, setComparison, setShowCounterjet],
+    [locale, setHovered, setComparison, setShowCounterjet, setClusterLayer],
   );
   const clearGaiaSource = () => navigateSpace(gaiaSourcePath(undefined, around ?? undefined, aroundRadius));
-  const openGaiaNeighbors = useCallback((id: string) => {
-    setInfoPreference(true);
-    navigateSpace(gaiaSourcePath(undefined, id));
-  }, [navigateSpace, setInfoPreference]);
+  // 주변 관측원 화면(?around=)은 정보 패널을 기본으로 연다.
+  const openGaiaNeighbors = useCallback((id: string) => navigateSpace(gaiaSourcePath(undefined, id)), [navigateSpace]);
   const selectGaiaNeighbor = (id: string) => navigateSpace(gaiaSourcePath(id, around ?? undefined, aroundRadius));
   const enterUniverse = useCallback((entry?: ZoomHandoff) => navigateSpace(UNIVERSE_PATH, entry), [navigateSpace]);
   const selectDistantObject = useCallback((id: string) => navigateSpace(distantObjectPath(id)), [navigateSpace]);
@@ -485,7 +490,7 @@ export function Explorer() {
           />
         ) : neighborhoodView ? (
           <NeighborhoodScene
-            key={around ?? gaiaParam ?? 'neighborhood'}
+            key={around ?? 'neighborhood'}
             sourceId={gaiaParam}
             aroundPosition={aroundPosition}
             aroundRadius={aroundRadius}
@@ -564,7 +569,7 @@ export function Explorer() {
             systems={systems}
             onSelect={navigateSpace}
             currentPath={searchParams.size ? `${pathname}?${searchParams}` : pathname}
-            currentName={body && (galaxyView || target !== null) ? `${catalogText(heading)} · ${catalogText(body.name)}` : catalogText(heading)}
+            currentName={body && (galaxyView || target !== null) ? `${catalogText(heading)} · ${catalogText(body.name)}` : aroundName ? `${catalogText(heading)} · ${aroundName}` : catalogText(heading)}
             quickLinks={[
               ...(!cosmicView && !groupView && !externalGalaxy && !neighborhoodView
                 ? [{ label: catalogText(milkyWay.neighborhood.name), onSelect: () => navigateTo(null, 'neighborhood') }] : []),
@@ -801,7 +806,7 @@ export function Explorer() {
             ) : focusBlackHole ? (
               <BlackHoleDetails key={recenter} onClose={closeInfo} showPolarization={showCenterPolarization} onPolarizationChange={setShowCenterPolarization} />
             ) : body && !oortView && (galaxyView || target !== null) ? (
-              <BodyDetails key={`${body.id}:${recenter}`} system={system} body={body} onSelect={navigateTo} onClose={closeInfo} onOpenNeighbors={hasGalaxy ? () => openGaiaNeighbors(systemId) : undefined} />
+              <BodyDetails key={`${body.id}:${recenter}`} system={system} body={body} onSelect={navigateTo} onClose={closeInfo} onOpenNeighbors={gaiaReachable ? () => openGaiaNeighbors(systemId) : undefined} />
             ) : galaxyView ? (
               <GalaxyDetails systems={galaxySystems} />
             ) : oortView && cloud ? (
@@ -809,7 +814,7 @@ export function Explorer() {
             ) : (scale === 'outer' || scale === 'distant') && outerRegion ? (
               <OuterRegionDetails system={system} distant={scale === 'distant'} onToggle={() => navigateTo(null, scale === 'distant' ? 'outer' : 'distant')} />
             ) : (
-              <SystemDetails system={system} onOpenNeighbors={hasGalaxy ? () => openGaiaNeighbors(systemId) : undefined} />
+              <SystemDetails system={system} onOpenNeighbors={gaiaReachable ? () => openGaiaNeighbors(systemId) : undefined} />
             )}
           </div>
         </div>

@@ -7,8 +7,9 @@ const referenceX = 5724.895 / 11235 * 4000;
 const referenceY = (1 - 2576.102 / 4714) * 1678;
 const radians = 16.32 * Math.PI / 180;
 const sceneUnitsPerPixel = 8.67415e-6 * 11235 / 4000 * 73;
-const westOrigin = (104.62 - 104.61441266) * 41;
-const northOrigin = (55.95 - 55.94834987) * 73;
+/** Bullet Cluster 하늘 좌표(RA·Dec, 도) → 장면 평면. 구성원 은하와 Webb 관측원이 같은 투영을 쓴다. */
+export const bulletSkyPosition = (ra: number, dec: number): [number, number] => [(104.62 - ra) * 41, (dec + 55.95) * 73];
+const [westOrigin, northOrigin] = bulletSkyPosition(104.61441266, -55.94834987);
 
 // Expand the presentation without changing the relative sky positions used for matching.
 export const bulletDisplaySpread: [number, number, number] = [1.08, 1.20, 1.32];

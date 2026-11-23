@@ -1,5 +1,4 @@
-import { systems } from '@/constants/space';
-import { gaiaCounterparts } from '@/constants/space/gaia-counterparts';
+import { gaiaCounterparts, systems } from '@/constants/space';
 
 const counterparts = gaiaCounterparts.map((entry) => ({
   ...entry,

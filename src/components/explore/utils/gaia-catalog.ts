@@ -1,34 +1,7 @@
 import { useEffect, useState } from 'react';
 
-export const gaiaCatalogPath = '/catalog/gaia-dr3-nearby';
-export const gaiaRecordBytes = 24;
-export const gaiaVersion = '3';
-
-export type GaiaSource = {
-  id: string;
-  position: [number, number, number];
-  magnitude: number;
-  distance: number;
-};
-
-export function readGaiaSourceId(value: string | null) {
-  if (!value || !/^[1-9]\d{0,18}$/.test(value)) return null;
-  return BigInt(value) <= BigInt('9223372036854775807') ? value : null;
-}
-
-export function decodeGaiaSource(data: DataView, offset: number): GaiaSource {
-  const position: GaiaSource['position'] = [
-    data.getFloat32(offset, true),
-    data.getFloat32(offset + 4, true),
-    data.getFloat32(offset + 8, true),
-  ];
-  return {
-    id: data.getBigUint64(offset + 16, true).toString(),
-    position,
-    magnitude: data.getFloat32(offset + 12, true),
-    distance: Math.hypot(...position),
-  };
-}
+export * from './gaia-format';
+import { decodeGaiaSource, gaiaCatalogPath, gaiaRecordBytes, gaiaVersion, type GaiaSource } from './gaia-format';
 
 async function lookupGaiaSource(id: string, signal: AbortSignal) {
   const numericId = BigInt(id);
@@ -91,10 +64,24 @@ export function gaiaPacketUrl(name: string) {
   return `${gaiaCatalogPath}/${name}?v=${gaiaVersion}`;
 }
 
+// 반경·중심을 바꿔도 이미 받은 manifest·타일은 다시 받지 않는다(실패한 요청은 지워 다시 시도). 정적 파일이라 표본 크기(3.6MB)를 넘지 않는다.
+const gaiaFiles = new Map<string, Promise<Response>>();
+function fetchGaiaFile(name: string) {
+  let request = gaiaFiles.get(name);
+  if (!request) {
+    request = fetch(gaiaPacketUrl(name)).then((response) => {
+      if (!response.ok) throw new Error(`Gaia file unavailable: ${name}`);
+      return response;
+    });
+    request.catch(() => gaiaFiles.delete(name));
+    gaiaFiles.set(name, request);
+  }
+  return request.then((response) => response.clone());
+}
+
 async function findGaiaNeighbors(center: GaiaSource['position'], radius: GaiaNeighborRadius, excludeIds: ReadonlySet<string>, signal: AbortSignal) {
-  const response = await fetch(gaiaPacketUrl('manifest.json'), { signal });
-  if (!response.ok) throw new Error('Gaia manifest unavailable');
-  const manifest: GaiaManifest = await response.json();
+  const manifest: GaiaManifest = await (await fetchGaiaFile('manifest.json')).json();
+  signal.throwIfAborted();
   const tiles = manifest.tiles.filter((tile) => Math.hypot(...tile.center.map((coordinate, axis) =>
     Math.max(0, Math.abs(coordinate - center[axis]) - manifest.tileSize / 2),
   )) <= radius);
@@ -102,13 +89,12 @@ async function findGaiaNeighbors(center: GaiaSource['position'], radius: GaiaNei
   const packets = await Promise.all(tiles.flatMap((tile) => (['bright', 'detail'] as const)
     .filter((level) => tile[level] > 0)
     .map(async (level) => {
-      const packet = await fetch(gaiaPacketUrl(`${tile.id}.${level}.bin`), { signal });
-      if (!packet.ok) throw new Error('Gaia tile unavailable');
-      const data = new DataView(await packet.arrayBuffer());
+      const data = new DataView(await (await fetchGaiaFile(`${tile.id}.${level}.bin`)).arrayBuffer());
       if (data.byteLength !== tile[level] * gaiaRecordBytes) throw new Error('Invalid Gaia tile');
       return data;
     })));
 
+  signal.throwIfAborted();
   const neighbors: GaiaNeighbor[] = [];
   for (const data of packets) {
     for (let offset = 0; offset < data.byteLength; offset += gaiaRecordBytes) {

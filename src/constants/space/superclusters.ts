@@ -24,6 +24,7 @@ export const superclusters: readonly [Supercluster, Supercluster] = [
   {
     id: LANIAKEA_REGION_ID,
     flowModel: 'laniakea',
+    flowAnchors: { norma: 'norma', virgo: 'virgo', hydra: 'hydra-i', fornax: 'fornax' },
     name: message('catalog.superclusters.laniakea.name'),
     spanMly: 520,
     gridRadiusMly: 275,

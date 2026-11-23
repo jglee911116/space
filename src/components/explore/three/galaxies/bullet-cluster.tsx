@@ -3,7 +3,7 @@ import { AdditiveBlending, BackSide, Color } from 'three';
 import { bulletMembers, type ClusterLayer, type Galaxy } from '@/constants/space';
 import { GalacticLabelLayer, GalacticMarker } from '../maps/galactic-marker';
 import { GalaxyPreview } from './galaxy-preview';
-import { BulletWebbField, bulletDisplaySpread, webbSources } from './bullet-webb-field';
+import { BulletWebbField, bulletDisplaySpread, bulletSkyPosition, webbSources } from './bullet-webb-field';
 import { useSurfaceMap } from '../shared/use-surface-map';
 
 const members = bulletMembers.map(([ra, dec, redshift], index) => {
@@ -14,7 +14,7 @@ const members = bulletMembers.map(([ra, dec, redshift], index) => {
     color: ['#e7c196', '#f1d6b8', '#d8deef'][index % 3],
   };
   // Redshift identifies members. It does not determine their depth inside the cluster.
-  const position: [number, number, number] = [(104.62 - ra) * 41, (dec + 55.95) * 73, ((index * 37) % 71) / 35 - 1];
+  const position: [number, number, number] = [...bulletSkyPosition(ra, dec), ((index * 37) % 71) / 35 - 1];
   let nearest = -1;
   let separation = 0.058;
   webbSources.forEach(({ x, y }, source) => {

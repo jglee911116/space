@@ -282,6 +282,8 @@ export type GalaxyAssociation = {
 export type Supercluster = {
   id: string;
   flowModel?: 'laniakea';
+  /** 흐름 모형이 이어 붙는 은하군·은하단 id(galaxyAssociations). norma 는 흐름이 모이는 수렴점. */
+  flowAnchors?: { norma: string; virgo: string; hydra: string; fornax: string };
   name: CatalogText;
   spanMly: number;
   gridRadiusMly: number;

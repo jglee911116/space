@@ -1,4 +1,4 @@
-// Each identifier is verified against the linked cross-identification and the map's Gaia sample.
+// Each identifier is verified against the linked cross-identification; validate-catalog checks it sits on the system in the shipped Gaia sample.
 export const gaiaCounterparts = [
   {
     sourceId: '5853498713190525696',
@@ -19,10 +19,10 @@ export const gaiaCounterparts = [
     reference: 'https://simbad.cds.unistra.fr/simbad/sim-id?Ident=alf+CMa+B',
   },
   {
-    sourceId: '4847957293278177024',
+    sourceId: '5164707970261890560',
     systemId: 'epsilon-eridani',
     bodyId: 'epsilon-eridani-star',
-    reference: 'https://www.cosmos.esa.int/web/gaia/iow_20250513',
+    reference: 'https://simbad.cds.unistra.fr/simbad/sim-id?Ident=eps+Eri',
   },
   {
     sourceId: '3796072592206250624',
@@ -47,5 +47,11 @@ export const gaiaCounterparts = [
     systemId: 'lhs-1140',
     bodyId: 'lhs-1140-star',
     reference: 'https://simbad.cds.unistra.fr/simbad/sim-basic?Ident=LHS1140',
+  },
+  {
+    sourceId: '2835207319109249920',
+    systemId: '51-pegasi',
+    bodyId: '51-pegasi-a',
+    reference: 'https://simbad.cds.unistra.fr/simbad/sim-id?Ident=51+Peg',
   },
 ] as const;

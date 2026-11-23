@@ -231,7 +231,10 @@ export default function NeighborhoodScene({ systems, onSelect, reportDistance, s
   onSelectAroundSource: (id: string) => void;
 }) {
   const { t, catalogText, number } = useLanguage();
-  const [pickedSource, setSource] = useState<GaiaSource | null>(null);
+  // 고른 점은 그때의 ?gaia= 값에 묶어, URL 의 관측원이 바뀌면(검색·공유 링크) 캔버스를 다시 만들지 않고도 비워진다.
+  const [picked, setPicked] = useState<{ sourceId: string | null; source: GaiaSource | null }>({ sourceId: null, source: null });
+  const pickedSource = picked.sourceId === sourceId ? picked.source : null;
+  const setSource = useCallback((source: GaiaSource | null) => setPicked({ sourceId, source }), [sourceId]);
   const lookupId = readGaiaSourceId(sourceId);
   const lookup = useGaiaSource(lookupId);
   const focusedSource = lookup?.source ?? undefined;
@@ -239,12 +242,12 @@ export default function NeighborhoodScene({ systems, onSelect, reportDistance, s
   const selectSource = useCallback((item: GaiaSource | null) => {
     if (aroundPosition && item) onSelectAroundSource(item.id);
     else setSource(item);
-  }, [aroundPosition, onSelectAroundSource]);
+  }, [aroundPosition, onSelectAroundSource, setSource]);
   const sourceStatus = sourceId && !source
     ? !lookupId || lookup?.source === null && !lookup.failed ? 'search.gaiaMissing'
       : lookup?.failed ? 'search.gaiaUnavailable' : 'search.gaiaLoading'
     : null;
-  const enterSolar = useCallback(() => onSelect('solar'), [onSelect]);
+  const enterSolar = useCallback(() => onSelect(milkyWay.systemId), [onSelect]);
   const { markers, rotation } = useMemo(() => createMarkers(systems), [systems]);
   const labels = useRef<Record<string, HTMLDivElement>>({});
   const projectLabels = useCallback<ProjectLabels>((screenMarkers, width, height) => {

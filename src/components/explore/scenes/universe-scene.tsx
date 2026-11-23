@@ -16,7 +16,7 @@ import { useSurfaceMap } from '../three/shared/use-surface-map';
 import { CosmicMapMarkers, type CosmicMapMarker } from '../three/maps/cosmic-map-markers';
 import { GalaxyPreview } from '../three/galaxies/galaxy-preview';
 import { CosmicBackground } from '../three/maps/cosmic-background';
-import { SurveyCluster } from '../three/galaxies/pandora-cluster';
+import { SurveyCluster } from '../three/galaxies/survey-cluster';
 import { BulletCluster } from '../three/galaxies/bullet-cluster';
 import type { ClusterLayer } from '@/constants/space';
 import { DistanceRings } from '../three/maps/distance-rings';
@@ -136,9 +136,10 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
     }));
   }, [association, region]);
   const flowAnchors = useMemo(() => {
-    const anchor = (id: string) => markers.find(({ clusterId }) => clusterId === id)?.position;
-    return { norma: anchor('norma'), virgo: anchor('virgo'), hydra: anchor('hydra-i'), fornax: anchor('fornax') };
-  }, [markers]);
+    const anchor = (id: string | undefined) => markers.find(({ clusterId }) => clusterId === id)?.position;
+    const ids = region?.flowAnchors;
+    return { norma: anchor(ids?.norma), virgo: anchor(ids?.virgo), hydra: anchor(ids?.hydra), fornax: anchor(ids?.fornax) };
+  }, [markers, region]);
   const flowRegion = !association && region?.flowModel === 'laniakea' ? region : undefined;
   const bodies = useMemo(() => {
     if (association?.volumeMembers) return [];

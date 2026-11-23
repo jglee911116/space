@@ -79,6 +79,7 @@ export function GaiaPreview({ rotation, center, overviewDistance, onSelect, onEx
   const nextSample = useRef(0);
   const projection = useMemo(() => new Matrix4(), []);
   const frustum = useMemo(() => new Frustum(), []);
+  const focus = useMemo(() => new Vector3(), []);
   const bounds = useMemo(() => {
     if (!manifest) return [];
     const transform = new Matrix4().makeRotationFromQuaternion(rotation);
@@ -117,9 +118,11 @@ export function GaiaPreview({ rotation, center, overviewDistance, onSelect, onEx
     camera.updateMatrixWorld();
     frustum.setFromProjectionMatrix(projection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     const detail = distanceToCenter < overviewDistance * 0.65;
+    // 카메라가 보는 지점에서 가까운 타일부터 — 카메라 쪽 앞면만 채우지 않고 초점 둘레를 고르게 채운다.
+    camera.getWorldDirection(focus).multiplyScalar(distanceToCenter).add(camera.position);
     const ranked = bounds.filter(({ box }) => frustum.intersectsBox(box)).map(({ tile, position }) => ({
-      tile, distance: camera.position.distanceTo(position),
-    })).sort((a, b) => a.distance - b.distance || a.tile.id.localeCompare(b.tile.id));
+      tile, focusDistance: focus.distanceTo(position), distance: camera.position.distanceTo(position),
+    })).sort((a, b) => a.focusDistance - b.focusDistance || a.tile.id.localeCompare(b.tile.id));
     let remainingDetail = detail ? detailBudget : 0;
     const next = ranked.slice(0, tileBudget).map(({ tile, distance }) => {
       const detailed = remainingDetail > 0 && tile.detail > 0 && manifest.tileSize * camera.projectionMatrix.elements[5] * size.height / distance > 38;

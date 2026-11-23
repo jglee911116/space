@@ -42,7 +42,8 @@ function indexEntry(entry: Entry) {
     entry.context ? translate(locale, entry.context) : '',
     entry.parentContext ? translate(locale, entry.parentContext) : '',
   ]);
-  const terms = [...new Set(nameFields.map((value) => compactTerm(words(value))).filter(Boolean))];
+  // 'Messier 51' 은 m51 과 messier51 둘 다 색인해 'Messier' 만 쳐도 찾게 한다.
+  const terms = [...new Set(nameFields.flatMap((value) => { const tokens = words(value); return [tokens.join(''), compactTerm(tokens)]; }).filter(Boolean))];
   const nameTokens = new Set(nameFields.flatMap(words));
   const tokens = new Set([...nameTokens, ...qualifiers.flatMap(words)]);
   return { ...entry, terms, nameTokens, tokens };

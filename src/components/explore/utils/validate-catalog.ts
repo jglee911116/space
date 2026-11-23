@@ -1,9 +1,13 @@
-import { gaiaCounterparts } from '@/constants/space/gaia-counterparts';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { Vector3 } from 'three';
+import { decodeGaiaSource, gaiaCatalogPath, gaiaRecordBytes, gaiaSampleRadiusLightYears, type GaiaSource } from './gaia-format';
+import { nearbyPositions } from './nearby-positions';
 import { gaiaSourcePath, readExplorerQuery } from './paths';
 import { createSearchCatalog } from './catalog-search';
 import { regionMarkers } from './cluster-markers';
 import { languages } from '@/i18n/messages';
-import { distantObjects, featuredObjects, galaxies, galaxyAssociations, localGroup, milkyWay, observableUniverse, superclusters, systems } from '@/constants/space';
+import { distantObjects, featuredObjects, gaiaCounterparts, galaxies, galaxyAssociations, localGroup, milkyWay, observableUniverse, superclusters, systems } from '@/constants/space';
 
 function requireValue(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(`Catalog: ${message}`);
@@ -121,12 +125,28 @@ export function validateCatalog() {
   }
   checkText({ galaxyAssociations, galaxies, systems, featuredObjects, distantObjects, superclusters, localGroup, observableUniverse }, 'data');
 
+  const manifest = JSON.parse(readFileSync(join(process.cwd(), 'public', gaiaCatalogPath, 'manifest.json'), 'utf8'));
+  requireValue(Math.abs(manifest.maxDistanceLightYears - gaiaSampleRadiusLightYears) < 1, 'gaiaSampleRadiusLightYears differs from the Gaia manifest');
+  for (const region of superclusters) {
+    for (const id of Object.values(region.flowAnchors ?? {})) requireValue(regionMarkers(region).some(({ clusterId }) => clusterId === id), `${region.id}.flowAnchors: ${id} is not on the map`);
+  }
+
   const matchedSourceIds = new Set<string>();
   for (const { sourceId, systemId, bodyId } of gaiaCounterparts) {
     requireValue(/^[1-9]\d{0,18}$/.test(sourceId) && !matchedSourceIds.has(sourceId), `invalid or duplicate Gaia source ${sourceId}`);
     matchedSourceIds.add(sourceId);
     const system = systems.find(({ id }) => id === systemId);
     requireValue(system?.bodies.some((body) => body.id === bodyId && body.kind === 'star'), `unknown Gaia counterpart ${systemId}/${bodyId}`);
+    // 다른 별의 ID 를 잘못 넣으면(예: 82 Eridani) 위치가 수 광년 이상 어긋난다.
+    const shard = Number((BigInt(sourceId) >> BigInt(40)) & BigInt(63));
+    const packet = readFileSync(join(process.cwd(), 'public', gaiaCatalogPath, 'index', `${shard}.bin`));
+    const data = new DataView(packet.buffer, packet.byteOffset, packet.byteLength);
+    let source: GaiaSource | undefined;
+    for (let offset = 0; offset < data.byteLength && !source; offset += gaiaRecordBytes) {
+      if (data.getBigUint64(offset + 16, true).toString() === sourceId) source = decodeGaiaSource(data, offset);
+    }
+    const expected = nearbyPositions(systems).find((item) => item.system.id === systemId)?.position;
+    requireValue(source && expected && expected.distanceTo(new Vector3(...source.position)) < 1, `Gaia ${sourceId} is not at ${systemId}`);
   }
 
   const search = createSearchCatalog(systems);
