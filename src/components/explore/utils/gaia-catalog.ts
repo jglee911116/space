@@ -69,7 +69,12 @@ export function useGaiaSource(id: string | null) {
   return id && result?.id === id ? result : undefined;
 }
 
-export const gaiaNeighborRadius = 10;
+export const gaiaNeighborRadii = [5, 10, 25] as const;
+export type GaiaNeighborRadius = (typeof gaiaNeighborRadii)[number];
+
+export function readGaiaNeighborRadius(value: string | null): GaiaNeighborRadius {
+  return value === '5' ? 5 : value === '25' ? 25 : 10;
+}
 const gaiaNeighborLimit = 20;
 
 type Tile = {
@@ -86,13 +91,13 @@ export function gaiaPacketUrl(name: string) {
   return `${gaiaCatalogPath}/${name}?v=${gaiaVersion}`;
 }
 
-async function findGaiaNeighbors(center: GaiaSource['position'], excludeId: string | undefined, signal: AbortSignal) {
+async function findGaiaNeighbors(center: GaiaSource['position'], radius: GaiaNeighborRadius, excludeIds: ReadonlySet<string>, signal: AbortSignal) {
   const response = await fetch(gaiaPacketUrl('manifest.json'), { signal });
   if (!response.ok) throw new Error('Gaia manifest unavailable');
   const manifest: GaiaManifest = await response.json();
   const tiles = manifest.tiles.filter((tile) => Math.hypot(...tile.center.map((coordinate, axis) =>
     Math.max(0, Math.abs(coordinate - center[axis]) - manifest.tileSize / 2),
-  )) <= gaiaNeighborRadius);
+  )) <= radius);
 
   const packets = await Promise.all(tiles.flatMap((tile) => (['bright', 'detail'] as const)
     .filter((level) => tile[level] > 0)
@@ -112,31 +117,31 @@ async function findGaiaNeighbors(center: GaiaSource['position'], excludeId: stri
         data.getFloat32(offset + 4, true) - center[1],
         data.getFloat32(offset + 8, true) - center[2],
       );
-      if (separation > gaiaNeighborRadius) continue;
+      if (separation > radius) continue;
       const source = decodeGaiaSource(data, offset);
-      if (source.id !== excludeId) neighbors.push({ source, separation });
+      if (!excludeIds.has(source.id)) neighbors.push({ source, separation });
     }
   }
   return neighbors.sort((a, b) => a.separation - b.separation || a.source.id.localeCompare(b.source.id));
 }
 
-type NeighborsResult = { center: GaiaSource['position']; entries: GaiaNeighbor[]; total: number; failed?: boolean };
+type NeighborsResult = { center: GaiaSource['position']; radius: GaiaNeighborRadius; entries: GaiaNeighbor[]; total: number; failed?: boolean };
 
-export function useGaiaNeighbors(center: GaiaSource['position'] | undefined, excludeId?: string) {
+export function useGaiaNeighbors(center: GaiaSource['position'] | undefined, radius: GaiaNeighborRadius, excludedSourceIds: string) {
   const [result, setResult] = useState<NeighborsResult>();
   useEffect(() => {
     if (!center) return;
     const controller = new AbortController();
-    void findGaiaNeighbors(center, excludeId, controller.signal)
+    void findGaiaNeighbors(center, radius, new Set(excludedSourceIds.split(',')), controller.signal)
       .then((neighbors) => {
         if (!controller.signal.aborted) {
-          setResult({ center, entries: neighbors.slice(0, gaiaNeighborLimit), total: neighbors.length });
+          setResult({ center, radius, entries: neighbors.slice(0, gaiaNeighborLimit), total: neighbors.length });
         }
       })
       .catch(() => {
-        if (!controller.signal.aborted) setResult({ center, entries: [], total: 0, failed: true });
+        if (!controller.signal.aborted) setResult({ center, radius, entries: [], total: 0, failed: true });
       });
     return () => controller.abort();
-  }, [center, excludeId]);
-  return center && result?.center === center ? result : undefined;
+  }, [center, radius, excludedSourceIds]);
+  return center && result?.center === center && result.radius === radius ? result : undefined;
 }

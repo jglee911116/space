@@ -1,4 +1,8 @@
 {
+  "details.gaiaRadiusControl": "Gaia search radius",
+  "details.gaiaLinkedRecords": "Linked Gaia records",
+  "details.gaiaCrossIdentification": "Cross-identification reference",
+  "details.gaiaOpenNamedObject": "Open registered object",
   "search.allDestinations": "All destinations",
   "search.recent": "Recently visited",
   "search.quickLinks": "Quick destinations",

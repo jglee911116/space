@@ -1,3 +1,4 @@
+import { gaiaCounterparts } from '@/constants/space/gaia-counterparts';
 import { gaiaSourcePath, readExplorerQuery } from './paths';
 import { createSearchCatalog } from './catalog-search';
 import { regionMarkers } from './cluster-markers';
@@ -119,6 +120,14 @@ export function validateCatalog() {
     requireValue(group.gridRadiusMly > 0 && group.members.length > 1 && group.members.every((member) => member.skyPosition && member.distanceKpc > 0), `${group.id}: invalid scale or members`);
   }
   checkText({ galaxyAssociations, galaxies, systems, featuredObjects, distantObjects, superclusters, localGroup, observableUniverse }, 'data');
+
+  const matchedSourceIds = new Set<string>();
+  for (const { sourceId, systemId, bodyId } of gaiaCounterparts) {
+    requireValue(/^[1-9]\d{0,18}$/.test(sourceId) && !matchedSourceIds.has(sourceId), `invalid or duplicate Gaia source ${sourceId}`);
+    matchedSourceIds.add(sourceId);
+    const system = systems.find(({ id }) => id === systemId);
+    requireValue(system?.bodies.some((body) => body.id === bodyId && body.kind === 'star'), `unknown Gaia counterpart ${systemId}/${bodyId}`);
+  }
 
   const search = createSearchCatalog(systems);
   requireValue(new Set(search.map(({ path }) => path)).size === search.length, 'duplicate search destinations');

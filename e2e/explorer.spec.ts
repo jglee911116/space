@@ -997,18 +997,24 @@ test('시리우스 중심으로 10광년 이내 Gaia 표본을 거리순으로 �
   await details(page).getByRole('button', { name: '항성계 주변 Gaia 관측원 보기' }).click();
   await expect(page).toHaveURL('/ko?view=neighborhood&around=sirius');
   await expect(details(page).getByRole('heading', { level: 2 })).toHaveText('시리우스 주변 Gaia 관측원');
-  const first = details(page).getByRole('list').first().getByRole('button').first();
-  await expect(first).toContainText(`Gaia DR3 ${id}`);
-  await expect(first).toContainText('0.12광년');
-  await first.click();
+  const linked = details(page).getByRole('group', { name: '연결된 Gaia 관측 기록' });
+  const siriusB = linked.getByRole('button', { name: /시리우스 B/ });
+  await expect(siriusB).toContainText(`Gaia DR3 ${id}`);
+  const nearby = details(page).getByRole('list').nth(1);
+  await expect(nearby.getByRole('button').first()).toContainText('5.74광년');
+  await expect(nearby.getByRole('button', { name: /프록시마 센타우리/ })).toContainText('Gaia DR3 5853498713190525696');
+  await expect(nearby.getByRole('button', { name: new RegExp(id) })).toHaveCount(0);
+  await siriusB.click();
   await expect(page).toHaveURL(`/ko?view=neighborhood&gaia=${id}&around=sirius`);
   const card = page.getByRole('complementary', { name: 'Gaia DR3 관측원' });
   await expect(card).toContainText(id);
+  await expect(card).toContainText('시리우스 B');
+  await expect(card.getByRole('link', { name: '등록된 천체 보기' })).toHaveAttribute('href', `${milkyWay}?system=sirius&target=sirius-b`);
   await card.getByRole('button', { name: '이 관측원 주변 보기' }).click();
   await expect(page).toHaveURL(`/ko?view=neighborhood&around=${id}`);
-  await expect(details(page).getByRole('heading', { level: 2 })).toContainText(`Gaia DR3 ${id} 주변`);
+  await expect(details(page).getByRole('heading', { level: 2 })).toContainText('시리우스 B 주변');
   await expect(details(page).getByRole('status')).toContainText('개 표시');
-  await expect(details(page).getByRole('button', { name: new RegExp(id) })).toHaveCount(0);
+  await expect(details(page).getByRole('list').nth(1).getByRole('button', { name: new RegExp(id) })).toHaveCount(0);
 });
 
 test('모바일 찾기 패널에서 빠른 이동, 전체 목록, 검색, 최근 방문을 사용할 수 있다', async ({ page }) => {
@@ -1041,4 +1047,54 @@ test('모바일 찾기 패널에서 빠른 이동, 전체 목록, 검색, 최근
   await page.keyboard.press('Escape');
   await expect(panel).toBeHidden();
   await expect(trigger).toBeFocused();
+});
+
+test('Gaia 반경을 바꾸고 관측원 선택 및 새로고침 후에도 유지한다', async ({ page }) => {
+  await page.goto('/ko?view=neighborhood&around=sirius');
+  const panel = details(page);
+  const radii = panel.getByRole('group', { name: 'Gaia 검색 반경' });
+  const total = panel.getByRole('status');
+  await expect(radii.getByRole('button', { name: '10광년', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(total).toContainText('표본 8개');
+  await radii.getByRole('button', { name: '5광년', exact: true }).click();
+  await expect(page).toHaveURL('/ko?view=neighborhood&around=sirius&radius=5');
+  await expect(total).toHaveText('이 범위에 표시할 Gaia 표본이 없습니다.');
+  await radii.getByRole('button', { name: '25광년', exact: true }).click();
+  await expect(total).toHaveText('표본 145개 중 가까운 20개 표시');
+
+  const scale = page.getByRole('group', { name: '화면 거리 축척' });
+  await expect(scale).toContainText('화면 축척');
+  const scaleBefore = await scale.innerText();
+  const neighbor = panel.getByRole('button', { name: /3139847906307949696/ });
+  await neighbor.click();
+  await expect(page).toHaveURL('/ko?view=neighborhood&gaia=3139847906307949696&around=sirius&radius=25');
+  await expect(neighbor).toHaveAttribute('aria-current', 'true');
+  const card = page.getByRole('complementary', { name: 'Gaia DR3 관측원' });
+  await expect(card).toContainText('3139847906307949696');
+  await expect(scale).toHaveText(scaleBefore);
+
+  await page.reload();
+  await expect(radii.getByRole('button', { name: '25광년', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(card).toBeVisible();
+  await card.getByRole('button', { name: '천체 정보 닫기' }).click();
+  await expect(page).toHaveURL('/ko?view=neighborhood&around=sirius&radius=25');
+});
+
+test('찾기에서 동의어, 카탈로그 번호와 이름이 같은 천체를 구분한다', async ({ page }) => {
+  await page.goto(milkyWay);
+  await page.getByRole('button', { name: '천체·영역 찾기' }).click();
+  const panel = page.getByRole('region', { name: '천체·영역 찾기' });
+  const input = panel.getByRole('searchbox');
+  await input.fill('태양 근방');
+  await expect(panel.getByRole('button', { name: /^태양계 이웃/ })).toBeVisible();
+  for (const text of ['M42', 'M 42', 'Messier 0042', '메시에 42']) {
+    await input.fill(text);
+    await expect(panel.getByRole('list').getByRole('button').first()).toContainText('오리온성운');
+  }
+  await input.fill('로스 128');
+  await expect(panel.getByRole('button', { name: '로스 128 항성계 · 우리은하', exact: true })).toBeVisible();
+  await expect(panel.getByRole('button', { name: '로스 128 항성 · 우리은하', exact: true })).toBeVisible();
+  await input.fill('로스 128 항성');
+  await input.press('Enter');
+  await expect(page).toHaveURL(`${milkyWay}?system=ross-128&target=ross-128-star`);
 });

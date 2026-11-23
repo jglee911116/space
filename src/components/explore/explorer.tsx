@@ -9,7 +9,8 @@ import { LanguageSelect } from './language-select';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { galaxyAssociations, superclusters, observableUniverse, distantObjects, featuredObjects, galaxies, localGroup, milkyWay, systems, type Galaxy, type StarSystem } from '@/constants/space';
-import { readGaiaSourceId, useGaiaNeighbors, useGaiaSource } from './utils/gaia-catalog';
+import { gaiaCounterpartsBySource, gaiaCounterpartsForSystem } from './utils/gaia-counterparts';
+import { readGaiaNeighborRadius, readGaiaSourceId, useGaiaNeighbors, useGaiaSource, type GaiaNeighborRadius } from './utils/gaia-catalog';
 import { nearbyPositions, featuredGalaxyPosition } from './utils/nearby-positions';
 import { SITE_NAME_KEY } from '@/constants/site';
 import {
@@ -128,7 +129,7 @@ export function Explorer() {
   const { t, catalogText, locale, number, measurement } = useLanguage();
   const pathname = withoutLocale(usePathname());
   const searchParams = useSearchParams();
-  const { system: systemParam, target: targetParam, view: viewParam, focus, galaxy: galaxyParam, cluster: clusterParam, gaia: gaiaParam, around: aroundParam } = readExplorerQuery(searchParams);
+  const { system: systemParam, target: targetParam, view: viewParam, focus, galaxy: galaxyParam, cluster: clusterParam, gaia: gaiaParam, around: aroundParam, radius: radiusParam } = readExplorerQuery(searchParams);
   const universeView = pathname === UNIVERSE_PATH;
   const region = superclusters.find(({ id }) => pathname === superclusterPath(id));
   const cosmicView = universeView || !!region;
@@ -174,8 +175,13 @@ export function Explorer() {
   const awaitingAroundSource = !!aroundGaiaId && !aroundSource;
   const aroundStar = around ? gaiaSystemCenters.get(around) : undefined;
   const aroundPosition = aroundStar?.position ?? aroundSource?.source?.position;
-  const neighbors = useGaiaNeighbors(aroundPosition, aroundSource?.source?.id);
-  const aroundName = aroundStar ? catalogText(aroundStar.name) : around ? `Gaia DR3 ${around}` : undefined;
+  const aroundCounterpart = aroundGaiaId ? gaiaCounterpartsBySource.get(aroundGaiaId) : undefined;
+  const systemCounterparts = gaiaCounterpartsForSystem(around);
+  const excludedSourceIds = systemCounterparts?.map(({ sourceId }) => sourceId).join(',') ?? aroundGaiaId ?? '';
+  const aroundRadius = readGaiaNeighborRadius(radiusParam);
+  const neighbors = useGaiaNeighbors(aroundPosition, aroundRadius, excludedSourceIds);
+  const aroundName = aroundStar ? catalogText(aroundStar.name)
+    : aroundCounterpart?.name ? catalogText(aroundCounterpart.name) : around ? `Gaia DR3 ${around}` : undefined;
   const outerRegion = system.outerRegion;
   const cloud = system.oortCloud;
   const overview: Overview =
@@ -329,12 +335,12 @@ export function Explorer() {
     },
     [locale, setHovered, setComparison, setShowCounterjet],
   );
-  const clearGaiaSource = () => navigateSpace(gaiaSourcePath(undefined, around ?? undefined));
+  const clearGaiaSource = () => navigateSpace(gaiaSourcePath(undefined, around ?? undefined, aroundRadius));
   const openGaiaNeighbors = useCallback((id: string) => {
     setInfoPreference(true);
     navigateSpace(gaiaSourcePath(undefined, id));
   }, [navigateSpace, setInfoPreference]);
-  const selectGaiaNeighbor = (id: string) => navigateSpace(gaiaSourcePath(id, around ?? undefined));
+  const selectGaiaNeighbor = (id: string) => navigateSpace(gaiaSourcePath(id, around ?? undefined, aroundRadius));
   const enterUniverse = useCallback((entry?: ZoomHandoff) => navigateSpace(UNIVERSE_PATH, entry), [navigateSpace]);
   const selectDistantObject = useCallback((id: string) => navigateSpace(distantObjectPath(id)), [navigateSpace]);
   const exitDistantObject = useCallback((id: string) => navigateSpace(universeFocusPath(id)), [navigateSpace]);
@@ -479,11 +485,13 @@ export function Explorer() {
           />
         ) : neighborhoodView ? (
           <NeighborhoodScene
-            key={`${around ?? ''}:${gaiaParam ?? ''}`}
+            key={around ?? gaiaParam ?? 'neighborhood'}
             sourceId={gaiaParam}
             aroundPosition={aroundPosition}
+            aroundRadius={aroundRadius}
             neighbors={neighbors?.entries}
             onOpenNeighbors={openGaiaNeighbors}
+            onSelectAroundSource={selectGaiaNeighbor}
             onClearSource={clearGaiaSource}
             showGaia={showGaia}
             systems={galaxySystems}
@@ -782,6 +790,9 @@ export function Explorer() {
             ) : neighborhoodView ? (
               <NeighborhoodDetails showGaia={showGaia} onGaiaChange={setShowGaia}
                 aroundName={aroundName} neighbors={neighbors}
+                radius={aroundRadius}
+                onChangeRadius={(radius: GaiaNeighborRadius) => navigateSpace(gaiaSourcePath(undefined, around ?? undefined, radius))}
+                counterparts={systemCounterparts ?? (aroundCounterpart ? [aroundCounterpart] : undefined)}
                 awaitingCenter={awaitingAroundSource}
                 centerUnavailable={!aroundPosition && !awaitingAroundSource}
                 selectedId={gaiaParam} onSelectNeighbor={selectGaiaNeighbor}

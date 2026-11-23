@@ -1,19 +1,21 @@
 'use client';
 
+import Link from 'next/link';
 import { useLanguage } from '@/i18n/language';
-import { Line, OrbitControls, PerspectiveCamera, Stars } from '@react-three/drei';
+import { Billboard, Line, OrbitControls, PerspectiveCamera, Stars } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { MathUtils, Quaternion, Vector3 } from 'three';
-import type { StarSystem } from '@/constants/space';
+import { milkyWay, type StarSystem } from '@/constants/space';
 import { KM_PER_AU, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { nearbyPositions, neighborhoodOverviewDistance } from '../utils/nearby-positions';
 import { GaiaPreview } from '../three/maps/gaia-preview';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import type { ZoomHandoff } from '../utils/zoom';
-import { readGaiaSourceId, useGaiaSource, type GaiaNeighbor, type GaiaSource } from '../utils/gaia-catalog';
-import { gaiaSourcePath } from '../utils/paths';
+import { readGaiaSourceId, useGaiaSource, type GaiaNeighbor, type GaiaNeighborRadius, type GaiaSource } from '../utils/gaia-catalog';
+import { gaiaCounterpartsBySource } from '../utils/gaia-counterparts';
+import { gaiaSourcePath, systemPath } from '../utils/paths';
 import { withLocale } from '@/i18n/routing';
 import styles from '../explore.module.scss';
 
@@ -59,10 +61,25 @@ type MapActions = {
   onEnterSolar: () => void;
 };
 
-function Map({ systems, markers, rotation, focusedSource, aroundPosition, neighbors, showGaia, projectLabels, reportDistance, onSource, onExit, onEnterSolar }: ReturnType<typeof createMarkers> & MapActions & { systems: readonly StarSystem[]; focusedSource?: GaiaSource; aroundPosition?: GaiaSource['position']; neighbors?: readonly GaiaNeighbor[]; showGaia: boolean; projectLabels: ProjectLabels; reportDistance: ReportDistanceScale }) {
+function GaiaSearchBoundary({ radius }: { radius: GaiaNeighborRadius }) {
+  const circles = useMemo(() => {
+    const unitCircle = Array.from({ length: 97 }, (_, index) => {
+      const angle = index / 96 * Math.PI * 2;
+      return [Math.cos(angle) * radius, Math.sin(angle) * radius];
+    });
+    return [
+      unitCircle.map(([a, b]): [number, number, number] => [a, b, 0]),
+      unitCircle.map(([a, b]): [number, number, number] => [a, 0, b]),
+      unitCircle.map(([a, b]): [number, number, number] => [0, a, b]),
+    ];
+  }, [radius]);
+  return circles.map((points, index) => <Line key={index} points={points} color="#86cee4" opacity={0.25} transparent depthWrite={false} />);
+}
+
+function Map({ systems, markers, rotation, focusedSource, aroundPosition, aroundRadius, neighbors, showGaia, projectLabels, reportDistance, onSource, onExit, onEnterSolar }: ReturnType<typeof createMarkers> & MapActions & { systems: readonly StarSystem[]; focusedSource?: GaiaSource; aroundPosition?: GaiaSource['position']; aroundRadius: GaiaNeighborRadius; neighbors?: readonly GaiaNeighbor[]; showGaia: boolean; projectLabels: ProjectLabels; reportDistance: ReportDistanceScale }) {
   const aspect = useThree((state) => state.size.width / Math.max(1, state.size.height));
   const distance = neighborhoodOverviewDistance(systems, aspect);
-  const focusPosition = focusedSource?.position ?? aroundPosition;
+  const focusPosition = aroundPosition ?? focusedSource?.position;
   const center = useMemo(() => focusPosition
     ? new Vector3(...focusPosition).applyQuaternion(rotation)
     : new Vector3(), [focusPosition, rotation]);
@@ -73,7 +90,10 @@ function Map({ systems, markers, rotation, focusedSource, aroundPosition, neighb
 
   const minDistance = focusPosition ? 2 : Math.min(24, distance * 0.25);
   const maxDistance = distance * 2.4;
-  const initialDistance = focusedSource ? 44 : aroundPosition ? 30 / MathUtils.clamp(aspect, 0.35, 1) : distance;
+  const initialDistance = aroundPosition ? 3 * aroundRadius / MathUtils.clamp(aspect, 0.35, 1) : focusedSource ? 44 : distance;
+  const highlightedPosition = useMemo(() => focusedSource
+    ? new Vector3(...focusedSource.position).applyQuaternion(rotation)
+    : undefined, [focusedSource, rotation]);
   const cameraPosition = useMemo<[number, number, number]>(() => [center.x, center.y, center.z + initialDistance], [center, initialDistance]);
 
   useFrame(({ camera, size, raycaster }) => {
@@ -114,6 +134,7 @@ function Map({ systems, markers, rotation, focusedSource, aroundPosition, neighb
         }}
       />
       {showGaia && !aroundPosition && <GaiaPreview center={center} rotation={rotation} overviewDistance={distance} onSelect={onSource} onExit={clearSource} />}
+      {aroundPosition && <group position={center}><GaiaSearchBoundary radius={aroundRadius} /></group>}
       {neighbors && (
         <group quaternion={rotation}>
           {neighbors.map(({ source }) => (
@@ -122,11 +143,19 @@ function Map({ systems, markers, rotation, focusedSource, aroundPosition, neighb
               event.stopPropagation();
               onSource(source);
             }}>
-              <sphereGeometry args={[0.12, 12, 8]} />
+              <sphereGeometry args={[aroundRadius * 0.012, 12, 8]} />
               <meshBasicMaterial color="#8ae5ff" />
             </mesh>
           ))}
         </group>
+      )}
+      {aroundPosition && highlightedPosition && (
+        <Billboard position={highlightedPosition}>
+          <mesh renderOrder={4}>
+            <ringGeometry args={[aroundRadius * 0.025, aroundRadius * 0.035, 32]} />
+            <meshBasicMaterial color="#ffd6a4" depthTest={false} depthWrite={false} />
+          </mesh>
+        </Billboard>
       )}
       {focusPosition && (
         <mesh position={center}>
@@ -149,15 +178,29 @@ function Map({ systems, markers, rotation, focusedSource, aroundPosition, neighb
 }
 
 function GaiaSourceCard({ source, onClose, onOpenNeighbors }: { source: GaiaSource; onClose: () => void; onOpenNeighbors: () => void }) {
-  const { t, locale, number } = useLanguage();
+  const { t, catalogText, locale, number } = useLanguage();
+  const counterpart = gaiaCounterpartsBySource.get(source.id);
   const [copy, setCopy] = useState<'copied' | 'manual'>();
   const path = withLocale(gaiaSourcePath(source.id), locale);
   return (
     <aside className={styles.gaiaSource} aria-label={t('details.gaiaSource')}>
       <button className={styles.gaiaClose} type="button" aria-label={t('details.close')} onClick={onClose}>×</button>
-      <strong>Gaia DR3 {source.id}</strong>
+      {counterpart?.name ? (
+        <>
+          <strong>{catalogText(counterpart.name)}</strong>
+          <span>Gaia DR3 {source.id}</span>
+        </>
+      ) : <strong>Gaia DR3 {source.id}</strong>}
       <span>{t('details.gaiaSunDistance', [t('units.lightYears', [number(source.distance, 2)])])} · G {number(source.magnitude, 2)}</span>
       <a href="https://gea.esac.esa.int/archive/" target="_blank" rel="noreferrer">ESA/Gaia/DPAC</a>
+      {counterpart && (
+        <>
+          <a href={counterpart.reference} target="_blank" rel="noreferrer">{t('details.gaiaCrossIdentification')}</a>
+          <Link prefetch={false} href={withLocale(systemPath(milkyWay.id, counterpart.systemId, counterpart.bodyId), locale)}>
+            {t('details.gaiaOpenNamedObject')}
+          </Link>
+        </>
+      )}
       <button className={styles.gaiaCopy} type="button" onClick={onOpenNeighbors}>{t('details.gaiaAroundSource')}</button>
       <button className={styles.gaiaCopy} type="button" onClick={async () => {
         try {
@@ -173,7 +216,7 @@ function GaiaSourceCard({ source, onClose, onOpenNeighbors }: { source: GaiaSour
   );
 }
 
-export default function NeighborhoodScene({ systems, onSelect, reportDistance, showGaia, onExit, sourceId, onClearSource, aroundPosition, neighbors, onOpenNeighbors }: {
+export default function NeighborhoodScene({ systems, onSelect, reportDistance, showGaia, onExit, sourceId, onClearSource, aroundPosition, aroundRadius, neighbors, onOpenNeighbors, onSelectAroundSource }: {
   systems: readonly StarSystem[];
   onSelect: (id: string) => void;
   reportDistance: ReportDistanceScale;
@@ -182,15 +225,21 @@ export default function NeighborhoodScene({ systems, onSelect, reportDistance, s
   sourceId: string | null;
   onClearSource: () => void;
   aroundPosition?: GaiaSource['position'];
+  aroundRadius: GaiaNeighborRadius;
   neighbors?: readonly GaiaNeighbor[];
   onOpenNeighbors: (id: string) => void;
+  onSelectAroundSource: (id: string) => void;
 }) {
   const { t, catalogText, number } = useLanguage();
   const [pickedSource, setSource] = useState<GaiaSource | null>(null);
   const lookupId = readGaiaSourceId(sourceId);
   const lookup = useGaiaSource(lookupId);
   const focusedSource = lookup?.source ?? undefined;
-  const source = (showGaia || aroundPosition ? pickedSource : null) ?? focusedSource;
+  const source = (showGaia ? pickedSource : null) ?? focusedSource;
+  const selectSource = useCallback((item: GaiaSource | null) => {
+    if (aroundPosition && item) onSelectAroundSource(item.id);
+    else setSource(item);
+  }, [aroundPosition, onSelectAroundSource]);
   const sourceStatus = sourceId && !source
     ? !lookupId || lookup?.source === null && !lookup.failed ? 'search.gaiaMissing'
       : lookup?.failed ? 'search.gaiaUnavailable' : 'search.gaiaLoading'
@@ -229,7 +278,7 @@ export default function NeighborhoodScene({ systems, onSelect, reportDistance, s
     <>
       <CanvasBoundary>
         <Canvas dpr={[1, 1.5]} aria-label={t('canvas.solarNeighborhood')} onPointerMissed={() => setSource(null)}>
-          <Map key={focusedSource?.id ?? (aroundPosition ? 'around' : 'overview')} focusedSource={focusedSource} aroundPosition={aroundPosition} neighbors={neighbors} systems={systems} markers={markers} rotation={rotation} showGaia={showGaia} projectLabels={projectLabels} reportDistance={reportDistance} onSource={setSource} onExit={onExit} onEnterSolar={enterSolar} />
+          <Map key={aroundPosition ? 'around' : focusedSource?.id ?? 'overview'} focusedSource={focusedSource} aroundPosition={aroundPosition} aroundRadius={aroundRadius} neighbors={neighbors} systems={systems} markers={markers} rotation={rotation} showGaia={showGaia} projectLabels={projectLabels} reportDistance={reportDistance} onSource={selectSource} onExit={onExit} onEnterSolar={enterSolar} />
         </Canvas>
       </CanvasBoundary>
       {source && <GaiaSourceCard key={source.id} source={source} onOpenNeighbors={() => onOpenNeighbors(source.id)} onClose={() => {

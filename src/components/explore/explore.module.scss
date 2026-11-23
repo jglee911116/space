@@ -971,3 +971,22 @@
     color: #8ae5ff;
   }
 }
+
+.gaiaRadii {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+
+  button {
+    margin: 0;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid #ffffff32;
+    border-radius: 0.45rem;
+    text-decoration: none;
+  }
+
+  button[aria-pressed='true'] {
+    background: #f5e2ca;
+    color: #2a160b;
+  }
+}

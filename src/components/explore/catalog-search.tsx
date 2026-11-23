@@ -5,6 +5,7 @@ import { useLanguage } from '@/i18n/language';
 import type { StarSystem } from '@/constants/space';
 import { createSearchCatalog, searchCatalog } from './utils/catalog-search';
 import { readGaiaSourceId, useGaiaSource } from './utils/gaia-catalog';
+import { gaiaCounterpartsBySource } from './utils/gaia-counterparts';
 import { gaiaSourcePath } from './utils/paths';
 import styles from './explore.module.scss';
 
@@ -48,9 +49,10 @@ export function CatalogSearch({ systems, onSelect, currentPath, currentName, qui
 
   const catalog = useMemo(() => createSearchCatalog(systems), [systems]);
   const results = useMemo(() => searchCatalog(catalog, query), [catalog, query]);
-  const exactGaia = query.trim().match(/^(?:gaia DR3\s+|gaia\s+)?([1-9]\d{9,18})$/i);
+  const exactGaia = query.normalize('NFKC').trim().match(/^(?:gaia\s+DR3\s+|gaia\s+)?([1-9]\d{9,18})$/i);
   const gaiaId = readGaiaSourceId(exactGaia?.[1] ?? null);
   const gaia = useGaiaSource(gaiaId);
+  const gaiaName = gaiaId ? gaiaCounterpartsBySource.get(gaiaId)?.name : undefined;
   const panel = useRef<HTMLElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const firstResult = useRef<HTMLButtonElement>(null);
@@ -174,8 +176,8 @@ export function CatalogSearch({ systems, onSelect, currentPath, currentName, qui
               <ul className={styles.searchResults}>
                 <li>
                   <button ref={firstResult} type="button" onClick={() => select(gaiaSourcePath(gaiaId))}>
-                    <strong>Gaia DR3 {gaiaId}</strong>
-                    <span>{t('details.gaiaSource')}</span>
+                    <strong>{gaiaName ? catalogText(gaiaName) : `Gaia DR3 ${gaiaId}`}</strong>
+                    <span>{gaiaName ? `Gaia DR3 ${gaiaId}` : t('details.gaiaSource')}</span>
                   </button>
                 </li>
               </ul>
@@ -190,11 +192,14 @@ export function CatalogSearch({ systems, onSelect, currentPath, currentName, qui
                 const name = catalogText(result.name);
                 const designation = result.designation && catalogText(result.designation);
                 const context = result.context && catalogText(result.context);
+                const parentContext = result.parentContext && catalogText(result.parentContext);
+                const subtitle = [...new Set([t(result.kind), context, parentContext, designation]
+                  .filter((value) => value && value !== name))].join(' · ');
                 return (
                   <li key={result.path}>
                     <button ref={index === 0 ? firstResult : undefined} type="button" onClick={() => select(result.path)}>
                       <strong>{name}</strong>
-                      <span>{[t(result.kind), context, designation !== name ? designation : undefined].filter(Boolean).join(' · ')}</span>
+                      <span>{subtitle}</span>
                     </button>
                   </li>
                 );

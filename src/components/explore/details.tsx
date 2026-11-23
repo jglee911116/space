@@ -25,7 +25,8 @@ import { KM_PER_AU, SOLAR_RADIUS_KM, LIGHT_YEARS_PER_KPC } from '@/constants/spa
 import { formatLightYearDistance } from './utils/distance-scale';
 import { bodySize, formatAxis, formatPeriod, formatSpin, kindLabel } from './utils/format';
 import type { Target } from './scenes/system-scene';
-import { gaiaNeighborRadius, type useGaiaNeighbors } from './utils/gaia-catalog';
+import { gaiaCounterpartsBySource, type gaiaCounterpartsForSystem } from './utils/gaia-counterparts';
+import { gaiaNeighborRadii, type GaiaNeighborRadius, type useGaiaNeighbors } from './utils/gaia-catalog';
 import styles from './explore.module.scss';
 
 /** 항성이 둘 이상이면 행성의 모항성 링크·항성의 행성 목록을 보여준다. */
@@ -401,16 +402,19 @@ export function GalaxySummaryDetails({ galaxy }: { galaxy: Galaxy }) {
 }
 
 export function NeighborhoodDetails({
-  showGaia, onGaiaChange, aroundName, neighbors, awaitingCenter, centerUnavailable, selectedId,
-  onSelectNeighbor, onCloseNeighbors,
+  showGaia, onGaiaChange, aroundName, neighbors, counterparts, awaitingCenter, centerUnavailable, selectedId,
+  onSelectNeighbor, onCloseNeighbors, radius, onChangeRadius,
 }: {
   showGaia: boolean;
   onGaiaChange: (show: boolean) => void;
   aroundName?: string;
   neighbors: ReturnType<typeof useGaiaNeighbors>;
+  counterparts?: ReturnType<typeof gaiaCounterpartsForSystem>;
   awaitingCenter: boolean;
   centerUnavailable: boolean;
   selectedId: string | null;
+  radius: GaiaNeighborRadius;
+  onChangeRadius: (radius: GaiaNeighborRadius) => void;
   onSelectNeighbor: (id: string) => void;
   onCloseNeighbors: () => void;
 }) {
@@ -422,21 +426,47 @@ export function NeighborhoodDetails({
           <h2 id="body-name">{t('details.gaiaAroundHeading', [aroundName])}</h2>
           <button className={styles.closeDetails} type="button" aria-label={t('details.close')} onClick={onCloseNeighbors}>×</button>
         </div>
-        <p>{t('details.gaiaAroundRadius', [gaiaNeighborRadius])}</p>
+        {!!counterparts?.length && (
+          <div role="group" aria-label={t('details.gaiaLinkedRecords')}>
+            <h3>{t('details.gaiaLinkedRecords')}</h3>
+            <ul className={styles.gaiaNeighbors}>
+              {counterparts.map(({ sourceId, name }) => (
+                <li key={sourceId}>
+                  <button type="button" aria-current={selectedId === sourceId ? 'true' : undefined} onClick={() => onSelectNeighbor(sourceId)}>
+                    {name && <strong>{catalogText(name)}</strong>}
+                    <span>Gaia DR3 {sourceId}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className={styles.gaiaRadii} role="group" aria-label={t('details.gaiaRadiusControl')}>
+          {gaiaNeighborRadii.map((option) => (
+            <button key={option} type="button" aria-pressed={radius === option} onClick={() => {
+              if (radius !== option) onChangeRadius(option);
+            }}>{t('units.lightYears', [number(option, 0)])}</button>
+          ))}
+        </div>
+        <p>{t('details.gaiaAroundRadius', [radius])}</p>
         <p role="status">{awaitingCenter || !neighbors && !centerUnavailable ? t('search.gaiaLoading')
           : centerUnavailable || neighbors?.failed ? t('search.gaiaUnavailable')
             : neighbors?.total ? t('details.gaiaAroundCount', [neighbors.entries.length, neighbors.total])
               : t('details.gaiaAroundEmpty')}</p>
         {!!neighbors?.entries.length && (
           <ul className={styles.gaiaNeighbors}>
-            {neighbors.entries.map(({ source, separation }) => (
-              <li key={source.id}>
-                <button type="button" aria-current={selectedId === source.id ? 'true' : undefined} onClick={() => onSelectNeighbor(source.id)}>
-                  <strong>Gaia DR3 {source.id}</strong>
-                  <span>{t('units.lightYears', [number(separation, 2)])}</span>
-                </button>
-              </li>
-            ))}
+            {neighbors.entries.map(({ source, separation }) => {
+              const name = gaiaCounterpartsBySource.get(source.id)?.name;
+              return (
+                <li key={source.id}>
+                  <button type="button" aria-current={selectedId === source.id ? 'true' : undefined} onClick={() => onSelectNeighbor(source.id)}>
+                    {name ? <strong>{catalogText(name)}</strong> : <strong>Gaia DR3 {source.id}</strong>}
+                    {name && <span>Gaia DR3 {source.id}</span>}
+                    <span>{t('units.lightYears', [number(separation, 2)])}</span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
         <p>{t('details.gaiaAroundSample')}</p>

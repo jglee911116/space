@@ -1,4 +1,8 @@
 {
+  "details.gaiaRadiusControl": "Gaia 검색 반경",
+  "details.gaiaLinkedRecords": "연결된 Gaia 관측 기록",
+  "details.gaiaCrossIdentification": "천체 식별 출처",
+  "details.gaiaOpenNamedObject": "등록된 천체 보기",
   "search.allDestinations": "전체 목록",
   "search.recent": "최근 방문",
   "search.quickLinks": "빠른 이동",
