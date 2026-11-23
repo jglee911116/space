@@ -2,7 +2,7 @@
 export const HOME_PATH = '/';
 export const LOCAL_GROUP_PATH = '/local-group';
 
-type ExplorerQuery = Partial<Record<'system' | 'target' | 'view' | 'focus' | 'galaxy' | 'cluster', string | null>>;
+type ExplorerQuery = Partial<Record<'system' | 'target' | 'view' | 'focus' | 'galaxy' | 'cluster' | 'gaia' | 'around', string | null>>;
 
 export function readExplorerQuery(params: Pick<URLSearchParams, 'get'>) {
   return {
@@ -12,6 +12,8 @@ export function readExplorerQuery(params: Pick<URLSearchParams, 'get'>) {
     focus: params.get('focus'),
     galaxy: params.get('galaxy'),
     cluster: params.get('cluster'),
+    gaia: params.get('gaia'),
+    around: params.get('around'),
   };
 }
 
@@ -30,11 +32,15 @@ function withQuery(path: string, query: ExplorerQuery) {
 
 export function updateSystemLocation(url: URL, pathname: string, system: string | null, target: string | null, view: string | null) {
   const current = readExplorerQuery(url.searchParams);
-  if (url.pathname === pathname && current.system === system && current.target === target && current.view === view) return false;
+  if (url.pathname === pathname && current.system === system && current.target === target && current.view === view && current.gaia === null && current.around === null) return false;
 
   url.pathname = pathname;
-  setExplorerQuery(url.searchParams, { focus: null, system, target, view });
+  setExplorerQuery(url.searchParams, { focus: null, gaia: null, around: null, system, target, view });
   return true;
+}
+
+export function gaiaSourcePath(gaia?: string, around?: string) {
+  return withQuery(HOME_PATH, { view: 'neighborhood', gaia, around });
 }
 
 export function galaxyPath(id: string) {

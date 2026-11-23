@@ -7,7 +7,8 @@ export function isLocale(value: string | null): value is Locale {
 }
 
 export function withLocale(path: string, locale: Locale) {
-  return path === '/' ? `/${locale}` : `/${locale}${path}`;
+  const suffix = path === '/' || path.startsWith('/?') ? path.slice(1) : path;
+  return `/${locale}${suffix}`;
 }
 
 export function withoutLocale(pathname: string) {

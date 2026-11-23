@@ -1,4 +1,4 @@
-import { readExplorerQuery } from './paths';
+import { gaiaSourcePath, readExplorerQuery } from './paths';
 import { createSearchCatalog } from './catalog-search';
 import { regionMarkers } from './cluster-markers';
 import { languages } from '@/i18n/messages';
@@ -154,7 +154,7 @@ export function validateCatalog() {
     } else if (segment === 'universe') {
       requireValue(!target || distantObjects.some((item) => item.id === target), `bad distant destination ${path}`);
     } else {
-      requireValue(segment === 'local-group', `unknown search destination ${path}`);
+      requireValue(segment === 'local-group' || path === gaiaSourcePath(), `unknown search destination ${path}`);
     }
   }
 }

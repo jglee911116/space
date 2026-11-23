@@ -28,11 +28,13 @@
 
 ## Gaia DR3 태양 근방 표본
 
-우리은하에서 태양 근방으로 확대하거나 탐색 메뉴에서 태양 근방을 선택합니다. 근방 지도에서 더 확대하면 Gaia 관측원이 표시됩니다. 점을 클릭하거나 탭하면 Gaia DR3 식별자, 추정 거리, G 등급을 볼 수 있습니다. 정보 패널에서 이 표시를 끌 수 있습니다.
+우리은하에서 태양 근방으로 확대하거나 탐색 메뉴에서 태양 근방을 선택합니다. 근방 지도에서 더 확대하면 Gaia 관측원이 표시됩니다. 점을 클릭하거나 탭하면 Gaia DR3 식별자, 추정 거리, G 등급을 볼 수 있습니다. 정보 패널에서 이 표시를 끌 수 있습니다. 탐색 검색창에는 숫자 ID 또는 `Gaia DR3 <ID>`를 입력할 수 있습니다. 관측원 카드에서 공유 링크를 복사하면 해당 점을 중심으로 지도를 열 수 있습니다.
 
 화면에 걸리는 40광년 격자 타일을 최대 16개 표시합니다. 각 타일의 밝은 관측원은 최대 12개입니다. 더 확대하면 가까운 타일 최대 5개에 각각 최대 256개를 추가합니다. 최근에 읽은 패킷은 최대 32개까지 재사용합니다. 관측 자료는 정적 파일로 제공됩니다.
 
-[ESA Gaia Archive](https://gea.esac.esa.int/archive/)에서 아래 쿼리의 결과를 `gaia.csv`로 내보냅니다. 외곽 표본은 같은 쿼리에서 `parallax >= 40`을 `parallax >= 30 AND parallax < 40`으로 바꿔 `gaia-outer.csv`로 내보냅니다. 두 CSV를 `python3 scripts/build-gaia-preview.py gaia.csv public/catalog/gaia-dr3-nearby --outer-csv gaia-outer.csv`로 패킹합니다. 현재 표본은 약 109광년 이내의 관측원 11,312개입니다. 밝기 및 시차 품질 기준으로 선택한 표본이므로 실제 공간 밀도를 그대로 나타내지는 않습니다. 출처는 ESA/Gaia/DPAC입니다.
+[ESA Gaia Archive](https://gea.esac.esa.int/archive/)에서 아래 쿼리의 결과를 `gaia.csv`로 내보냅니다. `gaia-outer.csv`는 시차 조건을 `parallax >= 30 AND parallax < 40`으로 바꿔 내보냅니다. `gaia-far.csv`는 `TOP 10000`과 `parallax >= 20 AND parallax < 30`을 사용합니다. 세 CSV를 `python3 scripts/build-gaia-preview.py gaia.csv public/catalog/gaia-dr3-nearby --outer-csv gaia-outer.csv --far-csv gaia-far.csv`로 패킹합니다.
+
+현재 표본은 약 163광년 이내의 관측원 21,312개입니다. 밝기와 시차 품질 기준으로 선별했습니다. ID 검색은 정렬된 인덱스 조각 64개 중 필요한 파일 하나를 불러옵니다. 출처는 ESA/Gaia/DPAC입니다.
 
 ```sql
 SELECT TOP 6000 source_id, ra, dec, parallax, phot_g_mean_mag

@@ -552,7 +552,7 @@
   font-size: 0.8rem;
   overflow-wrap: anywhere;
 
-  button {
+  .gaiaClose {
     position: absolute;
     top: 0.25rem;
     right: 0.25rem;
@@ -562,6 +562,22 @@
     background: transparent;
     color: inherit;
     cursor: pointer;
+  }
+
+  .gaiaCopy {
+    justify-self: start;
+    padding: 0.3rem 0.55rem;
+    border: 1px solid #a8c3e35c;
+    border-radius: 0.35rem;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  input {
+    min-width: 0;
+    color: inherit;
+    background: #101119;
   }
 
   a {
@@ -730,25 +746,117 @@
 }
 
 .searchTrigger {
-  display: grid;
-  place-items: center;
-  padding: 0;
-  inline-size: 2.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0 0.75rem;
   block-size: 2.35rem;
   border: 1px solid #ffffff32;
   border-radius: 0.65rem;
   background: #101119;
-  color: #ffc58d;
+  color: $space-fg;
+  font: inherit;
+  font-size: 0.8rem;
+  white-space: nowrap;
   cursor: pointer;
   pointer-events: auto;
+
+  svg {
+    flex: none;
+    color: #ffc58d;
+  }
 }
 
 .searchPanel {
-  width: min(25rem, calc(100vw - var(--edge) * 2));
+  width: min(28rem, calc(100vw - var(--edge) * 2));
+  overflow: hidden;
+}
+
+.searchPanel:popover-open {
+  display: flex;
+  flex-direction: column;
+}
+
+.searchHeader {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.searchClose {
+  flex: 0 0 2.5rem;
+  min-height: 2.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1.45rem;
+  cursor: pointer;
+}
+
+.searchContent {
+  min-height: 0;
+  overflow: auto;
+  padding: 0 0.12rem 0.12rem;
+  overscroll-behavior: contain;
+}
+
+.searchBrowse {
+  padding-top: 0.4rem;
+}
+
+.searchAll {
+  margin-top: 0.6rem;
+  border-top: 1px solid #ffffff1c;
+
+  summary {
+    padding: 0.7rem 0.5rem;
+    border-radius: 0.4rem;
+    color: $space-fg;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  nav {
+    padding-top: 0.25rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .searchTrigger {
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    padding: 0;
+
+    span {
+      display: none;
+    }
+  }
+
+  .searchPanel {
+    inset: max(0.75rem, env(safe-area-inset-top)) 0.75rem auto;
+    width: auto;
+    height: min(44rem, calc(100dvh - max(1.5rem, env(safe-area-inset-top) + env(safe-area-inset-bottom))));
+    max-height: none;
+  }
+
+  .searchPanel .controls button,
+  .searchPanel .searchResults button,
+  .searchClose,
+  .searchAll summary {
+    min-height: 2.75rem;
+    box-sizing: border-box;
+  }
 }
 
 .searchForm {
   position: relative;
+  flex: 1;
+  min-width: 0;
 }
 
 .searchInput {
@@ -809,12 +917,16 @@
 }
 
 .searchTrigger:hover,
+.searchClose:hover,
+.searchAll summary:hover,
 .searchClear:hover,
 .searchResults button:hover {
   background: #ffffff18;
 }
 
 .searchTrigger:focus-visible,
+.searchClose:focus-visible,
+.searchAll summary:focus-visible,
 .searchClear:focus-visible,
 .searchInput:focus-visible,
 .searchResults button:focus-visible {
@@ -834,4 +946,28 @@
 
 .searchStatus {
   margin: 0.65rem 0.25rem 0.2rem;
+}
+
+.gaiaNeighbors {
+  display: grid;
+  gap: 0.25rem;
+  max-height: min(28dvh, 16rem);
+  overflow: auto;
+  padding: 0;
+  list-style: none;
+
+  button {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 0.5rem;
+    width: 100%;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+
+  button[aria-current='true'] {
+    color: #8ae5ff;
+  }
 }

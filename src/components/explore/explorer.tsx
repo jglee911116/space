@@ -9,7 +9,8 @@ import { LanguageSelect } from './language-select';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { galaxyAssociations, superclusters, observableUniverse, distantObjects, featuredObjects, galaxies, localGroup, milkyWay, systems, type Galaxy, type StarSystem } from '@/constants/space';
-import { featuredGalaxyPosition } from './utils/nearby-positions';
+import { readGaiaSourceId, useGaiaNeighbors, useGaiaSource } from './utils/gaia-catalog';
+import { nearbyPositions, featuredGalaxyPosition } from './utils/nearby-positions';
 import { SITE_NAME_KEY } from '@/constants/site';
 import {
   BlackHoleDetails,
@@ -31,7 +32,7 @@ import {
 import { isNearbySystem } from './utils/nearby-positions';
 import { distanceScale } from './utils/distance-scale';
 import { createDistanceStore } from './utils/distance-store';
-import { galaxyFocusPath, readExplorerQuery, universeFocusPath, updateSystemLocation, associationPath, distantObjectPath, featuredObjectPath, galaxyPath, HOME_PATH, LOCAL_GROUP_PATH, localGroupPath, superclusterPath, systemPath, UNIVERSE_PATH } from './utils/paths';
+import { gaiaSourcePath, galaxyFocusPath, readExplorerQuery, universeFocusPath, updateSystemLocation, associationPath, distantObjectPath, featuredObjectPath, galaxyPath, HOME_PATH, LOCAL_GROUP_PATH, localGroupPath, superclusterPath, systemPath, UNIVERSE_PATH } from './utils/paths';
 import { elapsedSimulationDays, REALTIME_DAYS_PER_SECOND } from './utils/orbit';
 import type { Overview, Target } from './scenes/system-scene';
 import { AU_PER_KPC } from '@/constants/space/units';
@@ -101,6 +102,8 @@ const UniverseScene = dynamic(() => import('./scenes/universe-scene'), {
 
 type ExplorerView = Overview | 'galaxy' | 'neighborhood';
 const DEFAULT_SYSTEM_ID = systems[0].id;
+const gaiaSystemCenters = new Map(nearbyPositions(systems.filter((system) => (system.galaxyId ?? milkyWay.id) === milkyWay.id))
+  .map(({ system, position }) => [system.id, { name: system.name, position: position.toArray() }]));
 type HoveredBody = { id: string; x: number; y: number };
 
 function recordView(locale: Locale, target: Target, overview: ExplorerView, systemId: string, defaultSystemId: string, galaxyId: string) {
@@ -124,7 +127,8 @@ function subscribeToInfoMedia(change: () => void) {
 export function Explorer() {
   const { t, catalogText, locale, number, measurement } = useLanguage();
   const pathname = withoutLocale(usePathname());
-  const { system: systemParam, target: targetParam, view: viewParam, focus, galaxy: galaxyParam, cluster: clusterParam } = readExplorerQuery(useSearchParams());
+  const searchParams = useSearchParams();
+  const { system: systemParam, target: targetParam, view: viewParam, focus, galaxy: galaxyParam, cluster: clusterParam, gaia: gaiaParam, around: aroundParam } = readExplorerQuery(searchParams);
   const universeView = pathname === UNIVERSE_PATH;
   const region = superclusters.find(({ id }) => pathname === superclusterPath(id));
   const cosmicView = universeView || !!region;
@@ -134,7 +138,8 @@ export function Explorer() {
   const infoButton = useRef<HTMLButtonElement>(null);
   const compactInfo = useSyncExternalStore(subscribeToInfoMedia, () => window.matchMedia(infoMediaQuery).matches, () => false);
   const [infoPreference, setInfoPreference] = useState<boolean>();
-  const infoOpen = infoPreference ?? !compactInfo;
+  const neighborsByDefault = viewParam === 'neighborhood' && !!aroundParam;
+  const infoOpen = infoPreference ?? (neighborsByDefault || !compactInfo);
   const closeInfo = () => {
     setInfoPreference(false);
     infoButton.current?.focus();
@@ -163,6 +168,14 @@ export function Explorer() {
   const parentObjectId = featuredObjects.find(({ id }) => id === targetParam)?.parentObjectId;
   const featuredObject = !cosmicView && !groupView && viewParam === 'object' ? galaxyObjects.find(({ id }) => id === (parentObjectId ?? targetParam)) : undefined;
   const neighborhoodView = !externalGalaxy && !extraView && (viewParam === 'neighborhood' || (!pathGalaxy && !systemParam && !targetParam && !viewParam));
+  const around = neighborhoodView ? aroundParam : null;
+  const aroundGaiaId = readGaiaSourceId(around);
+  const aroundSource = useGaiaSource(aroundGaiaId);
+  const awaitingAroundSource = !!aroundGaiaId && !aroundSource;
+  const aroundStar = around ? gaiaSystemCenters.get(around) : undefined;
+  const aroundPosition = aroundStar?.position ?? aroundSource?.source?.position;
+  const neighbors = useGaiaNeighbors(aroundPosition, aroundSource?.source?.id);
+  const aroundName = aroundStar ? catalogText(aroundStar.name) : around ? `Gaia DR3 ${around}` : undefined;
   const outerRegion = system.outerRegion;
   const cloud = system.oortCloud;
   const overview: Overview =
@@ -316,6 +329,12 @@ export function Explorer() {
     },
     [locale, setHovered, setComparison, setShowCounterjet],
   );
+  const clearGaiaSource = () => navigateSpace(gaiaSourcePath(undefined, around ?? undefined));
+  const openGaiaNeighbors = useCallback((id: string) => {
+    setInfoPreference(true);
+    navigateSpace(gaiaSourcePath(undefined, id));
+  }, [navigateSpace, setInfoPreference]);
+  const selectGaiaNeighbor = (id: string) => navigateSpace(gaiaSourcePath(id, around ?? undefined));
   const enterUniverse = useCallback((entry?: ZoomHandoff) => navigateSpace(UNIVERSE_PATH, entry), [navigateSpace]);
   const selectDistantObject = useCallback((id: string) => navigateSpace(distantObjectPath(id)), [navigateSpace]);
   const exitDistantObject = useCallback((id: string) => navigateSpace(universeFocusPath(id)), [navigateSpace]);
@@ -460,6 +479,12 @@ export function Explorer() {
           />
         ) : neighborhoodView ? (
           <NeighborhoodScene
+            key={`${around ?? ''}:${gaiaParam ?? ''}`}
+            sourceId={gaiaParam}
+            aroundPosition={aroundPosition}
+            neighbors={neighbors?.entries}
+            onOpenNeighbors={openGaiaNeighbors}
+            onClearSource={clearGaiaSource}
             showGaia={showGaia}
             systems={galaxySystems}
             onSelect={selectSystem}
@@ -527,149 +552,152 @@ export function Explorer() {
           </p>
         </div>
         <div className={styles.headerActions}>
-          <CatalogSearch systems={systems} onSelect={navigateSpace} />
-          <LanguageSelect />
-          <button className={styles.exploreTrigger} type="button" popoverTarget="explore-navigation">
-            {t('navigation.explore')}
-          </button>
-        </div>
-        <nav
-          className={styles.exploreMenu}
-          id="explore-navigation"
-          aria-label={t('navigation.exploreMenu')}
-          popover="auto"
-          onClick={(event) => {
-            if (event.target instanceof Element && event.target.closest('button')) event.currentTarget.hidePopover();
-          }}
-        >
-          <div className={styles.controls} role="group" aria-label={t('navigation.galacticScales')}>
-            <h2>{t('navigation.galacticScales')}</h2>
-            <button type="button" aria-pressed={universeView && !distantObject} onClick={() => enterUniverse()}>
-              {catalogText(observableUniverse.name)}
-            </button>
-            {superclusters.map((item) => (
-              <button key={item.id} type="button" aria-pressed={item === region && !association} onClick={() => enterRegion(item.id)}>
-                {catalogText(item.name)}
+          <CatalogSearch
+            systems={systems}
+            onSelect={navigateSpace}
+            currentPath={searchParams.size ? `${pathname}?${searchParams}` : pathname}
+            currentName={body && (galaxyView || target !== null) ? `${catalogText(heading)} · ${catalogText(body.name)}` : catalogText(heading)}
+            quickLinks={[
+              ...(!cosmicView && !groupView && !externalGalaxy && !neighborhoodView
+                ? [{ label: catalogText(milkyWay.neighborhood.name), onSelect: () => navigateTo(null, 'neighborhood') }] : []),
+              ...(!cosmicView && !groupView && !externalGalaxy && (galaxyView || neighborhoodView || system.id !== DEFAULT_SYSTEM_ID || target !== null)
+                ? [{ label: catalogText(galaxyAnchor?.name ?? systems[0].name), onSelect: () => selectSystem(DEFAULT_SYSTEM_ID) }] : []),
+              ...(!galaxyView || focusGalacticCenter || activeGalaxy.id !== milkyWay.id
+                ? [{ label: catalogText(milkyWay.name), onSelect: () => enterExternalGalaxy(milkyWay) }] : []),
+              ...(!groupView ? [{ label: catalogText(localGroup.name), onSelect: () => enterLocalGroup() }] : []),
+              ...(!universeView || distantObject ? [{ label: catalogText(observableUniverse.name), onSelect: () => enterUniverse() }] : []),
+            ].slice(0, 4)}
+          >
+            <div className={styles.controls} role="group" aria-label={t('navigation.galacticScales')}>
+              <h2>{t('navigation.galacticScales')}</h2>
+              <button type="button" aria-pressed={universeView && !distantObject} onClick={() => enterUniverse()}>
+                {catalogText(observableUniverse.name)}
               </button>
-            ))}
-            {galaxyAssociations.map((item) => (
-              <button key={item.id} type="button" aria-pressed={association === item} onClick={() => enterAssociation(item.id)}>
-                {catalogText(item.name)}
+              {superclusters.map((item) => (
+                <button key={item.id} type="button" aria-pressed={item === region && !association} onClick={() => enterRegion(item.id)}>
+                  {catalogText(item.name)}
+                </button>
+              ))}
+              {galaxyAssociations.map((item) => (
+                <button key={item.id} type="button" aria-pressed={association === item} onClick={() => enterAssociation(item.id)}>
+                  {catalogText(item.name)}
+                </button>
+              ))}
+              <button type="button" aria-pressed={groupView} onClick={() => enterLocalGroup()}>
+                {catalogText(localGroup.name)}
               </button>
-            ))}
-            <button type="button" aria-pressed={groupView} onClick={() => enterLocalGroup()}>
-              {catalogText(localGroup.name)}
-            </button>
-            {galaxies.map((item) => (
-              <button key={item.id} type="button" aria-pressed={!cosmicView && !groupView && (extraView || galaxyView) && activeGalaxy.id === item.id} onClick={() => enterExternalGalaxy(item)}>
-                {catalogText(item.name)}
-              </button>
-            ))}
-          </div>
-          {universeView && (
-            <div className={styles.controls} role="group" aria-label={t('navigation.distantObjects')}>
-              <h2>{t('navigation.distantObjects')}</h2>
-              {distantObjects.map((item) => (
-                <button key={item.id} type="button" aria-pressed={distantObject?.id === item.id} onClick={() => selectDistantObject(item.id)}>
+              {galaxies.map((item) => (
+                <button key={item.id} type="button" aria-pressed={!cosmicView && !groupView && (extraView || galaxyView) && activeGalaxy.id === item.id} onClick={() => enterExternalGalaxy(item)}>
                   {catalogText(item.name)}
                 </button>
               ))}
             </div>
-          )}
-          {groupView && (
-            <div className={styles.controls} role="group" aria-label={t('navigation.scrollTargets')}>
-              <h2>{t('navigation.scrollTargets')}</h2>
-              {localGroup.galaxies.map((item) => (
-                <button key={item.id} type="button" aria-pressed={activeGalaxy.id === item.id} onClick={() => navigateSpace(localGroupPath(item.id))}>
-                  {t('navigation.focusOn', [catalogText(item.name)])}
-                </button>
-              ))}
-            </div>
-          )}
-          {!cosmicView && !groupView && galaxyObjects.length > 0 && (
-            <div className={styles.controls} role="group" aria-label={t('navigation.featuredObjects')}>
-              <h2>{t('navigation.featuredObjects')}</h2>
-              {galaxyObjects.map((item) => (
-                <button key={item.id} type="button" aria-pressed={featuredObject?.id === item.id} onClick={() => selectFeaturedObject(item.id)}>
-                  {catalogText(item.name)}
-                </button>
-              ))}
-            </div>
-          )}
-          {extraView && !cosmicView && !groupView && (activeGalaxy.parentGalaxyId || localGroup.galaxies.some(({ parentGalaxyId }) => parentGalaxyId === activeGalaxy.id)) && (
-            <div className={styles.controls} role="group" aria-label={t('navigation.relatedGalaxies')}>
-              <h2>{t('navigation.relatedGalaxies')}</h2>
-              {localGroup.galaxies
-                .filter((item) => item.id === activeGalaxy.parentGalaxyId || item.parentGalaxyId === activeGalaxy.id)
-                .map((item) => (
-                  <button key={item.id} type="button" onClick={() => enterExternalGalaxy(item)}>
+            {universeView && (
+              <div className={styles.controls} role="group" aria-label={t('navigation.distantObjects')}>
+                <h2>{t('navigation.distantObjects')}</h2>
+                {distantObjects.map((item) => (
+                  <button key={item.id} type="button" aria-pressed={distantObject?.id === item.id} onClick={() => selectDistantObject(item.id)}>
                     {catalogText(item.name)}
                   </button>
                 ))}
-            </div>
-          )}
-          {!cosmicView && !groupView && galaxySystems.length > 0 && (
-            <div className={styles.controls} role="group" aria-label={t('navigation.selectStarSystem')}>
-              <h2>{t('navigation.starSystems')}</h2>
-              {!externalGalaxy && (
-                <button type="button" aria-pressed={neighborhoodView} onClick={() => navigateTo(null, 'neighborhood')}>
-                  {catalogText(milkyWay.neighborhood.name)}
-                </button>
-              )}
-              {galaxySystems.map((item) => (
-                <button key={item.id} type="button" aria-pressed={!extraView && !neighborhoodView && item === system} onClick={() => selectSystem(item.id)}>
-                  {catalogText(item.name)}
-                </button>
-              ))}
-            </div>
-          )}
-          {!featuredObject && !neighborhoodView && !extraView && (
-            <div className={styles.controls} role="group" aria-label={t('navigation.cameraViews')}>
-              <h2>{t('navigation.currentView')}</h2>
-              <button type="button" aria-pressed={!galaxyView && target === null && scale === 'system' && overview !== 'distant'} onClick={() => navigateTo(null)}>
-                {catalogText(system.overviewLabel ?? 'navigation.planetarySystem')}
-              </button>
-              {system.wideOverview && (
-                <button type="button" aria-pressed={target === null && overview === 'distant'} onClick={() => navigateTo(null, 'distant')}>
-                  {catalogText(system.wideOverview.label)}
-                </button>
-              )}
-              {outerRegion && (
-                <button type="button" aria-pressed={!galaxyView && (scale === 'outer' || scale === 'distant' || (!oortView && outerSelection !== undefined))} onClick={() => navigateTo(null, 'outer')}>
-                  {catalogText(outerRegion.name)}
-                </button>
-              )}
-              {cloud && (
-                <button type="button" aria-pressed={oortView} onClick={() => navigateTo(null, 'oort')}>
-                  {t('navigation.oortCloud')}
-                </button>
-              )}
-              {hasGalaxy && (
-                <button type="button" aria-pressed={galaxyView && !focusGalacticCenter && !body} onClick={() => navigateTo(null, 'galaxy')}>
-                  {t('navigation.entireGalaxy')}
-                </button>
-              )}
-              {galaxyView ? (
-                <>
-                  {galaxySystems.filter(isNearbySystem).map((item) => (
-                    <button key={item.id} type="button" aria-pressed={item === system && body === root} onClick={() => focusNearbySystem(item)}>
-                      {t('navigation.around', [catalogText(item.name)])}
-                    </button>
-                  ))}
-                  <button type="button" aria-pressed={focusBlackHole} onClick={selectGalacticCenter}>
-                    {catalogText(milkyWay.center.name)}
+              </div>
+            )}
+            {groupView && (
+              <div className={styles.controls} role="group" aria-label={t('navigation.scrollTargets')}>
+                <h2>{t('navigation.scrollTargets')}</h2>
+                {localGroup.galaxies.map((item) => (
+                  <button key={item.id} type="button" aria-pressed={activeGalaxy.id === item.id} onClick={() => navigateSpace(localGroupPath(item.id))}>
+                    {t('navigation.focusOn', [catalogText(item.name)])}
                   </button>
-                </>
-              ) : (
-                navigation.map((item) => (
-                  <button key={item.id} type="button" aria-pressed={target === item.id || (item !== root && body?.parent === item.id)} onClick={() => navigateTo(item.id)}>
+                ))}
+              </div>
+            )}
+            {!cosmicView && !groupView && galaxyObjects.length > 0 && (
+              <div className={styles.controls} role="group" aria-label={t('navigation.featuredObjects')}>
+                <h2>{t('navigation.featuredObjects')}</h2>
+                {galaxyObjects.map((item) => (
+                  <button key={item.id} type="button" aria-pressed={featuredObject?.id === item.id} onClick={() => selectFeaturedObject(item.id)}>
                     {catalogText(item.name)}
                   </button>
-                ))
-              )}
-            </div>
-          )}
-        </nav>
+                ))}
+              </div>
+            )}
+            {extraView && !cosmicView && !groupView && (activeGalaxy.parentGalaxyId || localGroup.galaxies.some(({ parentGalaxyId }) => parentGalaxyId === activeGalaxy.id)) && (
+              <div className={styles.controls} role="group" aria-label={t('navigation.relatedGalaxies')}>
+                <h2>{t('navigation.relatedGalaxies')}</h2>
+                {localGroup.galaxies
+                  .filter((item) => item.id === activeGalaxy.parentGalaxyId || item.parentGalaxyId === activeGalaxy.id)
+                  .map((item) => (
+                    <button key={item.id} type="button" onClick={() => enterExternalGalaxy(item)}>
+                      {catalogText(item.name)}
+                    </button>
+                  ))}
+              </div>
+            )}
+            {!cosmicView && !groupView && galaxySystems.length > 0 && (
+              <div className={styles.controls} role="group" aria-label={t('navigation.selectStarSystem')}>
+                <h2>{t('navigation.starSystems')}</h2>
+                {!externalGalaxy && (
+                  <button type="button" aria-pressed={neighborhoodView} onClick={() => navigateTo(null, 'neighborhood')}>
+                    {catalogText(milkyWay.neighborhood.name)}
+                  </button>
+                )}
+                {galaxySystems.map((item) => (
+                  <button key={item.id} type="button" aria-pressed={!extraView && !neighborhoodView && item === system} onClick={() => selectSystem(item.id)}>
+                    {catalogText(item.name)}
+                  </button>
+                ))}
+              </div>
+            )}
+            {!featuredObject && !neighborhoodView && !extraView && (
+              <div className={styles.controls} role="group" aria-label={t('navigation.cameraViews')}>
+                <h2>{t('navigation.currentView')}</h2>
+                <button type="button" aria-pressed={!galaxyView && target === null && scale === 'system' && overview !== 'distant'} onClick={() => navigateTo(null)}>
+                  {catalogText(system.overviewLabel ?? 'navigation.planetarySystem')}
+                </button>
+                {system.wideOverview && (
+                  <button type="button" aria-pressed={target === null && overview === 'distant'} onClick={() => navigateTo(null, 'distant')}>
+                    {catalogText(system.wideOverview.label)}
+                  </button>
+                )}
+                {outerRegion && (
+                  <button type="button" aria-pressed={!galaxyView && (scale === 'outer' || scale === 'distant' || (!oortView && outerSelection !== undefined))} onClick={() => navigateTo(null, 'outer')}>
+                    {catalogText(outerRegion.name)}
+                  </button>
+                )}
+                {cloud && (
+                  <button type="button" aria-pressed={oortView} onClick={() => navigateTo(null, 'oort')}>
+                    {t('navigation.oortCloud')}
+                  </button>
+                )}
+                {hasGalaxy && (
+                  <button type="button" aria-pressed={galaxyView && !focusGalacticCenter && !body} onClick={() => navigateTo(null, 'galaxy')}>
+                    {t('navigation.entireGalaxy')}
+                  </button>
+                )}
+                {galaxyView ? (
+                  <>
+                    {galaxySystems.filter(isNearbySystem).map((item) => (
+                      <button key={item.id} type="button" aria-pressed={item === system && body === root} onClick={() => focusNearbySystem(item)}>
+                        {t('navigation.around', [catalogText(item.name)])}
+                      </button>
+                    ))}
+                    <button type="button" aria-pressed={focusBlackHole} onClick={selectGalacticCenter}>
+                      {catalogText(milkyWay.center.name)}
+                    </button>
+                  </>
+                ) : (
+                  navigation.map((item) => (
+                    <button key={item.id} type="button" aria-pressed={target === item.id || (item !== root && body?.parent === item.id)} onClick={() => navigateTo(item.id)}>
+                      {catalogText(item.name)}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </CatalogSearch>
+          <LanguageSelect />
+        </div>
       </header>
 
       <footer className={styles.footer}>
@@ -739,7 +767,7 @@ export function Explorer() {
               <path d="M12 11v5m0-8v.01" />
             </svg>
           </button>
-          <div id={infoId} className={styles.infoPanel} data-default={infoPreference === undefined || undefined} hidden={!infoOpen}>
+          <div id={infoId} className={styles.infoPanel} data-default={infoPreference === undefined && !neighborsByDefault || undefined} hidden={!infoOpen}>
             {region ? (
               <SuperclusterDetails region={region} association={association} onSelectCluster={enterAssociation} onSelectGalaxy={selectCatalogGalaxy}
                 showFlows={showSuperclusterFlows} onFlowsChange={setShowSuperclusterFlows} />
@@ -752,11 +780,17 @@ export function Explorer() {
             ) : extraView ? (
               <GalaxySummaryDetails galaxy={activeGalaxy} />
             ) : neighborhoodView ? (
-              <NeighborhoodDetails showGaia={showGaia} onGaiaChange={setShowGaia} />
+              <NeighborhoodDetails showGaia={showGaia} onGaiaChange={setShowGaia}
+                aroundName={aroundName} neighbors={neighbors}
+                awaitingCenter={awaitingAroundSource}
+                centerUnavailable={!aroundPosition && !awaitingAroundSource}
+                selectedId={gaiaParam} onSelectNeighbor={selectGaiaNeighbor}
+                onCloseNeighbors={() => navigateSpace(gaiaSourcePath())}
+              />
             ) : focusBlackHole ? (
               <BlackHoleDetails key={recenter} onClose={closeInfo} showPolarization={showCenterPolarization} onPolarizationChange={setShowCenterPolarization} />
             ) : body && !oortView && (galaxyView || target !== null) ? (
-              <BodyDetails key={`${body.id}:${recenter}`} system={system} body={body} onSelect={navigateTo} onClose={closeInfo} />
+              <BodyDetails key={`${body.id}:${recenter}`} system={system} body={body} onSelect={navigateTo} onClose={closeInfo} onOpenNeighbors={hasGalaxy ? () => openGaiaNeighbors(systemId) : undefined} />
             ) : galaxyView ? (
               <GalaxyDetails systems={galaxySystems} />
             ) : oortView && cloud ? (
@@ -764,7 +798,7 @@ export function Explorer() {
             ) : (scale === 'outer' || scale === 'distant') && outerRegion ? (
               <OuterRegionDetails system={system} distant={scale === 'distant'} onToggle={() => navigateTo(null, scale === 'distant' ? 'outer' : 'distant')} />
             ) : (
-              <SystemDetails system={system} />
+              <SystemDetails system={system} onOpenNeighbors={hasGalaxy ? () => openGaiaNeighbors(systemId) : undefined} />
             )}
           </div>
         </div>

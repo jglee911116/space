@@ -25,6 +25,7 @@ import { KM_PER_AU, SOLAR_RADIUS_KM, LIGHT_YEARS_PER_KPC } from '@/constants/spa
 import { formatLightYearDistance } from './utils/distance-scale';
 import { bodySize, formatAxis, formatPeriod, formatSpin, kindLabel } from './utils/format';
 import type { Target } from './scenes/system-scene';
+import { gaiaNeighborRadius, type useGaiaNeighbors } from './utils/gaia-catalog';
 import styles from './explore.module.scss';
 
 /** 항성이 둘 이상이면 행성의 모항성 링크·항성의 행성 목록을 보여준다. */
@@ -144,7 +145,7 @@ function DetailPanel({ name, onClose, children }: { name: CatalogText; onClose: 
   );
 }
 
-export function BodyDetails({ system, body, onSelect, onClose }: { system: StarSystem; body: Body; onSelect: (target: Target) => void; onClose: () => void }) {
+export function BodyDetails({ system, body, onSelect, onClose, onOpenNeighbors }: { system: StarSystem; body: Body; onSelect: (target: Target) => void; onClose: () => void; onOpenNeighbors?: () => void }) {
   const { t, catalogText, number, measurement } = useLanguage();
   const parent = system.bodies.find((other) => other.id === body.parent);
   const children = system.bodies.filter((other) => other.parent === body.id && (other.kind === 'moon' || isMultiStar(system)));
@@ -240,6 +241,7 @@ export function BodyDetails({ system, body, onSelect, onClose }: { system: StarS
       {body.note && <p>{catalogText(body.note)}</p>}
       <ModelNotes>{t('details.systemModelScale')}</ModelNotes>
       <DetailSources sources={systemDistance ? [...body.sources, systemDistance.source] : body.sources} />
+      {onOpenNeighbors && <button type="button" onClick={onOpenNeighbors}>{t('details.gaiaAroundSystem')}</button>}
     </DetailPanel>
   );
 }
@@ -343,7 +345,7 @@ export function OuterRegionDetails({ system, distant, onToggle }: { system: Star
   );
 }
 
-export function SystemDetails({ system }: { system: StarSystem }) {
+export function SystemDetails({ system, onOpenNeighbors }: { system: StarSystem; onOpenNeighbors?: () => void }) {
   const { t, catalogText } = useLanguage();
   const planetCount = system.bodies.filter((body) => body.kind === 'planet').length;
   return system.summary ? (
@@ -352,6 +354,7 @@ export function SystemDetails({ system }: { system: StarSystem }) {
       <p>{catalogText(system.summary)}</p>
       <p>{t('details.starAndExoplanetCounts', [system.bodies.filter((body) => body.kind === 'star').length, planetCount])}</p>
       <ModelNotes>{t('details.auScaleEnlarged')}</ModelNotes>
+      {onOpenNeighbors && <button type="button" onClick={onOpenNeighbors}>{t('details.gaiaAroundSystem')}</button>}
       <DetailSources sources={system.sources} />
     </section>
   ) : (
@@ -360,6 +363,7 @@ export function SystemDetails({ system }: { system: StarSystem }) {
       <ModelNotes>
         {t('details.commonScaleEnlarged')} · {t('details.fixedJ2000')}
       </ModelNotes>
+      {onOpenNeighbors && <button type="button" onClick={onOpenNeighbors}>{t('details.gaiaAroundSystem')}</button>}
       <DetailSources sources={system.sources} />
     </section>
   );
@@ -396,8 +400,50 @@ export function GalaxySummaryDetails({ galaxy }: { galaxy: Galaxy }) {
   );
 }
 
-export function NeighborhoodDetails({ showGaia, onGaiaChange }: { showGaia: boolean; onGaiaChange: (show: boolean) => void }) {
-  const { t, catalogText } = useLanguage();
+export function NeighborhoodDetails({
+  showGaia, onGaiaChange, aroundName, neighbors, awaitingCenter, centerUnavailable, selectedId,
+  onSelectNeighbor, onCloseNeighbors,
+}: {
+  showGaia: boolean;
+  onGaiaChange: (show: boolean) => void;
+  aroundName?: string;
+  neighbors: ReturnType<typeof useGaiaNeighbors>;
+  awaitingCenter: boolean;
+  centerUnavailable: boolean;
+  selectedId: string | null;
+  onSelectNeighbor: (id: string) => void;
+  onCloseNeighbors: () => void;
+}) {
+  const { t, catalogText, number } = useLanguage();
+  if (aroundName) {
+    return (
+      <section className={styles.details} aria-labelledby="body-name">
+        <div className={styles.detailsHeading}>
+          <h2 id="body-name">{t('details.gaiaAroundHeading', [aroundName])}</h2>
+          <button className={styles.closeDetails} type="button" aria-label={t('details.close')} onClick={onCloseNeighbors}>×</button>
+        </div>
+        <p>{t('details.gaiaAroundRadius', [gaiaNeighborRadius])}</p>
+        <p role="status">{awaitingCenter || !neighbors && !centerUnavailable ? t('search.gaiaLoading')
+          : centerUnavailable || neighbors?.failed ? t('search.gaiaUnavailable')
+            : neighbors?.total ? t('details.gaiaAroundCount', [neighbors.entries.length, neighbors.total])
+              : t('details.gaiaAroundEmpty')}</p>
+        {!!neighbors?.entries.length && (
+          <ul className={styles.gaiaNeighbors}>
+            {neighbors.entries.map(({ source, separation }) => (
+              <li key={source.id}>
+                <button type="button" aria-current={selectedId === source.id ? 'true' : undefined} onClick={() => onSelectNeighbor(source.id)}>
+                  <strong>Gaia DR3 {source.id}</strong>
+                  <span>{t('units.lightYears', [number(separation, 2)])}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p>{t('details.gaiaAroundSample')}</p>
+        <DetailSources sources={[{ label: 'ESA/Gaia/DPAC · Gaia DR3', href: 'https://gea.esac.esa.int/archive/' }]} />
+      </section>
+    );
+  }
   const { neighborhood } = milkyWay;
   return (
     <section className={styles.details} aria-labelledby="body-name">

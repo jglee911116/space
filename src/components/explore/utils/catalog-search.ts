@@ -1,7 +1,7 @@
 import { distantObjects, featuredObjects, galaxies, galaxyAssociations, localGroup, milkyWay, observableUniverse, superclusters, type StarSystem } from '@/constants/space';
 import { translate, type CatalogText, type MessageKey } from '@/i18n/messages';
 import { localeCodes } from '@/i18n/routing';
-import { associationPath, distantObjectPath, featuredObjectPath, galaxyPath, LOCAL_GROUP_PATH, superclusterPath, systemPath, UNIVERSE_PATH } from './paths';
+import { associationPath, distantObjectPath, featuredObjectPath, gaiaSourcePath, galaxyPath, LOCAL_GROUP_PATH, superclusterPath, systemPath, UNIVERSE_PATH } from './paths';
 
 type Entry = {
   name: CatalogText;
@@ -36,6 +36,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
   const entries: Entry[] = [
     { name: observableUniverse.name, path: UNIVERSE_PATH, kind: 'search.region', aliases: [] },
     { name: localGroup.name, path: LOCAL_GROUP_PATH, kind: 'search.region', aliases: [] },
+    { name: milkyWay.neighborhood.name, path: gaiaSourcePath(), kind: 'search.region', context: milkyWay.name, aliases: ['solar neighborhood'] },
     ...galaxyAssociations.map(({ id, name, mapRegionId, aliases = [] }): Entry => ({ name, path: associationPath(mapRegionId, id), kind: 'search.region', aliases })),
     ...superclusters.map(({ name, id }): Entry => ({ name, path: superclusterPath(id), kind: 'search.region', aliases: [id] })),
     ...galaxies.map(({ name, title, id, aliases = [] }): Entry => ({ name, designation: title, path: galaxyPath(id), kind: 'search.galaxy', aliases: [id, ...aliases] })),
