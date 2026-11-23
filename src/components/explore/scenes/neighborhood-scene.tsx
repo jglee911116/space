@@ -64,7 +64,7 @@ type MapActions = {
 function GaiaSearchBoundary({ radius }: { radius: GaiaNeighborRadius }) {
   const circles = useMemo(() => {
     const unitCircle = Array.from({ length: 97 }, (_, index) => {
-      const angle = index / 96 * Math.PI * 2;
+      const angle = (index / 96) * Math.PI * 2;
       return [Math.cos(angle) * radius, Math.sin(angle) * radius];
     });
     return [
@@ -76,13 +76,35 @@ function GaiaSearchBoundary({ radius }: { radius: GaiaNeighborRadius }) {
   return circles.map((points, index) => <Line key={index} points={points} color="#86cee4" opacity={0.25} transparent depthWrite={false} />);
 }
 
-function Map({ systems, markers, rotation, focusedSource, aroundPosition, aroundRadius, neighbors, showGaia, projectLabels, reportDistance, onSource, onExit, onEnterSolar }: ReturnType<typeof createMarkers> & MapActions & { systems: readonly StarSystem[]; focusedSource?: GaiaSource; aroundPosition?: GaiaSource['position']; aroundRadius: GaiaNeighborRadius; neighbors?: readonly GaiaNeighbor[]; showGaia: boolean; projectLabels: ProjectLabels; reportDistance: ReportDistanceScale }) {
+function Map({
+  systems,
+  markers,
+  rotation,
+  focusedSource,
+  aroundPosition,
+  aroundRadius,
+  neighbors,
+  showGaia,
+  projectLabels,
+  reportDistance,
+  onSource,
+  onExit,
+  onEnterSolar,
+}: ReturnType<typeof createMarkers> &
+  MapActions & {
+    systems: readonly StarSystem[];
+    focusedSource?: GaiaSource;
+    aroundPosition?: GaiaSource['position'];
+    aroundRadius: GaiaNeighborRadius;
+    neighbors?: readonly GaiaNeighbor[];
+    showGaia: boolean;
+    projectLabels: ProjectLabels;
+    reportDistance: ReportDistanceScale;
+  }) {
   const aspect = useThree((state) => state.size.width / Math.max(1, state.size.height));
   const distance = neighborhoodOverviewDistance(systems, aspect);
   const focusPosition = aroundPosition ?? focusedSource?.position;
-  const center = useMemo(() => focusPosition
-    ? new Vector3(...focusPosition).applyQuaternion(rotation)
-    : new Vector3(), [focusPosition, rotation]);
+  const center = useMemo(() => (focusPosition ? new Vector3(...focusPosition).applyQuaternion(rotation) : new Vector3()), [focusPosition, rotation]);
   const camera = useThree((state) => state.camera);
   const zoomStart = useRef(0);
   const clearSource = useCallback(() => onSource(null), [onSource]);
@@ -90,10 +112,8 @@ function Map({ systems, markers, rotation, focusedSource, aroundPosition, around
 
   const minDistance = focusPosition ? 2 : Math.min(24, distance * 0.25);
   const maxDistance = distance * 2.4;
-  const initialDistance = aroundPosition ? 3 * aroundRadius / MathUtils.clamp(aspect, 0.35, 1) : focusedSource ? 44 : distance;
-  const highlightedPosition = useMemo(() => focusedSource
-    ? new Vector3(...focusedSource.position).applyQuaternion(rotation)
-    : undefined, [focusedSource, rotation]);
+  const initialDistance = aroundPosition ? (3 * aroundRadius) / MathUtils.clamp(aspect, 0.35, 1) : focusedSource ? 44 : distance;
+  const highlightedPosition = useMemo(() => (focusedSource ? new Vector3(...focusedSource.position).applyQuaternion(rotation) : undefined), [focusedSource, rotation]);
   const cameraPosition = useMemo<[number, number, number]>(() => [center.x, center.y, center.z + initialDistance], [center, initialDistance]);
 
   useFrame(({ camera, size, raycaster }) => {
@@ -122,27 +142,37 @@ function Map({ systems, markers, rotation, focusedSource, aroundPosition, around
         enablePan={false}
         minDistance={minDistance}
         maxDistance={maxDistance}
-        onStart={() => { zoomStart.current = camera.position.distanceTo(center); }}
+        onStart={() => {
+          zoomStart.current = camera.position.distanceTo(center);
+        }}
         onEnd={() => {
           const offset = projected.copy(camera.position).sub(center);
           const current = offset.length();
           if (current > zoomStart.current && current >= maxDistance * 0.99) {
-            onExit({ direction: offset.normalize().toArray(), distanceAu: current * KM_PER_LIGHT_YEAR / KM_PER_AU });
+            onExit({ direction: offset.normalize().toArray(), distanceAu: (current * KM_PER_LIGHT_YEAR) / KM_PER_AU });
           } else if (current < zoomStart.current && current <= minDistance * 1.01) {
             if (!focusPosition) onEnterSolar();
           }
         }}
       />
       {showGaia && !aroundPosition && <GaiaPreview center={center} rotation={rotation} overviewDistance={distance} onSelect={onSource} onExit={clearSource} />}
-      {aroundPosition && <group position={center}><GaiaSearchBoundary radius={aroundRadius} /></group>}
+      {aroundPosition && (
+        <group position={center}>
+          <GaiaSearchBoundary radius={aroundRadius} />
+        </group>
+      )}
       {neighbors && (
         <group quaternion={rotation}>
           {neighbors.map(({ source }) => (
-            <mesh key={source.id} position={source.position} onClick={(event) => {
-              if (event.delta > 4) return;
-              event.stopPropagation();
-              onSource(source);
-            }}>
+            <mesh
+              key={source.id}
+              position={source.position}
+              onClick={(event) => {
+                if (event.delta > 4) return;
+                event.stopPropagation();
+                onSource(source);
+              }}
+            >
               <sphereGeometry args={[aroundRadius * 0.012, 12, 8]} />
               <meshBasicMaterial color="#8ae5ff" />
             </mesh>
@@ -184,39 +214,70 @@ function GaiaSourceCard({ source, onClose, onOpenNeighbors }: { source: GaiaSour
   const path = withLocale(gaiaSourcePath(source.id), locale);
   return (
     <aside className={styles.gaiaSource} aria-label={t('details.gaiaSource')}>
-      <button className={styles.gaiaClose} type="button" aria-label={t('details.close')} onClick={onClose}>×</button>
+      <button className={styles.gaiaClose} type="button" aria-label={t('details.close')} onClick={onClose}>
+        ×
+      </button>
       {counterpart?.name ? (
         <>
           <strong>{catalogText(counterpart.name)}</strong>
           <span>Gaia DR3 {source.id}</span>
         </>
-      ) : <strong>Gaia DR3 {source.id}</strong>}
-      <span>{t('details.gaiaSunDistance', [t('units.lightYears', [number(source.distance, 2)])])} · G {number(source.magnitude, 2)}</span>
-      <a href="https://gea.esac.esa.int/archive/" target="_blank" rel="noreferrer">ESA/Gaia/DPAC</a>
+      ) : (
+        <strong>Gaia DR3 {source.id}</strong>
+      )}
+      <span>
+        {t('details.gaiaSunDistance', [t('units.lightYears', [number(source.distance, 2)])])} · G {number(source.magnitude, 2)}
+      </span>
+      <a href="https://gea.esac.esa.int/archive/" target="_blank" rel="noreferrer">
+        ESA/Gaia/DPAC
+      </a>
       {counterpart && (
         <>
-          <a href={counterpart.reference} target="_blank" rel="noreferrer">{t('details.gaiaCrossIdentification')}</a>
+          <a href={counterpart.reference} target="_blank" rel="noreferrer">
+            {t('details.gaiaCrossIdentification')}
+          </a>
           <Link prefetch={false} href={withLocale(systemPath(milkyWay.id, counterpart.systemId, counterpart.bodyId), locale)}>
             {t('details.gaiaOpenNamedObject')}
           </Link>
         </>
       )}
-      <button className={styles.gaiaCopy} type="button" onClick={onOpenNeighbors}>{t('details.gaiaAroundSource')}</button>
-      <button className={styles.gaiaCopy} type="button" onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(new URL(path, window.location.origin).href);
-          setCopy('copied');
-        } catch {
-          setCopy('manual');
-        }
-      }}>{t('details.gaiaShare')}</button>
+      <button className={styles.gaiaCopy} type="button" onClick={onOpenNeighbors}>
+        {t('details.gaiaAroundSource')}
+      </button>
+      <button
+        className={styles.gaiaCopy}
+        type="button"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(new URL(path, window.location.origin).href);
+            setCopy('copied');
+          } catch {
+            setCopy('manual');
+          }
+        }}
+      >
+        {t('details.gaiaShare')}
+      </button>
       {copy === 'copied' && <span role="status">{t('details.gaiaCopied')}</span>}
       {copy === 'manual' && <input aria-label={t('details.gaiaShare')} readOnly value={new URL(path, window.location.origin).href} onFocus={(event) => event.currentTarget.select()} />}
     </aside>
   );
 }
 
-export default function NeighborhoodScene({ systems, onSelect, reportDistance, showGaia, onExit, sourceId, onClearSource, aroundPosition, aroundRadius, neighbors, onOpenNeighbors, onSelectAroundSource }: {
+export default function NeighborhoodScene({
+  systems,
+  onSelect,
+  reportDistance,
+  showGaia,
+  onExit,
+  sourceId,
+  onClearSource,
+  aroundPosition,
+  aroundRadius,
+  neighbors,
+  onOpenNeighbors,
+  onSelectAroundSource,
+}: {
   systems: readonly StarSystem[];
   onSelect: (id: string) => void;
   reportDistance: ReportDistanceScale;
@@ -239,14 +300,15 @@ export default function NeighborhoodScene({ systems, onSelect, reportDistance, s
   const lookup = useGaiaSource(lookupId);
   const focusedSource = lookup?.source ?? undefined;
   const source = (showGaia ? pickedSource : null) ?? focusedSource;
-  const selectSource = useCallback((item: GaiaSource | null) => {
-    if (aroundPosition && item) onSelectAroundSource(item.id);
-    else setSource(item);
-  }, [aroundPosition, onSelectAroundSource, setSource]);
-  const sourceStatus = sourceId && !source
-    ? !lookupId || lookup?.source === null && !lookup.failed ? 'search.gaiaMissing'
-      : lookup?.failed ? 'search.gaiaUnavailable' : 'search.gaiaLoading'
-    : null;
+  const selectSource = useCallback(
+    (item: GaiaSource | null) => {
+      if (aroundPosition && item) onSelectAroundSource(item.id);
+      else setSource(item);
+    },
+    [aroundPosition, onSelectAroundSource, setSource],
+  );
+  const sourceStatus =
+    sourceId && !source ? (!lookupId || (lookup?.source === null && !lookup.failed) ? 'search.gaiaMissing' : lookup?.failed ? 'search.gaiaUnavailable' : 'search.gaiaLoading') : null;
   const enterSolar = useCallback(() => onSelect(milkyWay.systemId), [onSelect]);
   const { markers, rotation } = useMemo(() => createMarkers(systems), [systems]);
   const labels = useRef<Record<string, HTMLDivElement>>({});
@@ -281,16 +343,40 @@ export default function NeighborhoodScene({ systems, onSelect, reportDistance, s
     <>
       <CanvasBoundary>
         <Canvas dpr={[1, 1.5]} aria-label={t('canvas.solarNeighborhood')} onPointerMissed={() => setSource(null)}>
-          <Map key={aroundPosition ? 'around' : focusedSource?.id ?? 'overview'} focusedSource={focusedSource} aroundPosition={aroundPosition} aroundRadius={aroundRadius} neighbors={neighbors} systems={systems} markers={markers} rotation={rotation} showGaia={showGaia} projectLabels={projectLabels} reportDistance={reportDistance} onSource={selectSource} onExit={onExit} onEnterSolar={enterSolar} />
+          <Map
+            key={aroundPosition ? 'around' : (focusedSource?.id ?? 'overview')}
+            focusedSource={focusedSource}
+            aroundPosition={aroundPosition}
+            aroundRadius={aroundRadius}
+            neighbors={neighbors}
+            systems={systems}
+            markers={markers}
+            rotation={rotation}
+            showGaia={showGaia}
+            projectLabels={projectLabels}
+            reportDistance={reportDistance}
+            onSource={selectSource}
+            onExit={onExit}
+            onEnterSolar={enterSolar}
+          />
         </Canvas>
       </CanvasBoundary>
-      {source && <GaiaSourceCard key={source.id} source={source} onOpenNeighbors={() => onOpenNeighbors(source.id)} onClose={() => {
-        setSource(null);
-        if (sourceId) onClearSource();
-      }} />}
+      {source && (
+        <GaiaSourceCard
+          key={source.id}
+          source={source}
+          onOpenNeighbors={() => onOpenNeighbors(source.id)}
+          onClose={() => {
+            setSource(null);
+            if (sourceId) onClearSource();
+          }}
+        />
+      )}
       {sourceStatus && (
         <aside className={styles.gaiaSource} aria-label={t('details.gaiaSource')}>
-          <button className={styles.gaiaClose} type="button" aria-label={t('details.close')} onClick={onClearSource}>×</button>
+          <button className={styles.gaiaClose} type="button" aria-label={t('details.close')} onClick={onClearSource}>
+            ×
+          </button>
           <span role="status">{t(sourceStatus)}</span>
         </aside>
       )}

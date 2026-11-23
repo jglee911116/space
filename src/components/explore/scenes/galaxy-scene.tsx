@@ -21,7 +21,15 @@ import { OortCloudModel } from '../three/planetary-systems/oort-cloud';
 import { AU_PER_KPC, DAYS_PER_YEAR, KM_PER_KPC, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { galacticOrbitColor, nearbyPositions, neighborhoodOverviewDistance } from '../utils/nearby-positions';
-import { BLACK_HOLE_EXIT_DISTANCE, GALACTIC_CENTER_ENTRY_KPC, GALACTIC_CENTER_RETURN_KPC, GALAXY_EXIT_KPC, featuredOverviewDistanceKpc, galaxyHandoffDistanceAu, type ZoomHandoff } from '../utils/zoom';
+import {
+  BLACK_HOLE_EXIT_DISTANCE,
+  GALACTIC_CENTER_ENTRY_KPC,
+  GALACTIC_CENTER_RETURN_KPC,
+  GALAXY_EXIT_KPC,
+  featuredOverviewDistanceKpc,
+  galaxyHandoffDistanceAu,
+  type ZoomHandoff,
+} from '../utils/zoom';
 import { seededRandom } from '../utils/random';
 
 type GalaxySceneProps = {
@@ -54,7 +62,7 @@ const MAP_CAMERA = new Vector3(0, 36, 28);
 const CENTER_CAMERA = new Vector3(0, 1.8, 6.2);
 const CENTER_OVERVIEW_DIAMETER_KPC = (SAGITTARIUS_FLOW_DIAMETER / BLACK_HOLE_EXIT_DISTANCE) * GALACTIC_CENTER_RETURN_KPC;
 const CENTER_EINSTEIN_RADIUS = 2.26;
-const CENTER_LENS_FADE_KPC = [0.20, 0.94] as const;
+const CENTER_LENS_FADE_KPC = [0.2, 0.94] as const;
 const COUNT = 24_000;
 const PHASE = 0.36;
 const BAR_ANGLE = 0.29;
@@ -393,16 +401,33 @@ function GalacticMap({
         .filter((object) => !object.parentObjectId && (!object.galaxyId || object.galaxyId === milkyWay.id))
         .map((object, index) => (
           <group key={object.id} position={featuredPosition(object, radius)}>
-            {(object.extentLightYears > 0 || object.photosphere || object.id === focusedObjectId) && <FeaturedObjectPreview
-              object={object}
-              focused={object.id === focusedObjectId}
-              playbackTime={object.kind === 'x-ray-binary' ? accretionPlaybackTime : undefined}
-              simulationDays={simulationDaysRef}
-            />}
-            <GalacticMarker name={object.name} color={object.color} labelOffset={index ? -1.0 : 1.0} modelRadius={object.id === focusedObjectId ? featuredOverviewDistanceKpc(object) * 0.13 : undefined} priority={object.id === focusedObjectId ? 3 : 0} localOpacity={cloudOpacity} onSelect={() => onSelectObject(object.id)} />
+            {(object.extentLightYears > 0 || object.photosphere || object.id === focusedObjectId) && (
+              <FeaturedObjectPreview
+                object={object}
+                focused={object.id === focusedObjectId}
+                playbackTime={object.kind === 'x-ray-binary' ? accretionPlaybackTime : undefined}
+                simulationDays={simulationDaysRef}
+              />
+            )}
+            <GalacticMarker
+              name={object.name}
+              color={object.color}
+              labelOffset={index ? -1.0 : 1.0}
+              modelRadius={object.id === focusedObjectId ? featuredOverviewDistanceKpc(object) * 0.13 : undefined}
+              priority={object.id === focusedObjectId ? 3 : 0}
+              localOpacity={cloudOpacity}
+              onSelect={() => onSelectObject(object.id)}
+            />
           </group>
         ))}
-      <GalacticMarker name={milkyWay.center.name} priority={centerFocused ? 3 : 2} onSelect={onSelectCenter} localOpacity={centerLabelFade} labelOffset={1.15} modelRadius={CENTER_OVERVIEW_DIAMETER_KPC * 0.30} />
+      <GalacticMarker
+        name={milkyWay.center.name}
+        priority={centerFocused ? 3 : 2}
+        onSelect={onSelectCenter}
+        localOpacity={centerLabelFade}
+        labelOffset={1.15}
+        modelRadius={CENTER_OVERVIEW_DIAMETER_KPC * 0.3}
+      />
     </>
   );
 }
@@ -467,7 +492,7 @@ function Scene({
   const focusedObject = featuredObjects.find(({ id }) => id === focusedObjectId);
   const focusedDistance = focusedObject ? featuredOverviewDistanceKpc(focusedObject) : 0;
   const focusedPosition = useMemo(
-    () => focusedObject ? new Vector3(...featuredPosition(focusedObject, star.galacticOrbit?.radiusKpc ?? 0)) : undefined,
+    () => (focusedObject ? new Vector3(...featuredPosition(focusedObject, star.galacticOrbit?.radiusKpc ?? 0)) : undefined),
     [focusedObject, star.galacticOrbit?.radiusKpc],
   );
   const handoffRadius = galaxyHandoffDistanceAu(system) / AU_PER_KPC;
@@ -475,7 +500,7 @@ function Scene({
   const observationMaps = milkyWay.center.observationMaps;
   const intensityMap = useSurfaceMap(observationMaps?.intensity, centerFocused);
   const polarizationMap = useSurfaceMap(observationMaps?.polarization, centerFocused && showCenterPolarization);
-  const observationMap = showCenterPolarization ? polarizationMap ?? intensityMap : intensityMap;
+  const observationMap = showCenterPolarization ? (polarizationMap ?? intensityMap) : intensityMap;
   const scratch = useMemo(() => ({ offset: new Vector3(), center: new Vector3(), sun: new Vector3(), selected: new Vector3() }), []);
   const selectedPath = selectedNeighbor?.system.galacticPath;
   const anchorRadius = star.galacticOrbit?.radiusKpc ?? 0;
@@ -488,8 +513,8 @@ function Scene({
     if (centerFocused && centerEntry) {
       orbit.target.set(0, 0, 0);
       const distance = close
-        ? MathUtils.clamp((centerEntry.distanceAu / AU_PER_KPC) * SAGITTARIUS_FLOW_DIAMETER / CENTER_OVERVIEW_DIAMETER_KPC, 2.4, BLACK_HOLE_EXIT_DISTANCE * 0.85)
-        : (centerEntry.distanceAu / AU_PER_KPC) * CENTER_OVERVIEW_DIAMETER_KPC / SAGITTARIUS_FLOW_DIAMETER;
+        ? MathUtils.clamp(((centerEntry.distanceAu / AU_PER_KPC) * SAGITTARIUS_FLOW_DIAMETER) / CENTER_OVERVIEW_DIAMETER_KPC, 2.4, BLACK_HOLE_EXIT_DISTANCE * 0.85)
+        : ((centerEntry.distanceAu / AU_PER_KPC) * CENTER_OVERVIEW_DIAMETER_KPC) / SAGITTARIUS_FLOW_DIAMETER;
       camera.position.set(...centerEntry.direction).multiplyScalar(distance);
     } else if (focusedPosition) {
       orbit.target.copy(focusedPosition);
@@ -510,7 +535,27 @@ function Scene({
       camera.position.copy(close ? CENTER_CAMERA : MAP_CAMERA).multiplyScalar(Math.max(1, ((close ? 0.55 : 0.85) * height) / Math.max(width, 1)));
     }
     orbit.update();
-  }, [camera, centerEntry, centerFocused, close, cursorZoomRef, entry, focusLocal, focusedDistance, focusedObject, focusedPosition, getState, groupEntry, handoffRadius, localCenter, recenter, scratch, simulationDaysRef, star, system.id]);
+  }, [
+    camera,
+    centerEntry,
+    centerFocused,
+    close,
+    cursorZoomRef,
+    entry,
+    focusLocal,
+    focusedDistance,
+    focusedObject,
+    focusedPosition,
+    getState,
+    groupEntry,
+    handoffRadius,
+    localCenter,
+    recenter,
+    scratch,
+    simulationDaysRef,
+    star,
+    system.id,
+  ]);
 
   useFrame(({ camera }, delta) => {
     if (!paused) {
@@ -567,7 +612,7 @@ function Scene({
     <>
       {centerFocused && (
         <LensedStarfield
-          einsteinRadius={close ? CENTER_EINSTEIN_RADIUS : CENTER_EINSTEIN_RADIUS * CENTER_OVERVIEW_DIAMETER_KPC / SAGITTARIUS_FLOW_DIAMETER}
+          einsteinRadius={close ? CENTER_EINSTEIN_RADIUS : (CENTER_EINSTEIN_RADIUS * CENTER_OVERVIEW_DIAMETER_KPC) / SAGITTARIUS_FLOW_DIAMETER}
           fadeRange={close ? undefined : CENTER_LENS_FADE_KPC}
         />
       )}
@@ -624,9 +669,7 @@ function Scene({
             if (zoomingIn && radius <= focusedDistance * 0.72) onSelectObject(focusedObject.id);
           } else if (zoomingIn) {
             const { width, height } = getState().size;
-            const entryRadius = system.id === anchor.id
-              ? neighborhoodOverviewDistance(systems, width / Math.max(1, height)) / LIGHT_YEARS_PER_KPC
-              : handoffRadius * 0.88;
+            const entryRadius = system.id === anchor.id ? neighborhoodOverviewDistance(systems, width / Math.max(1, height)) / LIGHT_YEARS_PER_KPC : handoffRadius * 0.88;
             if (radius <= entryRadius) onZoomIn(handoff);
           }
         }}

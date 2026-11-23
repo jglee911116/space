@@ -50,16 +50,23 @@ export function MagnetarSurface({ color, paused }: { color: string; paused: bool
   const time = useRef(0);
   const materials = useRef<(ShaderMaterial | null)[]>([]);
   const uniforms = useMemo(() => ({ phase: { value: 0 }, tint: { value: new Color(color) } }), [color]);
-  const field = useMemo(() => [1.60, 2.22, 2.87].flatMap((shell, ring) =>
-    Array.from({ length: 5 }, (_, index) => {
-      const edge = Math.asin(Math.sqrt(1 / shell));
-      return new CatmullRomCurve3(Array.from({ length: 37 }, (_, step) => {
-        const theta = edge + step / 36 * (Math.PI - 2 * edge);
-        const longitude = index * Math.PI * 2 / 5 + 0.21 * ring + 0.58 * Math.cos(theta);
-        const radius = shell * Math.sin(theta) ** 2;
-        return new Vector3(radius * Math.sin(theta) * Math.cos(longitude), radius * Math.cos(theta), radius * Math.sin(theta) * Math.sin(longitude));
-      }));
-    })), []);
+  const field = useMemo(
+    () =>
+      [1.6, 2.22, 2.87].flatMap((shell, ring) =>
+        Array.from({ length: 5 }, (_, index) => {
+          const edge = Math.asin(Math.sqrt(1 / shell));
+          return new CatmullRomCurve3(
+            Array.from({ length: 37 }, (_, step) => {
+              const theta = edge + (step / 36) * (Math.PI - 2 * edge);
+              const longitude = (index * Math.PI * 2) / 5 + 0.21 * ring + 0.58 * Math.cos(theta);
+              const radius = shell * Math.sin(theta) ** 2;
+              return new Vector3(radius * Math.sin(theta) * Math.cos(longitude), radius * Math.cos(theta), radius * Math.sin(theta) * Math.sin(longitude));
+            }),
+          );
+        }),
+      ),
+    [],
+  );
 
   useFrame((_, delta) => {
     if (!paused) time.current = (time.current + Math.min(delta, 0.1) * 2.9) % (2 * Math.PI);
@@ -72,12 +79,29 @@ export function MagnetarSurface({ color, paused }: { color: string; paused: bool
     <>
       <mesh>
         <sphereGeometry args={[1, 64, 40]} />
-        <shaderMaterial ref={(material) => { materials.current[0] = material; }} uniforms={uniforms} vertexShader={surfaceVertex} fragmentShader={crust} />
+        <shaderMaterial
+          ref={(material) => {
+            materials.current[0] = material;
+          }}
+          uniforms={uniforms}
+          vertexShader={surfaceVertex}
+          fragmentShader={crust}
+        />
       </mesh>
       {field.map((curve, index) => (
         <mesh key={index} raycast={() => {}}>
           <tubeGeometry args={[curve, 48, index < 5 ? 0.012 : 0.007, 5, false]} />
-          <shaderMaterial ref={(material) => { materials.current[index + 1] = material; }} uniforms={uniforms} vertexShader={fieldVertex} fragmentShader={fieldFragment} transparent depthWrite={false} blending={AdditiveBlending} />
+          <shaderMaterial
+            ref={(material) => {
+              materials.current[index + 1] = material;
+            }}
+            uniforms={uniforms}
+            vertexShader={fieldVertex}
+            fragmentShader={fieldFragment}
+            transparent
+            depthWrite={false}
+            blending={AdditiveBlending}
+          />
         </mesh>
       ))}
     </>

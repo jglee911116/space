@@ -81,11 +81,14 @@ const skyFragment = /* glsl */ `
 
 export function LensedStarfield({ einsteinRadius, fadeRange, center }: { einsteinRadius: number; fadeRange?: readonly [number, number]; center?: readonly [number, number, number] }) {
   const sky = useRef<Mesh>(null);
-  const uniforms = useMemo(() => ({
-    einsteinRadius: { value: einsteinRadius },
-    fadeRange: { value: new Vector2(...(fadeRange ?? [0, 0])) },
-    lensCenter: { value: new Vector3(...(center ?? [0, 0, 0])) },
-  }), [center, einsteinRadius, fadeRange]);
+  const uniforms = useMemo(
+    () => ({
+      einsteinRadius: { value: einsteinRadius },
+      fadeRange: { value: new Vector2(...(fadeRange ?? [0, 0])) },
+      lensCenter: { value: new Vector3(...(center ?? [0, 0, 0])) },
+    }),
+    [center, einsteinRadius, fadeRange],
+  );
   useFrame(({ camera }) => {
     if (sky.current) sky.current.visible = !fadeRange || camera.position.distanceToSquared(uniforms.lensCenter.value) < fadeRange[1] * fadeRange[1];
   });

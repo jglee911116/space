@@ -55,7 +55,9 @@ function buildFlowModel(span: number, anchors: Anchors) {
   const hull = new SphereGeometry(1, 64, 40);
   const shape = hull.getAttribute('position');
   for (let i = 0; i < shape.count; i++) {
-    const x = shape.getX(i), y = shape.getY(i), z = shape.getZ(i);
+    const x = shape.getX(i),
+      y = shape.getY(i),
+      z = shape.getZ(i);
     const angle = Math.atan2(z, y);
     const ripple = 0.92 + 0.12 * Math.sin(4.0 * x + angle * 3.0) + 0.08 * Math.cos(angle * 5.0 - x * 5.0);
     const pinch = 0.75 + 0.25 * Math.sin(3.9 * x + 0.45);
@@ -70,19 +72,19 @@ function buildFlowModel(span: number, anchors: Anchors) {
 
   const convergence = anchors.norma ?? locate(0.56, 0.02, 0.05);
   const origin = new Vector3();
-  const virgo = anchors.virgo ?? locate(-0.20, 0.24, 0.10);
+  const virgo = anchors.virgo ?? locate(-0.2, 0.24, 0.1);
   const hydra = anchors.hydra ?? locate(0.19, -0.26, 0.14);
   const fornax = anchors.fornax ?? locate(-0.32, -0.23, -0.18);
   // Curves are illustrative. Observed cluster positions anchor the named junctions.
   const routes = [
-    [locate(-0.92, 0.14, -0.05), locate(-0.61, 0.28, -0.10), virgo, locate(0.25, 0.08, -0.11), convergence],
+    [locate(-0.92, 0.14, -0.05), locate(-0.61, 0.28, -0.1), virgo, locate(0.25, 0.08, -0.11), convergence],
     [locate(-0.74, -0.18, 0.19), locate(-0.55, -0.21, 0.28), origin, locate(0.33, 0.16, 0.08), convergence],
-    [locate(0.20, -0.37, 0.15), hydra, locate(0.37, -0.19, 0.12), convergence],
-    [locate(-0.67, -0.23, -0.18), fornax, locate(0.10, -0.27, -0.13), convergence],
+    [locate(0.2, -0.37, 0.15), hydra, locate(0.37, -0.19, 0.12), convergence],
+    [locate(-0.67, -0.23, -0.18), fornax, locate(0.1, -0.27, -0.13), convergence],
     [locate(0.91, 0.16, 0.08), locate(0.78, 0.08, 0.17), convergence],
     [locate(0.76, -0.25, -0.09), locate(0.52, -0.23, -0.15), convergence],
     [locate(-0.43, 0.25, 0.37), locate(-0.12, 0.32, 0.25), virgo],
-    [locate(0.46, 0.29, -0.26), locate(0.27, 0.20, -0.31), locate(0.16, 0.07, -0.12), convergence],
+    [locate(0.46, 0.29, -0.26), locate(0.27, 0.2, -0.31), locate(0.16, 0.07, -0.12), convergence],
   ].map((points) => new CatmullRomCurve3(points));
 
   let seed = 1219;
@@ -90,8 +92,11 @@ function buildFlowModel(span: number, anchors: Anchors) {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
     return seed / 4294967296;
   };
-  const positions: number[] = [], colors: number[] = [], strengths: number[] = [];
-  const warm = new Color('#ffd294'), cool = new Color('#88abcd');
+  const positions: number[] = [],
+    colors: number[] = [],
+    strengths: number[] = [];
+  const warm = new Color('#ffd294'),
+    cool = new Color('#88abcd');
   const tint = new Color();
   for (const route of routes) {
     for (let i = 0; i < 440; i++) {
@@ -107,8 +112,12 @@ function buildFlowModel(span: number, anchors: Anchors) {
     }
   }
   return {
-    hullPositions, hullNormals, hullIndices,
-    fieldPositions: Float32Array.from(positions), colors: Float32Array.from(colors), strengths: Float32Array.from(strengths),
+    hullPositions,
+    hullNormals,
+    hullIndices,
+    fieldPositions: Float32Array.from(positions),
+    colors: Float32Array.from(colors),
+    strengths: Float32Array.from(strengths),
     paths: routes.map((route) => route.getPoints(60)),
   };
 }
@@ -123,8 +132,7 @@ export function LaniakeaVolume({ span, anchors, showFlows }: { span: number; anc
           <bufferAttribute attach="attributes-position" args={[model.hullPositions, 3]} />
           <bufferAttribute attach="attributes-normal" args={[model.hullNormals, 3]} />
         </bufferGeometry>
-        <shaderMaterial vertexShader={boundaryVertex} fragmentShader={boundaryFragment} side={BackSide}
-          transparent depthWrite={false} blending={AdditiveBlending} />
+        <shaderMaterial vertexShader={boundaryVertex} fragmentShader={boundaryFragment} side={BackSide} transparent depthWrite={false} blending={AdditiveBlending} />
       </mesh>
       <points raycast={() => {}}>
         <bufferGeometry>
@@ -132,13 +140,9 @@ export function LaniakeaVolume({ span, anchors, showFlows }: { span: number; anc
           <bufferAttribute attach="attributes-color" args={[model.colors, 3]} />
           <bufferAttribute attach="attributes-strength" args={[model.strengths, 1]} />
         </bufferGeometry>
-        <shaderMaterial vertexShader={fieldVertex} fragmentShader={fieldFragment} vertexColors
-          transparent depthWrite={false} blending={AdditiveBlending} />
+        <shaderMaterial vertexShader={fieldVertex} fragmentShader={fieldFragment} vertexColors transparent depthWrite={false} blending={AdditiveBlending} />
       </points>
-      {showFlows && model.paths.map((path, index) => (
-        <Line key={index} points={path} color="#f6c486" lineWidth={1.1} opacity={0.52}
-          transparent depthWrite={false} raycast={() => {}} />
-      ))}
+      {showFlows && model.paths.map((path, index) => <Line key={index} points={path} color="#f6c486" lineWidth={1.1} opacity={0.52} transparent depthWrite={false} raycast={() => {}} />)}
     </>
   );
 }

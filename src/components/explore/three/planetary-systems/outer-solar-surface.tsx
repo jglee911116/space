@@ -14,8 +14,7 @@ export function PlanetGeometry({ radius, body }: { radius: number; body: Body })
       const x = positions.getX(index) / radius;
       const y = positions.getY(index) / radius;
       const z = positions.getZ(index) / radius;
-      const relief = 0.037 * Math.sin(6 * x + 4 * y + seed) * Math.cos(7 * z - 3 * y)
-        + 0.023 * Math.sin(14 * x - 9 * z + 8 * y + seed);
+      const relief = 0.037 * Math.sin(6 * x + 4 * y + seed) * Math.cos(7 * z - 3 * y) + 0.023 * Math.sin(14 * x - 9 * z + 8 * y + seed);
       let scale = 1 + relief;
       if (silhouette === 'rounded-box') {
         const cube = (x ** 6 + y ** 6 + z ** 6) ** (-1 / 6);

@@ -34,10 +34,16 @@ const fragment = /* glsl */ `
 export function IcePlumes({ radius, paused }: { radius: number; paused: boolean }) {
   const material = useRef<ShaderMaterial>(null);
   const uniforms = useMemo(() => ({ radius: { value: radius }, time: { value: 0 } }), [radius]);
-  const positions = useMemo(() => new Float32Array(Array.from({ length: 280 }, (_, index) => {
-    const stripe = index % 4;
-    return [(stripe - 1.5) * 0.095 + 0.018 * Math.sin(index * 5.1), 0.18 * Math.sin(index * 8.7), ((index * 89) % 281) / 281];
-  }).flat()), []);
+  const positions = useMemo(
+    () =>
+      new Float32Array(
+        Array.from({ length: 280 }, (_, index) => {
+          const stripe = index % 4;
+          return [(stripe - 1.5) * 0.095 + 0.018 * Math.sin(index * 5.1), 0.18 * Math.sin(index * 8.7), ((index * 89) % 281) / 281];
+        }).flat(),
+      ),
+    [],
+  );
 
   useFrame((_, delta) => {
     if (material.current && !paused) material.current.uniforms.time.value += Math.min(delta, 0.1);

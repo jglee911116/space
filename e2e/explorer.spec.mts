@@ -146,10 +146,15 @@ for (const [startPage, delta, scenario] of [
     if (!bounds) throw new Error('Starting map canvas not mounted');
     await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
 
-    await expect.poll(async () => {
-      if (new URL(page.url()).pathname !== '/ko/local-group') await page.mouse.wheel(0, delta);
-      return new URL(page.url()).pathname;
-    }, { intervals: [150], timeout: 12_000 }).toBe('/ko/local-group');
+    await expect
+      .poll(
+        async () => {
+          if (new URL(page.url()).pathname !== '/ko/local-group') await page.mouse.wheel(0, delta);
+          return new URL(page.url()).pathname;
+        },
+        { intervals: [150], timeout: 12_000 },
+      )
+      .toBe('/ko/local-group');
     await expect(page).toHaveURL('/ko/local-group?galaxy=milky-way');
     await waitForRenderedMap(page);
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
@@ -236,13 +241,16 @@ test('라니아케아에서 노르마 은하단 마커와 분광 관측 은하�
   const canvas = await page.locator('main canvas').boundingBox();
   if (!canvas) throw new Error('Laniakea canvas not mounted');
   const camera = new PerspectiveCamera(45, canvas.width / canvas.height);
-  camera.position.set(0.29, 0.39, 1).normalize().multiplyScalar(275 * 3.18 * Math.max(1, canvas.height / canvas.width));
+  camera.position
+    .set(0.29, 0.39, 1)
+    .normalize()
+    .multiplyScalar(275 * 3.18 * Math.max(1, canvas.height / canvas.width));
   camera.lookAt(0, 0, 0);
   camera.updateMatrixWorld();
-  const ra = 243.76597 * Math.PI / 180;
-  const dec = -60.907114 * Math.PI / 180;
+  const ra = (243.76597 * Math.PI) / 180;
+  const dec = (-60.907114 * Math.PI) / 180;
   const projected = new Vector3(Math.cos(dec) * Math.cos(ra), Math.sin(dec), -Math.cos(dec) * Math.sin(ra)).multiplyScalar(220).project(camera);
-  await page.mouse.click(canvas.x + (projected.x + 1) * canvas.width / 2, canvas.y + (1 - projected.y) * canvas.height / 2 - 0.95 * 30);
+  await page.mouse.click(canvas.x + ((projected.x + 1) * canvas.width) / 2, canvas.y + ((1 - projected.y) * canvas.height) / 2 - 0.95 * 30);
   await expect(page).toHaveURL('/ko/superclusters/laniakea?view=cluster&cluster=norma');
   await waitForRenderedMap(page);
   await details(page).getByText('분광 관측 표본 (128)', { exact: true }).click();
@@ -275,7 +283,9 @@ test('목성과 토성의 대기 특징을 표시하고 행성 셰이더를 컴�
   });
 
   const saturnRings = page.waitForResponse((response) => response.url().endsWith('/saturn/rings-sss.png') && response.ok());
-  const jupiterMap = page.waitForResponse((response) => response.url().endsWith('/textures/star-systems/solar/planets/jupiter/jupiter-cassini-pia07782.webp') && (response.ok() || response.status() === 304));
+  const jupiterMap = page.waitForResponse(
+    (response) => response.url().endsWith('/textures/star-systems/solar/planets/jupiter/jupiter-cassini-pia07782.webp') && (response.ok() || response.status() === 304),
+  );
   await page.goto(`${milkyWay}?system=solar&target=jupiter`);
   await Promise.all([jupiterMap, saturnRings]);
   await expect(details(page)).toContainText('남위 약 22°에 대적점');
@@ -322,7 +332,11 @@ test('태양계 밖 성운의 관측 텍스처를 로드한다', async ({ page }
     }
   });
 
-  for (const [target, category] of [['m57', 'planetary'], ['pillars-of-creation', 'star-forming'], ['crab-nebula', 'supernova-remnants']]) {
+  for (const [target, category] of [
+    ['m57', 'planetary'],
+    ['pillars-of-creation', 'star-forming'],
+    ['crab-nebula', 'supernova-remnants'],
+  ]) {
     const image = page.waitForResponse((response) => response.url().endsWith(`/textures/nebulae/${category}/${target}/webb.webp`) && response.ok());
     await page.goto(`${milkyWay}?view=object&target=${target}`);
     await image;
@@ -503,15 +517,25 @@ test('NGC 346을 검색하고 소마젤란은하 지도와 3D 장면을 오간�
   await expect(details(page).getByRole('heading', { name: 'NGC 346', exact: true })).toBeVisible();
   await expect(page.locator('main canvas')).toBeVisible();
   await page.mouse.move(720, 450);
-  await expect.poll(async () => {
-    await page.mouse.wheel(0, 550);
-    return new URL(page.url()).search;
-  }, { intervals: [130], timeout: 12_000 }).toBe('?focus=ngc-346');
+  await expect
+    .poll(
+      async () => {
+        await page.mouse.wheel(0, 550);
+        return new URL(page.url()).search;
+      },
+      { intervals: [130], timeout: 12_000 },
+    )
+    .toBe('?focus=ngc-346');
   await waitForRenderedMap(page);
-  await expect.poll(async () => {
-    await page.mouse.wheel(0, -550);
-    return new URL(page.url()).search;
-  }, { intervals: [130], timeout: 12_000 }).toBe('?view=object&target=ngc-346');
+  await expect
+    .poll(
+      async () => {
+        await page.mouse.wheel(0, -550);
+        return new URL(page.url()).search;
+      },
+      { intervals: [130], timeout: 12_000 },
+    )
+    .toBe('?view=object&target=ngc-346');
   expect(errors).toEqual([]);
 });
 
@@ -556,8 +580,7 @@ test('좁은 화면으로 축소해도 선택한 태양계 라벨과 주변 라�
   await expect.poll(async () => scene.getByRole('button').count()).toBeGreaterThan(2);
   const overlaps = await scene.getByRole('button').evaluateAll((buttons) => {
     const boxes = buttons.map((button) => button.getBoundingClientRect());
-    return boxes.some((a, index) => boxes.slice(index + 1).some((b) =>
-      a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom));
+    return boxes.some((a, index) => boxes.slice(index + 1).some((b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom));
   });
   expect(overlaps).toBe(false);
 });
@@ -688,12 +711,14 @@ test('M87* 강착원반과 제트가 은하 지도로 축소해도 재생된다'
   const frame = () => page.screenshot({ clip });
   const stableFrame = async (capture: () => Promise<Buffer>) => {
     let previous = await capture();
-    await expect.poll(async () => {
-      const current = await capture();
-      const stable = current.equals(previous);
-      previous = current;
-      return stable;
-    }).toBe(true);
+    await expect
+      .poll(async () => {
+        const current = await capture();
+        const stable = current.equals(previous);
+        previous = current;
+        return stable;
+      })
+      .toBe(true);
     return previous;
   };
   const pausedFrame = await stableFrame(frame);
@@ -703,10 +728,15 @@ test('M87* 강착원반과 제트가 은하 지도로 축소해도 재생된다'
 
   await page.getByRole('button', { name: '시뮬레이션 일시정지' }).click();
   await page.mouse.move(720, 450);
-  await expect.poll(async () => {
-    await page.mouse.wheel(0, 560);
-    return new URL(page.url()).search;
-  }, { intervals: [120], timeout: 12_000 }).toBe('?focus=m87-star');
+  await expect
+    .poll(
+      async () => {
+        await page.mouse.wheel(0, 560);
+        return new URL(page.url()).search;
+      },
+      { intervals: [120], timeout: 12_000 },
+    )
+    .toBe('?focus=m87-star');
   await waitForRenderedMap(page);
   await expect(page.getByText('이 화면은 고정된 관측 배치를 표시합니다.')).toBeHidden();
   const jetFrame = () => page.screenshot({ clip: { x: 714, y: 250, width: 105, height: 100 } });
@@ -724,36 +754,53 @@ test('커서가 화면 중심에서 벗어나도 궁수자리 A*를 축소한 �
   await expect(page.locator('main canvas')).toBeVisible();
   await page.mouse.move(300, 260);
 
-  await expect.poll(async () => {
-    await page.mouse.wheel(0, 500);
-    return details(page).getByText('편광 보기').isVisible();
-  }).toBe(false);
+  await expect
+    .poll(async () => {
+      await page.mouse.wheel(0, 500);
+      return details(page).getByText('편광 보기').isVisible();
+    })
+    .toBe(false);
   await expect(page).toHaveURL(/target=sgr-a$/);
   await expect(page.locator('main canvas')).toBeVisible();
 
-  await expect.poll(async () => {
-    await page.mouse.wheel(0, -500);
-    return details(page).getByText('편광 보기').isVisible();
-  }).toBe(true);
+  await expect
+    .poll(async () => {
+      await page.mouse.wheel(0, -500);
+      return details(page).getByText('편광 보기').isVisible();
+    })
+    .toBe(true);
 });
 
 test('성운과 외부 은하의 블랙홀을 축소해도 은하 지도에서 같은 천체에 초점을 둔다', async ({ page }) => {
-  for (const [galaxy, id] of [[milkyWay, 'orion-nebula'], ['/ko/galaxies/m87', 'm87-star']]) {
+  for (const [galaxy, id] of [
+    [milkyWay, 'orion-nebula'],
+    ['/ko/galaxies/m87', 'm87-star'],
+  ]) {
     const objectUrl = `${galaxy}?view=object&target=${id}`;
     await page.goto(objectUrl);
     await expect(page.locator('main canvas')).toBeVisible();
     await page.mouse.move(720, 450);
 
-    await expect.poll(async () => {
-      await page.mouse.wheel(0, 560);
-      return new URL(page.url()).search;
-    }, { intervals: [120], timeout: 12_000 }).toBe(`?focus=${id}`);
+    await expect
+      .poll(
+        async () => {
+          await page.mouse.wheel(0, 560);
+          return new URL(page.url()).search;
+        },
+        { intervals: [120], timeout: 12_000 },
+      )
+      .toBe(`?focus=${id}`);
     await waitForRenderedMap(page);
 
-    await expect.poll(async () => {
-      await page.mouse.wheel(0, -560);
-      return new URL(page.url()).search;
-    }, { intervals: [120], timeout: 12_000 }).toBe(`?view=object&target=${id}`);
+    await expect
+      .poll(
+        async () => {
+          await page.mouse.wheel(0, -560);
+          return new URL(page.url()).search;
+        },
+        { intervals: [120], timeout: 12_000 },
+      )
+      .toBe(`?view=object&target=${id}`);
   }
 });
 
@@ -767,15 +814,25 @@ test('헤라클레스 성단과 백조자리 X-1의 축소 모형을 지도에�
     await page.goto(`${milkyWay}?view=object&target=${id}`);
     await expect(page.locator('main canvas')).toBeVisible();
     await page.mouse.move(720, 450);
-    await expect.poll(async () => {
-      await page.mouse.wheel(0, 560);
-      return new URL(page.url()).search;
-    }, { intervals: [130], timeout: 12_000 }).toBe(`?focus=${id}`);
+    await expect
+      .poll(
+        async () => {
+          await page.mouse.wheel(0, 560);
+          return new URL(page.url()).search;
+        },
+        { intervals: [130], timeout: 12_000 },
+      )
+      .toBe(`?focus=${id}`);
     await waitForRenderedMap(page);
-    await expect.poll(async () => {
-      await page.mouse.wheel(0, -560);
-      return new URL(page.url()).search;
-    }, { intervals: [130], timeout: 12_000 }).toBe(`?view=object&target=${id}`);
+    await expect
+      .poll(
+        async () => {
+          await page.mouse.wheel(0, -560);
+          return new URL(page.url()).search;
+        },
+        { intervals: [130], timeout: 12_000 },
+      )
+      .toBe(`?view=object&target=${id}`);
   }
   expect(errors).toEqual([]);
 });
@@ -813,28 +870,41 @@ test('모바일 핀치로 태양계에서 우주까지 이동하고 뒤로 돌�
       if (!bounds) throw new Error('Canvas not mounted');
       const x = Math.round(bounds.x + bounds.width / 2);
       const y = Math.round(bounds.y + bounds.height / 2);
-      const fingers = (gap: number) => [{ x: x - gap, y, id: 1 }, { x: x + gap, y, id: 2 }];
+      const fingers = (gap: number) => [
+        { x: x - gap, y, id: 1 },
+        { x: x + gap, y, id: 2 },
+      ];
       await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: fingers(from) });
       for (let step = 1; step <= 5; step++) {
-        await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: fingers(from + (to - from) * step / 5) });
+        await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: fingers(from + ((to - from) * step) / 5) });
       }
       await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     }
     async function pinchTo(path: RegExp, from = 145, to = 22) {
-      await expect.poll(async () => {
-        if (!path.test(page.url())) await pinch(from, to);
-        return page.url();
-      }, { intervals: [180], timeout: 15_000 }).toMatch(path);
+      await expect
+        .poll(
+          async () => {
+            if (!path.test(page.url())) await pinch(from, to);
+            return page.url();
+          },
+          { intervals: [180], timeout: 15_000 },
+        )
+        .toMatch(path);
     }
 
     await page.goto(`${milkyWay}?system=solar&target=earth`);
     const scene = page.getByLabel('회전하고 확대할 수 있는 태양계 3D 모델');
     await scene.locator('button[aria-current="true"]').waitFor();
     const moon = scene.getByRole('button', { name: '달', exact: true });
-    await expect.poll(async () => {
-      if (!await moon.isVisible()) await pinch(105, 76);
-      return moon.isVisible();
-    }, { intervals: [150], timeout: 5000 }).toBe(true);
+    await expect
+      .poll(
+        async () => {
+          if (!(await moon.isVisible())) await pinch(105, 76);
+          return moon.isVisible();
+        },
+        { intervals: [150], timeout: 5000 },
+      )
+      .toBe(true);
     await moon.tap();
     await expect(page).toHaveURL(/target=moon$/);
     await page.goBack();
@@ -852,13 +922,7 @@ test('모바일 핀치로 태양계에서 우주까지 이동하고 뒤로 돌�
     await page.goBack();
     await expect(page).toHaveURL('/ko/universe');
     await expect(details(page)).toBeHidden();
-    for (const path of [
-      /\/superclusters\/laniakea$/,
-      /\/superclusters\/virgo$/,
-      /\/local-group\?galaxy=milky-way$/,
-      /\/milky-way\?view=galaxy$/,
-      /target=earth$/,
-    ]) {
+    for (const path of [/\/superclusters\/laniakea$/, /\/superclusters\/virgo$/, /\/local-group\?galaxy=milky-way$/, /\/milky-way\?view=galaxy$/, /target=earth$/]) {
       await page.goBack();
       await expect(page).toHaveURL(path);
     }
@@ -908,9 +972,14 @@ test('Gaia 표본은 확대할 때 타일을 읽고 축소 후 재사용한다',
   const canvas = page.locator('main canvas');
   const bounds = await canvas.boundingBox();
   if (!bounds) throw new Error('Neighborhood canvas not mounted');
-  const zoom = (deltaY: number) => canvas.dispatchEvent('wheel', {
-    deltaY, clientX: bounds.x + bounds.width / 2, clientY: bounds.y + bounds.height / 2, bubbles: true, cancelable: true,
-  });
+  const zoom = (deltaY: number) =>
+    canvas.dispatchEvent('wheel', {
+      deltaY,
+      clientX: bounds.x + bounds.width / 2,
+      clientY: bounds.y + bounds.height / 2,
+      bubbles: true,
+      cancelable: true,
+    });
   const bright = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith('.bright.bin') && response.ok());
   for (let step = 0; step < 5; step++) await zoom(-100);
   await bright;
@@ -937,12 +1006,17 @@ test('Gaia 점을 선택하면 64비트 관측원 식별자와 측정값을 표�
   const tile = Buffer.alloc(24);
   tile.writeFloatLE(6.5, 12);
   tile.writeBigUInt64LE(sourceId, 16);
-  await page.route('**/catalog/gaia-dr3-nearby/manifest.json?*', (route) => route.fulfill({
-    json: { tileSize: 40, tiles: [{ id: '0_0_0', center: [0, 0, 0], bright: 1, detail: 0 }] },
-  }));
-  await page.route('**/catalog/gaia-dr3-nearby/0_0_0.bright.bin?*', (route) => route.fulfill({
-    body: tile, contentType: 'application/octet-stream',
-  }));
+  await page.route('**/catalog/gaia-dr3-nearby/manifest.json?*', (route) =>
+    route.fulfill({
+      json: { tileSize: 40, tiles: [{ id: '0_0_0', center: [0, 0, 0], bright: 1, detail: 0 }] },
+    }),
+  );
+  await page.route('**/catalog/gaia-dr3-nearby/0_0_0.bright.bin?*', (route) =>
+    route.fulfill({
+      body: tile,
+      contentType: 'application/octet-stream',
+    }),
+  );
   await page.goto('/ko');
   await waitForRenderedMap(page);
   const canvas = page.locator('main canvas');
@@ -956,14 +1030,15 @@ test('Gaia 점을 선택하면 64비트 관측원 식별자와 측정값을 표�
   }
   await loaded;
   const info = page.getByRole('complementary', { name: 'Gaia DR3 관측원' });
-  await expect.poll(async () => {
-    await page.mouse.click(x, y);
-    return info.isVisible();
-  }).toBe(true);
+  await expect
+    .poll(async () => {
+      await page.mouse.click(x, y);
+      return info.isVisible();
+    })
+    .toBe(true);
   await expect(info).toContainText(`Gaia DR3 ${sourceId}`);
   await expect(info).toContainText('G 6.5');
 });
-
 
 test('확장된 Gaia 표본을 ID로 찾아 공유 링크에서 다시 연다', async ({ page, context }) => {
   const id = '4357027756659697664';
@@ -1014,7 +1089,12 @@ test('시리우스 중심으로 10광년 이내 Gaia 표본을 거리순으로 �
   await expect(page).toHaveURL(`/ko?view=neighborhood&around=${id}`);
   await expect(details(page).getByRole('heading', { level: 2 })).toContainText('시리우스 B 주변');
   await expect(details(page).getByRole('status')).toContainText('개 표시');
-  await expect(details(page).getByRole('list').nth(1).getByRole('button', { name: new RegExp(id) })).toHaveCount(0);
+  await expect(
+    details(page)
+      .getByRole('list')
+      .nth(1)
+      .getByRole('button', { name: new RegExp(id) }),
+  ).toHaveCount(0);
 });
 
 test('모바일 찾기 패널에서 빠른 이동, 전체 목록, 검색, 최근 방문을 사용할 수 있다', async ({ page }) => {
@@ -1105,7 +1185,12 @@ test('찾기에서 카탈로그 이름만 입력해도 메시에 천체를 찾�
   const panel = page.getByRole('region', { name: '천체·영역 찾기' });
   for (const text of ['Messier', '메시에']) {
     await panel.getByRole('searchbox').fill(text);
-    await expect(panel.getByRole('list').getByRole('button', { name: /메시에 87/ }).first()).toBeVisible();
+    await expect(
+      panel
+        .getByRole('list')
+        .getByRole('button', { name: /메시에 87/ })
+        .first(),
+    ).toBeVisible();
   }
 });
 
@@ -1128,7 +1213,12 @@ test('Gaia 대응 관측원은 자기 항성계의 별이고 주변 목록에서
     const linked = details(page).getByRole('group', { name: '연결된 Gaia 관측 기록' });
     await expect(linked.getByRole('button', { name })).toContainText(`Gaia DR3 ${id}`);
     await expect(details(page).getByRole('status')).toContainText('개 표시');
-    await expect(details(page).getByRole('list').nth(1).getByRole('button', { name: new RegExp(id) })).toHaveCount(0);
+    await expect(
+      details(page)
+        .getByRole('list')
+        .nth(1)
+        .getByRole('button', { name: new RegExp(id) }),
+    ).toHaveCount(0);
   }
 });
 

@@ -18,7 +18,9 @@ export default function GlobalNotFound() {
           <p lang="en">This page could not be found.</p>
           <nav>
             <Link href="/ko">{translate('ko', SITE_NAME_KEY)} 처음 화면</Link>
-            <Link href="/en" lang="en">{translate('en', SITE_NAME_KEY)} home</Link>
+            <Link href="/en" lang="en">
+              {translate('en', SITE_NAME_KEY)} home
+            </Link>
           </nav>
         </main>
       </body>

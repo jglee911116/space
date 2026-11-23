@@ -82,27 +82,25 @@ function fetchGaiaFile(name: string) {
 async function findGaiaNeighbors(center: GaiaSource['position'], radius: GaiaNeighborRadius, excludeIds: ReadonlySet<string>, signal: AbortSignal) {
   const manifest: GaiaManifest = await (await fetchGaiaFile('manifest.json')).json();
   signal.throwIfAborted();
-  const tiles = manifest.tiles.filter((tile) => Math.hypot(...tile.center.map((coordinate, axis) =>
-    Math.max(0, Math.abs(coordinate - center[axis]) - manifest.tileSize / 2),
-  )) <= radius);
+  const tiles = manifest.tiles.filter((tile) => Math.hypot(...tile.center.map((coordinate, axis) => Math.max(0, Math.abs(coordinate - center[axis]) - manifest.tileSize / 2))) <= radius);
 
-  const packets = await Promise.all(tiles.flatMap((tile) => (['bright', 'detail'] as const)
-    .filter((level) => tile[level] > 0)
-    .map(async (level) => {
-      const data = new DataView(await (await fetchGaiaFile(`${tile.id}.${level}.bin`)).arrayBuffer());
-      if (data.byteLength !== tile[level] * gaiaRecordBytes) throw new Error('Invalid Gaia tile');
-      return data;
-    })));
+  const packets = await Promise.all(
+    tiles.flatMap((tile) =>
+      (['bright', 'detail'] as const)
+        .filter((level) => tile[level] > 0)
+        .map(async (level) => {
+          const data = new DataView(await (await fetchGaiaFile(`${tile.id}.${level}.bin`)).arrayBuffer());
+          if (data.byteLength !== tile[level] * gaiaRecordBytes) throw new Error('Invalid Gaia tile');
+          return data;
+        }),
+    ),
+  );
 
   signal.throwIfAborted();
   const neighbors: GaiaNeighbor[] = [];
   for (const data of packets) {
     for (let offset = 0; offset < data.byteLength; offset += gaiaRecordBytes) {
-      const separation = Math.hypot(
-        data.getFloat32(offset, true) - center[0],
-        data.getFloat32(offset + 4, true) - center[1],
-        data.getFloat32(offset + 8, true) - center[2],
-      );
+      const separation = Math.hypot(data.getFloat32(offset, true) - center[0], data.getFloat32(offset + 4, true) - center[1], data.getFloat32(offset + 8, true) - center[2]);
       if (separation > radius) continue;
       const source = decodeGaiaSource(data, offset);
       if (!excludeIds.has(source.id)) neighbors.push({ source, separation });

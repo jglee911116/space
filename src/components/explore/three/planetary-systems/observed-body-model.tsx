@@ -11,7 +11,7 @@ export function ObservedBodyModel({ file, radius }: { file: string; radius: numb
     return {
       object: scene.clone(true),
       center: bounds.getCenter(new Vector3()).negate(),
-      scale: 2 * radius / Math.max(size.x, size.y, size.z),
+      scale: (2 * radius) / Math.max(size.x, size.y, size.z),
     };
   }, [scene, radius]);
 

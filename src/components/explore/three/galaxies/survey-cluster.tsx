@@ -9,11 +9,7 @@ const centerRa = 3.5876;
 const centerDec = -30.3975;
 const skyScale = 245;
 const rightAscensionProjection = Math.cos(MathUtils.degToRad(centerDec));
-const positionFor = (ra: number, dec: number, depth: number): [number, number, number] => [
-  (centerRa - ra) * skyScale * rightAscensionProjection,
-  (dec - centerDec) * skyScale,
-  depth,
-];
+const positionFor = (ra: number, dec: number, depth: number): [number, number, number] => [(centerRa - ra) * skyScale * rightAscensionProjection, (dec - centerDec) * skyScale, depth];
 
 const members = pandoraMembers.map(([id, ra, dec, major, minor, theta]) => {
   // Radial velocities include internal motion. Depth here separates overlapping elements for viewing.
@@ -21,13 +17,18 @@ const members = pandoraMembers.map(([id, ra, dec, major, minor, theta]) => {
   const edge = MathUtils.smoothstep(Math.hypot(x / 4.7, y / 4.2), 0.55, 1.45);
   const depth = (((id * 317) % 997) / 997 - 0.5) * MathUtils.lerp(3.7, 1.35, edge);
   const galaxy: Galaxy = {
-    id: String(id), name: `MUSE ${id}`, summary: '', distanceKpc: 0, sources: [],
+    id: String(id),
+    name: `MUSE ${id}`,
+    summary: '',
+    distanceKpc: 0,
+    sources: [],
     modelRadiusKpc: MathUtils.clamp(major * 1680, 0.09, 0.32),
     morphology: 'compact-elliptical',
     color: ['#efc698', '#e2c7ac', '#dad6ec', '#f2d3b5'][id % 4],
   };
   return {
-    galaxy, position: positionFor(ra, dec, depth),
+    galaxy,
+    position: positionFor(ra, dec, depth),
     opacity: MathUtils.lerp(1, 0.24, edge),
     rotation: MathUtils.degToRad(theta) + Math.PI / 2,
     axis: major > 0 ? MathUtils.clamp(minor / major, 0.46, 1) : 0.78,
@@ -35,37 +36,48 @@ const members = pandoraMembers.map(([id, ra, dec, major, minor, theta]) => {
 });
 
 const arcs = pandoraArcs.map(([id, ra, dec, major, minor, theta]) => ({
-  id, position: positionFor(ra, dec, -1.05),
+  id,
+  position: positionFor(ra, dec, -1.05),
   rotation: MathUtils.degToRad(theta),
   length: MathUtils.clamp(major * 4300, 0.23, 0.72),
   width: MathUtils.clamp(minor * 3100, 0.095, 0.18),
 }));
 
-const macsPosition = (ra: number, dec: number, depth: number): [number, number, number] => [
-  (64.038 - ra) * 180, (dec + 24.067) * 197, depth,
-];
+const macsPosition = (ra: number, dec: number, depth: number): [number, number, number] => [(64.038 - ra) * 180, (dec + 24.067) * 197, depth];
 const macsGalaxies = macsMembers.map(([id, ra, dec, magnitude]) => {
   const brightness = 1 - MathUtils.smoothstep(magnitude, 17, 24);
   const galaxy: Galaxy = {
-    id: String(id), name: `MACS0416 ${id}`, summary: '', distanceKpc: 0, sources: [],
+    id: String(id),
+    name: `MACS0416 ${id}`,
+    summary: '',
+    distanceKpc: 0,
+    sources: [],
     modelRadiusKpc: MathUtils.lerp(0.12, 0.46, brightness ** 1.35),
-    morphology: 'compact-elliptical', color: ['#f1cb9f', '#ecd6b9', '#d1c7dc'][id % 3],
+    morphology: 'compact-elliptical',
+    color: ['#f1cb9f', '#ecd6b9', '#d1c7dc'][id % 3],
   };
   return {
-    galaxy, position: macsPosition(ra, dec, ((id * 317) % 997 / 997 - 0.5) * 2.8),
-    opacity: MathUtils.lerp(0.61, 1, brightness), rotation: id * 2.39996,
-    axis: MathUtils.lerp(0.55, 0.95, id % 11 / 10),
+    galaxy,
+    position: macsPosition(ra, dec, (((id * 317) % 997) / 997 - 0.5) * 2.8),
+    opacity: MathUtils.lerp(0.61, 1, brightness),
+    rotation: id * 2.39996,
+    axis: MathUtils.lerp(0.55, 0.95, (id % 11) / 10),
   };
 });
 // Draw a sample of the cataloged image centers; the arc sizes and curvature are illustrative.
-const macsArcs = macsImages.filter((_, index) => index % 3 !== 2).map(([id, ra, dec, redshift], index) => {
-  const position = macsPosition(ra, dec, -1.45 - (index % 7) * 0.12);
-  const center = position[1] < -0.9 ? macsPosition(64.031967, -24.077426, 0) : macsPosition(64.038101, -24.067485, 0);
-  return {
-    id, position, rotation: Math.atan2(position[1] - center[1], position[0] - center[0]) + Math.PI / 2,
-    length: 0.16 + (index % 9) * 0.023, width: 0.056 + redshift * 0.003,
-  };
-});
+const macsArcs = macsImages
+  .filter((_, index) => index % 3 !== 2)
+  .map(([id, ra, dec, redshift], index) => {
+    const position = macsPosition(ra, dec, -1.45 - (index % 7) * 0.12);
+    const center = position[1] < -0.9 ? macsPosition(64.031967, -24.077426, 0) : macsPosition(64.038101, -24.067485, 0);
+    return {
+      id,
+      position,
+      rotation: Math.atan2(position[1] - center[1], position[0] - center[0]) + Math.PI / 2,
+      length: 0.16 + (index % 9) * 0.023,
+      width: 0.056 + redshift * 0.003,
+    };
+  });
 
 const arcVertex = /* glsl */ `
   varying vec2 point;

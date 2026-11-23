@@ -6,8 +6,8 @@ import { coronaVertex } from '../shared/shaders';
 
 // Representative active regions. Recurrence and time offsets are in preview days.
 const regions = [
-  { longitude: 0.22, latitude: 0.27, height: 0.20, span: 0.19, recurrence: 0.26, offset: 0.03 },
-  { longitude: 2.50, latitude: -0.31, height: 0.30, span: 0.24, recurrence: 0.42, offset: 0.09 },
+  { longitude: 0.22, latitude: 0.27, height: 0.2, span: 0.19, recurrence: 0.26, offset: 0.03 },
+  { longitude: 2.5, latitude: -0.31, height: 0.3, span: 0.24, recurrence: 0.42, offset: 0.09 },
   { longitude: 3.85, latitude: 0.42, height: 0.17, span: 0.16, recurrence: 0.32, offset: 0.19 },
   { longitude: 5.34, latitude: -0.22, height: 0.22, span: 0.19, recurrence: 0.38, offset: 0 },
 ];
@@ -71,20 +71,21 @@ type Props = {
 export function SolarProminences({ radius, days, activityDays, spinDays, poleSpinDays }: Props) {
   const groups = useRef<(Group | null)[]>([]);
   const loops = useMemo(
-    () => regions.map(({ longitude, latitude, span, height }) => {
-      const surfacePoint = (angle: number) => new Vector3(Math.cos(latitude) * Math.cos(angle), Math.sin(latitude), Math.cos(latitude) * Math.sin(angle));
-      const strands = [-1, 0, 1].map((strand) => {
-        const start = surfacePoint(longitude - span + strand * 0.025).multiplyScalar(radius * 0.993);
-        const end = surfacePoint(longitude + span + strand * 0.033).multiplyScalar(radius * 0.993);
-        const crest = surfacePoint(longitude + strand * 0.04).multiplyScalar(radius * height * (0.98 - Math.abs(strand) * 0.22));
-        return new CubicBezierCurve3(start, start.clone().add(crest), end.clone().add(crest), end);
-      });
-      return {
-        strands,
-        footpoint: surfacePoint(longitude).multiplyScalar(radius * 1.01),
-        uniforms: { radius: { value: radius }, burst: { value: 0 }, expansion: { value: 0 }, flow: { value: 0 } },
-      };
-    }),
+    () =>
+      regions.map(({ longitude, latitude, span, height }) => {
+        const surfacePoint = (angle: number) => new Vector3(Math.cos(latitude) * Math.cos(angle), Math.sin(latitude), Math.cos(latitude) * Math.sin(angle));
+        const strands = [-1, 0, 1].map((strand) => {
+          const start = surfacePoint(longitude - span + strand * 0.025).multiplyScalar(radius * 0.993);
+          const end = surfacePoint(longitude + span + strand * 0.033).multiplyScalar(radius * 0.993);
+          const crest = surfacePoint(longitude + strand * 0.04).multiplyScalar(radius * height * (0.98 - Math.abs(strand) * 0.22));
+          return new CubicBezierCurve3(start, start.clone().add(crest), end.clone().add(crest), end);
+        });
+        return {
+          strands,
+          footpoint: surfacePoint(longitude).multiplyScalar(radius * 1.01),
+          uniforms: { radius: { value: radius }, burst: { value: 0 }, expansion: { value: 0 }, flow: { value: 0 } },
+        };
+      }),
     [radius],
   );
 
@@ -99,7 +100,7 @@ export function SolarProminences({ radius, days, activityDays, spinDays, poleSpi
       const elapsed = (time + offset) % recurrence;
       // A rapid rise followed by a slower, multi-stage decay around each active region.
       const burst = MathUtils.smoothstep(elapsed, 0, 0.007) * (1 - MathUtils.smoothstep(elapsed, 0.008, 0.065));
-      const loopsCooling = 1 - MathUtils.smoothstep(elapsed, 0.023, 0.10);
+      const loopsCooling = 1 - MathUtils.smoothstep(elapsed, 0.023, 0.1);
       const uniforms = loops[index].uniforms;
       uniforms.burst.value = burst;
       uniforms.expansion.value = 0.22 * Math.sin(time * 33 + index) + 0.67 * MathUtils.smoothstep(elapsed, 0, 0.024) * loopsCooling;
@@ -108,10 +109,15 @@ export function SolarProminences({ radius, days, activityDays, spinDays, poleSpi
   });
 
   return loops.map(({ strands, footpoint, uniforms }, index) => (
-    <group key={index} ref={(group) => { groups.current[index] = group; }}>
+    <group
+      key={index}
+      ref={(group) => {
+        groups.current[index] = group;
+      }}
+    >
       {strands.map((path, strand) => (
         <mesh key={strand} raycast={() => {}}>
-          <tubeGeometry args={[path, 32, radius * (strand === 1 ? 0.010 : 0.005), 5, false]} />
+          <tubeGeometry args={[path, 32, radius * (strand === 1 ? 0.01 : 0.005), 5, false]} />
           <shaderMaterial uniforms={uniforms} vertexShader={loopVertex} fragmentShader={loopFragment} blending={AdditiveBlending} transparent depthWrite={false} />
         </mesh>
       ))}

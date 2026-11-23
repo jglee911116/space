@@ -52,9 +52,18 @@ export const omegaCentauri: FeaturedObject = {
 };
 
 export const tucanae47: FeaturedObject = {
-  id: 'ngc-104', name: message('catalog.featured-objects.ngc-104.name'), designation: 'NGC 104 · Caldwell 106',
+  id: 'ngc-104',
+  name: message('catalog.featured-objects.ngc-104.name'),
+  designation: 'NGC 104 · Caldwell 106',
   aliases: ['47 Tuc', '47 Tucanae', 'C106', '큰부리새자리 47'],
-  description: message('catalog.featured-objects.ngc-104.summary'), kind: 'globular-cluster', clusterModel: '47-tucanae', observationStatus: 'observed',
-  distanceLightYears: 16700, rightAscension: 6.02233, declination: -72.08144, extentLightYears: 120, color: '#f2d6ac',
+  description: message('catalog.featured-objects.ngc-104.summary'),
+  kind: 'globular-cluster',
+  clusterModel: '47-tucanae',
+  observationStatus: 'observed',
+  distanceLightYears: 16700,
+  rightAscension: 6.02233,
+  declination: -72.08144,
+  extentLightYears: 120,
+  color: '#f2d6ac',
   sources: [{ label: 'NASA Hubble · 47 Tucanae', href: 'https://science.nasa.gov/asset/hubble/globular-cluster-47-tucanae-2/' }],
 };

@@ -33,9 +33,9 @@ const star: Body = {
 };
 
 const planetData = [
-  { letter: 'd', axisAu: 0.0188, periodDays: 2.3402, mass: 0.263, phase: 95, colors: ['#27252b', '#62616a', '#a49da3'], rockySurface: [191, 0.10, 0.65, 0.86] },
+  { letter: 'd', axisAu: 0.0188, periodDays: 2.3402, mass: 0.263, phase: 95, colors: ['#27252b', '#62616a', '#a49da3'], rockySurface: [191, 0.1, 0.65, 0.86] },
   { letter: 'b', axisAu: 0.0229, periodDays: 3.1542, mass: 0.299, phase: 5, colors: ['#39241d', '#a06b50', '#dbaf86'], rockySurface: [211, 0.24, 0.78, 0.44] },
-  { letter: 'c', axisAu: 0.0274, periodDays: 4.1244, mass: 0.335, phase: 182, colors: ['#303038', '#777280', '#b4aeb9'], rockySurface: [227, 0.40, 0.53, 0.36] },
+  { letter: 'c', axisAu: 0.0274, periodDays: 4.1244, mass: 0.335, phase: 182, colors: ['#303038', '#777280', '#b4aeb9'], rockySurface: [227, 0.4, 0.53, 0.36] },
   { letter: 'e', axisAu: 0.0381, periodDays: 6.7392, mass: 0.193, phase: 275, colors: ['#302820', '#81724d', '#bead7c'], rockySurface: [251, 0.12, 0.68, 0.69] },
 ] as const;
 

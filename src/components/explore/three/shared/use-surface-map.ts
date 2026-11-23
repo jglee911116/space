@@ -5,12 +5,15 @@ export function useSurfaceMap(file?: string, enabled = true) {
   const [loadedMap, setLoadedMap] = useState<{ file: string; texture: Texture }>();
 
   const requestedMap = useRef<Texture | null>(null);
-  useEffect(() => () => {
-    const texture = requestedMap.current;
-    requestedMap.current = null;
-    texture?.dispose();
-    setLoadedMap((current) => (current?.texture === texture ? undefined : current));
-  }, [file]);
+  useEffect(
+    () => () => {
+      const texture = requestedMap.current;
+      requestedMap.current = null;
+      texture?.dispose();
+      setLoadedMap((current) => (current?.texture === texture ? undefined : current));
+    },
+    [file],
+  );
   useEffect(() => {
     if (!file || !enabled || requestedMap.current) return;
     const texture = new TextureLoader().load(

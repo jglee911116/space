@@ -3,16 +3,16 @@ import { CustomBlending, OneFactor, ZeroFactor, type Texture } from 'three';
 import { bulletWebbSources } from '@/constants/space';
 
 // Reference pixel, plate scale and rotation from the ESA/Webb JPEG's AVM metadata.
-const referenceX = 5724.895 / 11235 * 4000;
+const referenceX = (5724.895 / 11235) * 4000;
 const referenceY = (1 - 2576.102 / 4714) * 1678;
-const radians = 16.32 * Math.PI / 180;
-const sceneUnitsPerPixel = 8.67415e-6 * 11235 / 4000 * 73;
+const radians = (16.32 * Math.PI) / 180;
+const sceneUnitsPerPixel = ((8.67415e-6 * 11235) / 4000) * 73;
 /** Bullet Cluster 하늘 좌표(RA·Dec, 도) → 장면 평면. 구성원 은하와 Webb 관측원이 같은 투영을 쓴다. */
 export const bulletSkyPosition = (ra: number, dec: number): [number, number] => [(104.62 - ra) * 41, (dec + 55.95) * 73];
 const [westOrigin, northOrigin] = bulletSkyPosition(104.61441266, -55.94834987);
 
 // Expand the presentation without changing the relative sky positions used for matching.
-export const bulletDisplaySpread: [number, number, number] = [1.08, 1.20, 1.32];
+export const bulletDisplaySpread: [number, number, number] = [1.08, 1.2, 1.32];
 
 export const webbSources = bulletWebbSources.map(([x, y, radius]) => {
   const right = (x - referenceX) * sceneUnitsPerPixel;
@@ -57,9 +57,7 @@ const indices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
 export function BulletWebbField({ texture, depths, strength }: { texture: Texture; depths: readonly number[]; strength: number }) {
   const [spreadX, spreadY, spreadZ] = bulletDisplaySpread;
-  const offsets = useMemo(() => Float32Array.from(
-    webbSources.flatMap(({ x, y, size }, index) => [x * spreadX, y * spreadY, depths[index] * spreadZ, size]),
-  ), [depths, spreadX, spreadY, spreadZ]);
+  const offsets = useMemo(() => Float32Array.from(webbSources.flatMap(({ x, y, size }, index) => [x * spreadX, y * spreadY, depths[index] * spreadZ, size])), [depths, spreadX, spreadY, spreadZ]);
   const uniforms = useMemo(() => ({ atlas: { value: texture }, strength: { value: strength } }), [texture, strength]);
   return (
     <mesh frustumCulled={false} raycast={() => {}}>
@@ -70,9 +68,18 @@ export function BulletWebbField({ texture, depths, strength }: { texture: Textur
         <instancedBufferAttribute attach="attributes-source" args={[offsets, 4]} />
         <instancedBufferAttribute attach="attributes-tile" args={[tiles, 1]} />
       </instancedBufferGeometry>
-      <shaderMaterial vertexShader={vertex} fragmentShader={fragment} uniforms={uniforms}
-        transparent depthWrite={false} blending={CustomBlending}
-        blendSrc={OneFactor} blendDst={OneFactor} blendSrcAlpha={ZeroFactor} blendDstAlpha={OneFactor} />
+      <shaderMaterial
+        vertexShader={vertex}
+        fragmentShader={fragment}
+        uniforms={uniforms}
+        transparent
+        depthWrite={false}
+        blending={CustomBlending}
+        blendSrc={OneFactor}
+        blendDst={OneFactor}
+        blendSrcAlpha={ZeroFactor}
+        blendDstAlpha={OneFactor}
+      />
     </mesh>
   );
 }

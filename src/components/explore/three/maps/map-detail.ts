@@ -6,7 +6,7 @@ export const PREVIEW_OPAQUE_PX = 18;
 export function projectedPreviewDiameter(diameter: number, depth: number, camera: PerspectiveCamera | OrthographicCamera, viewportHeight: number) {
   if (depth <= camera.near || depth >= camera.far) return 0;
   const perspectiveDepth = 'isPerspectiveCamera' in camera ? depth : 1;
-  return diameter * camera.projectionMatrix.elements[5] * viewportHeight / (2 * perspectiveDepth);
+  return (diameter * camera.projectionMatrix.elements[5] * viewportHeight) / (2 * perspectiveDepth);
 }
 
 export function previewOpacity(pixels: number) {

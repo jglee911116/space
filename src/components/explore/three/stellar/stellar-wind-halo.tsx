@@ -49,9 +49,14 @@ export function StellarWindHalo({ warm, overviewDistance }: { warm: boolean; ove
   const position = useMemo(() => new Vector3(), []);
   const detail = overviewDistance === undefined;
   const diameter = 2 * STELLAR_WIND_RADIUS * (detail ? 1 : overviewDistance / STELLAR_DETAIL_EXIT);
-  const uniforms = useMemo(() => ({
-    warm: { value: warm }, detail: { value: detail }, visibility: { value: 0 },
-  }), [warm, detail]);
+  const uniforms = useMemo(
+    () => ({
+      warm: { value: warm },
+      detail: { value: detail },
+      visibility: { value: 0 },
+    }),
+    [warm, detail],
+  );
   useFrame(({ camera, size }) => {
     if (!mesh.current || !material.current) return;
     mesh.current.getWorldPosition(position);

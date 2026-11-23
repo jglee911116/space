@@ -229,13 +229,22 @@ function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTim
   const backgroundScale = Math.max(1, scale);
   const image = object.observationImage;
   const southernRing = image?.shape === 'southern-ring';
-  const centralRadius = object.kind === 'planetary-nebula' && !southernRing && image?.shape !== 'butterfly' ? scale * 0.047
-    : image?.shape === 'ejecta' ? 0.036
-      : image?.shape === 'wolf-rayet-ejecta' ? scale * 0.088
-        : image?.shape === 'light-echo' || image?.shape === 'homunculus' || image?.shape === 'debris-disk' || image?.shape === 'vela-wind' ? scale * 0.13 : 0;
+  const centralRadius =
+    object.kind === 'planetary-nebula' && !southernRing && image?.shape !== 'butterfly'
+      ? scale * 0.047
+      : image?.shape === 'ejecta'
+        ? 0.036
+        : image?.shape === 'wolf-rayet-ejecta'
+          ? scale * 0.088
+          : image?.shape === 'light-echo' || image?.shape === 'homunculus' || image?.shape === 'debris-disk' || image?.shape === 'vela-wind'
+            ? scale * 0.13
+            : 0;
   const texture = useSurfaceMap(image?.file);
   const uniforms = useMemo(() => ({ particleScale: { value: scale }, expansion: { value: 0 }, particleOpacity: { value: texture ? 0.29 : 1 } }), [scale, texture]);
-  const particles = useMemo(() => pleiades || globular || object.kind === 'x-ray-binary' || (image && image.shape !== 'crab' && image.shape !== 'ejecta') ? undefined : nebulaParticles(object), [object, pleiades, globular, image]);
+  const particles = useMemo(
+    () => (pleiades || globular || object.kind === 'x-ray-binary' || (image && image.shape !== 'crab' && image.shape !== 'ejecta') ? undefined : nebulaParticles(object)),
+    [object, pleiades, globular, image],
+  );
   const material = useRef<ShaderMaterial>(null);
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const start = useRef(0);
@@ -252,18 +261,20 @@ function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTim
     <>
       <Stars radius={46 * backgroundScale} depth={23 * backgroundScale} count={1800} factor={3} saturation={0} fade speed={0} />
       {pleiades && <PleiadesCluster radius={object.extentLightYears * 0.61} />}
-      {globular && <GlobularCluster radius={object.extentLightYears * 0.50} profile={object.clusterModel} />}
+      {globular && <GlobularCluster radius={object.extentLightYears * 0.5} profile={object.clusterModel} />}
       {object.kind === 'x-ray-binary' && <CygnusBinary disk={object.accretionDisk} size={object.extentLightYears} days={simulationDaysRef} time={accretionPlaybackTime} />}
       {image && <NebulaVolume texture={texture} radius={object.extentLightYears * (image.shape === 'crab' ? 0.71 : 0.61)} shape={image.shape} paused={paused} daysPerSecond={daysPerSecond} />}
-      {particles && <points scale={scale} visible={!image || image.shape === 'crab' || image.shape === 'ejecta'}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[particles.positions, 3]} />
-          <bufferAttribute attach="attributes-color" args={[particles.colors, 3]} />
-          <bufferAttribute attach="attributes-grain" args={[particles.sizes, 1]} />
-          <bufferAttribute attach="attributes-expanding" args={[particles.expansionMask, 1]} />
-        </bufferGeometry>
-        <shaderMaterial ref={material} uniforms={uniforms} vertexShader={vertexShader} fragmentShader={fragmentShader} vertexColors transparent depthWrite={false} blending={AdditiveBlending} />
-      </points>}
+      {particles && (
+        <points scale={scale} visible={!image || image.shape === 'crab' || image.shape === 'ejecta'}>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[particles.positions, 3]} />
+            <bufferAttribute attach="attributes-color" args={[particles.colors, 3]} />
+            <bufferAttribute attach="attributes-grain" args={[particles.sizes, 1]} />
+            <bufferAttribute attach="attributes-expanding" args={[particles.expansionMask, 1]} />
+          </bufferGeometry>
+          <shaderMaterial ref={material} uniforms={uniforms} vertexShader={vertexShader} fragmentShader={fragmentShader} vertexColors transparent depthWrite={false} blending={AdditiveBlending} />
+        </points>
+      )}
       {object.embeddedCluster?.map(([x, y, z], index) => (
         <group key={index} position={[x * scale, y * scale, z * scale]}>
           <mesh>
@@ -292,13 +303,15 @@ function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTim
         </>
       )}
       {image?.shape === 'crab' && <CrabPulsarWind paused={paused} daysPerSecond={daysPerSecond} texture={texture} scale={object.extentLightYears * 0.048} />}
-      {object.remnantPulsar && <group position={object.remnantPulsar.position.map((value) => value * object.extentLightYears * 0.61) as [number, number, number]}>
-        <StellarGlow radius={object.extentLightYears * 0.012} color={object.remnantPulsar.color} strength={0.65} paused={paused} />
-        <mesh raycast={() => {}}>
-          <sphereGeometry args={[object.extentLightYears * 0.003, 12, 8]} />
-          <meshBasicMaterial color={object.remnantPulsar.color} />
-        </mesh>
-      </group>}
+      {object.remnantPulsar && (
+        <group position={object.remnantPulsar.position.map((value) => value * object.extentLightYears * 0.61) as [number, number, number]}>
+          <StellarGlow radius={object.extentLightYears * 0.012} color={object.remnantPulsar.color} strength={0.65} paused={paused} />
+          <mesh raycast={() => {}}>
+            <sphereGeometry args={[object.extentLightYears * 0.003, 12, 8]} />
+            <meshBasicMaterial color={object.remnantPulsar.color} />
+          </mesh>
+        </group>
+      )}
       {centralRadius > 0 && (
         <>
           <mesh>
@@ -381,8 +394,13 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
         <>
           <mesh>
             <sphereGeometry args={[1, 64, 40]} />
-            {thermalSurface ? <shaderMaterial ref={surface} uniforms={thermalUniforms} vertexShader={surfaceVertex} fragmentShader={neutronThermalFragment} />
-              : surfaceUniforms ? <shaderMaterial ref={surface} uniforms={surfaceUniforms} vertexShader={surfaceVertex} fragmentShader={supergiantFragment} /> : <meshBasicMaterial color={object.color} />}
+            {thermalSurface ? (
+              <shaderMaterial ref={surface} uniforms={thermalUniforms} vertexShader={surfaceVertex} fragmentShader={neutronThermalFragment} />
+            ) : surfaceUniforms ? (
+              <shaderMaterial ref={surface} uniforms={surfaceUniforms} vertexShader={surfaceVertex} fragmentShader={supergiantFragment} />
+            ) : (
+              <meshBasicMaterial color={object.color} />
+            )}
           </mesh>
           <StellarGlow radius={1} color={object.color} strength={thermalSurface ? 0.31 : photosphere ? 1.15 : 0.65} brightness={brightness} paused={paused || !photosphere} />
         </>
@@ -445,7 +463,11 @@ export default function FeaturedObjectScene(props: Props) {
     <CanvasBoundary>
       <Canvas
         camera={{
-          position: blackHole ? [5, 5.6, 13] : stellar ? [0, 1.5, object.modelCameraDistance ?? (object.photosphere ? 5.7 : 8)] : [distance * 0.023, distance * (object.kind === 'x-ray-binary' ? 0.38 : 0.063), distance],
+          position: blackHole
+            ? [5, 5.6, 13]
+            : stellar
+              ? [0, 1.5, object.modelCameraDistance ?? (object.photosphere ? 5.7 : 8)]
+              : [distance * 0.023, distance * (object.kind === 'x-ray-binary' ? 0.38 : 0.063), distance],
           fov: 45,
           near: stellar || blackHole ? 0.05 : Math.min(0.05, object.extentLightYears * 0.015),
           far: Math.max(170, object.extentLightYears * 32),
@@ -455,11 +477,7 @@ export default function FeaturedObjectScene(props: Props) {
         aria-label={t('canvas.namedObjectModel', [catalogText(object.name)])}
       >
         {blackHole ? (
-          <AccretionModel
-            object={{ color: object.color, visibleJet: true, accretionDisk: object.accretionDisk }}
-            onExit={props.onLeave}
-            time={props.accretionPlaybackTime}
-          />
+          <AccretionModel object={{ color: object.color, visibleJet: true, accretionDisk: object.accretionDisk }} onExit={props.onLeave} time={props.accretionPlaybackTime} />
         ) : stellar ? (
           <StellarModel {...props} />
         ) : (

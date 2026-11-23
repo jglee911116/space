@@ -14,4 +14,19 @@ import { solarSystem } from './solar-system';
 import { trappist1 } from './trappist-1';
 
 // 첫 항목이 기본 항성계
-export const systems: readonly StarSystem[] = [solarSystem, alphaCentauri, barnardStar, sirius, epsilonEridani, ross128, procyon, trappist1, gliese12, lhs1140, pegasi51, kepler16, arScorpii, m31EclipsingBinary];
+export const systems: readonly StarSystem[] = [
+  solarSystem,
+  alphaCentauri,
+  barnardStar,
+  sirius,
+  epsilonEridani,
+  ross128,
+  procyon,
+  trappist1,
+  gliese12,
+  lhs1140,
+  pegasi51,
+  kepler16,
+  arScorpii,
+  m31EclipsingBinary,
+];

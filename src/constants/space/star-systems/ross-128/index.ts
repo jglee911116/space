@@ -14,7 +14,14 @@ const star: Body = {
   tilt: 0,
   colors: ['#721c17', '#ed7549', '#ffab85'],
   mass: message('catalog.ross-128.ross-128-star.mass'),
-  stellar: { evolutionaryStage: message('catalog.stellar-stage.mainSequence'), spectralType: 'M4 V', temperatureK: 3192, luminosityWatts: 0.00362 * SOLAR_LUMINOSITY_W, emissionColor: '#ff663d', photosphere: { seed: 103, granuleScale: 133, activeRegions: 0.20 } },
+  stellar: {
+    evolutionaryStage: message('catalog.stellar-stage.mainSequence'),
+    spectralType: 'M4 V',
+    temperatureK: 3192,
+    luminosityWatts: 0.00362 * SOLAR_LUMINOSITY_W,
+    emissionColor: '#ff663d',
+    photosphere: { seed: 103, granuleScale: 133, activeRegions: 0.2 },
+  },
   sources: [ARCHIVE, DISCOVERY],
 };
 

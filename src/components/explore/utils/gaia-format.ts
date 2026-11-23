@@ -16,11 +16,7 @@ export function readGaiaSourceId(value: string | null) {
 }
 
 export function decodeGaiaSource(data: DataView, offset: number): GaiaSource {
-  const position: GaiaSource['position'] = [
-    data.getFloat32(offset, true),
-    data.getFloat32(offset + 4, true),
-    data.getFloat32(offset + 8, true),
-  ];
+  const position: GaiaSource['position'] = [data.getFloat32(offset, true), data.getFloat32(offset + 4, true), data.getFloat32(offset + 8, true)];
   return {
     id: data.getBigUint64(offset + 16, true).toString(),
     position,

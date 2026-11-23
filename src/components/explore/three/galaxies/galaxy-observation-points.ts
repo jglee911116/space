@@ -25,7 +25,7 @@ export function galaxyObservationPoints(texture: Texture, observation: NonNullab
   const tint = new Color();
   let total = 0;
   for (let index = 0; index < distribution.length; index++) {
-    const u = (index % SAMPLE_SIZE + 0.5) / SAMPLE_SIZE;
+    const u = ((index % SAMPLE_SIZE) + 0.5) / SAMPLE_SIZE;
     const v = 1 - (Math.floor(index / SAMPLE_SIZE) + 0.5) / SAMPLE_SIZE;
     const radial = Math.hypot(diskX(u, v), diskZ(u, v));
     const edge = Math.min(u, v, 1 - u, 1 - v);
@@ -54,7 +54,7 @@ export function galaxyObservationPoints(texture: Texture, observation: NonNullab
     }
 
     // Canvas rows run downward while the GPU texture's v axis runs upward.
-    const u = (low % SAMPLE_SIZE + random()) / SAMPLE_SIZE;
+    const u = ((low % SAMPLE_SIZE) + random()) / SAMPLE_SIZE;
     const v = 1 - (Math.floor(low / SAMPLE_SIZE) + random()) / SAMPLE_SIZE;
     const x = diskX(u, v);
     const z = diskZ(u, v);

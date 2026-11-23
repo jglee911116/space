@@ -33,7 +33,23 @@ import {
 import { isNearbySystem } from './utils/nearby-positions';
 import { distanceScale } from './utils/distance-scale';
 import { createDistanceStore } from './utils/distance-store';
-import { gaiaSourcePath, galaxyFocusPath, readExplorerQuery, universeFocusPath, updateSystemLocation, associationPath, distantObjectPath, featuredObjectPath, galaxyPath, HOME_PATH, LOCAL_GROUP_PATH, localGroupPath, superclusterPath, systemPath, UNIVERSE_PATH } from './utils/paths';
+import {
+  gaiaSourcePath,
+  galaxyFocusPath,
+  readExplorerQuery,
+  universeFocusPath,
+  updateSystemLocation,
+  associationPath,
+  distantObjectPath,
+  featuredObjectPath,
+  galaxyPath,
+  HOME_PATH,
+  LOCAL_GROUP_PATH,
+  localGroupPath,
+  superclusterPath,
+  systemPath,
+  UNIVERSE_PATH,
+} from './utils/paths';
 import { elapsedSimulationDays, REALTIME_DAYS_PER_SECOND } from './utils/orbit';
 import type { Overview, Target } from './scenes/system-scene';
 import { AU_PER_KPC } from '@/constants/space/units';
@@ -103,8 +119,9 @@ const UniverseScene = dynamic(() => import('./scenes/universe-scene'), {
 
 type ExplorerView = Overview | 'galaxy' | 'neighborhood';
 const DEFAULT_SYSTEM_ID = systems[0].id;
-const gaiaSystemCenters = new Map(nearbyPositions(systems.filter((system) => (system.galaxyId ?? milkyWay.id) === milkyWay.id))
-  .map(({ system, position }) => [system.id, { name: system.name, position: position.toArray() }]));
+const gaiaSystemCenters = new Map(
+  nearbyPositions(systems.filter((system) => (system.galaxyId ?? milkyWay.id) === milkyWay.id)).map(({ system, position }) => [system.id, { name: system.name, position: position.toArray() }]),
+);
 type HoveredBody = { id: string; x: number; y: number };
 
 function recordView(locale: Locale, target: Target, overview: ExplorerView, systemId: string, defaultSystemId: string, galaxyId: string) {
@@ -129,7 +146,17 @@ export function Explorer() {
   const { t, catalogText, locale, number, measurement } = useLanguage();
   const pathname = withoutLocale(usePathname());
   const searchParams = useSearchParams();
-  const { system: systemParam, target: targetParam, view: viewParam, focus, galaxy: galaxyParam, cluster: clusterParam, gaia: gaiaParam, around: aroundParam, radius: radiusParam } = readExplorerQuery(searchParams);
+  const {
+    system: systemParam,
+    target: targetParam,
+    view: viewParam,
+    focus,
+    galaxy: galaxyParam,
+    cluster: clusterParam,
+    gaia: gaiaParam,
+    around: aroundParam,
+    radius: radiusParam,
+  } = readExplorerQuery(searchParams);
   const universeView = pathname === UNIVERSE_PATH;
   const region = superclusters.find(({ id }) => pathname === superclusterPath(id));
   const cosmicView = universeView || !!region;
@@ -137,7 +164,11 @@ export function Explorer() {
   const distantObject = universeView ? distantObjects.find(({ id }) => id === targetParam) : undefined;
   const infoId = useId();
   const infoButton = useRef<HTMLButtonElement>(null);
-  const compactInfo = useSyncExternalStore(subscribeToInfoMedia, () => window.matchMedia(infoMediaQuery).matches, () => false);
+  const compactInfo = useSyncExternalStore(
+    subscribeToInfoMedia,
+    () => window.matchMedia(infoMediaQuery).matches,
+    () => false,
+  );
   // 정보 패널 열림/닫힘 선택은 지금 보는 화면에만 적용한다(이동하거나 뒤로 가면 기본값으로).
   const viewKey = `${pathname}?${searchParams}`;
   const [infoChoice, setInfoChoice] = useState<{ viewKey: string; open: boolean }>();
@@ -166,10 +197,7 @@ export function Explorer() {
   const system = selectedSystem ?? systems[0];
   const systemId = String(system.id);
   const galaxyObjects = useMemo(() => featuredObjects.filter((item) => !item.parentObjectId && (item.galaxyId ?? milkyWay.id) === activeGalaxy.id), [activeGalaxy.id]);
-  const objectMarkers = useMemo(
-    () => galaxyObjects.map((object) => ({ object, position: featuredGalaxyPosition(object, activeGalaxy) })),
-    [activeGalaxy, galaxyObjects],
-  );
+  const objectMarkers = useMemo(() => galaxyObjects.map((object) => ({ object, position: featuredGalaxyPosition(object, activeGalaxy) })), [activeGalaxy, galaxyObjects]);
   const parentObjectId = featuredObjects.find(({ id }) => id === targetParam)?.parentObjectId;
   const featuredObject = !cosmicView && !groupView && viewParam === 'object' ? galaxyObjects.find(({ id }) => id === (parentObjectId ?? targetParam)) : undefined;
   const neighborhoodView = !externalGalaxy && !extraView && (viewParam === 'neighborhood' || (!pathGalaxy && !systemParam && !targetParam && !viewParam));
@@ -184,8 +212,7 @@ export function Explorer() {
   const excludedSourceIds = systemCounterparts?.map(({ sourceId }) => sourceId).join(',') ?? aroundGaiaId ?? '';
   const aroundRadius = readGaiaNeighborRadius(radiusParam);
   const neighbors = useGaiaNeighbors(aroundPosition, aroundRadius, excludedSourceIds);
-  const aroundName = aroundStar ? catalogText(aroundStar.name)
-    : aroundCounterpart?.name ? catalogText(aroundCounterpart.name) : around ? `Gaia DR3 ${around}` : undefined;
+  const aroundName = aroundStar ? catalogText(aroundStar.name) : aroundCounterpart?.name ? catalogText(aroundCounterpart.name) : around ? `Gaia DR3 ${around}` : undefined;
   const outerRegion = system.outerRegion;
   const cloud = system.oortCloud;
   const overview: Overview =
@@ -203,10 +230,19 @@ export function Explorer() {
     (wheelView ? wheelView.scene === 'galaxy' : viewParam === 'galaxy' || targetParam === milkyWay.center.id || (!!pathGalaxy && !systemParam && !targetParam && !viewParam));
   const focusGalacticCenter = galaxyView && targetParam === milkyWay.center.id;
   const focusBlackHole = focusGalacticCenter && (centerZoom?.close ?? true);
-  const animatedAccretion = distantObject?.kind === 'quasar' || featuredObject?.kind === 'black-hole'
-    || featuredObject?.kind === 'x-ray-binary' || (extraView && galaxyObjects.find(({ id }) => id === focus)?.kind === 'black-hole');
+  const animatedAccretion =
+    distantObject?.kind === 'quasar' ||
+    featuredObject?.kind === 'black-hole' ||
+    featuredObject?.kind === 'x-ray-binary' ||
+    (extraView && galaxyObjects.find(({ id }) => id === focus)?.kind === 'black-hole');
   const featuredShape = featuredObject?.observationImage?.shape;
-  const animatedFeaturedVolume = !!featuredObject?.stellarWind || featuredShape === 'bipolar-jet' || featuredShape === 'shocked-shell' || featuredShape === 'dust-spiral' || featuredShape === 'edge-on-disk' || featuredShape === 'light-echo';
+  const animatedFeaturedVolume =
+    !!featuredObject?.stellarWind ||
+    featuredShape === 'bipolar-jet' ||
+    featuredShape === 'shocked-shell' ||
+    featuredShape === 'dust-spiral' ||
+    featuredShape === 'edge-on-disk' ||
+    featuredShape === 'light-echo';
   const heading = region
     ? association
       ? association.name
@@ -280,7 +316,7 @@ export function Explorer() {
   const canCompare = target !== null && system.home === true && !galaxyView && !cosmicView && !extraView && !featuredObject && !neighborhoodView;
   const activeComparison = canCompare && comparison?.origin === target ? comparison : null;
   const comparisonBody = activeComparison && system.bodies.find((item) => item.id === activeComparison.destination);
-  const distanceTarget = activeComparison ? activeComparison.destination : hovered?.id ?? null;
+  const distanceTarget = activeComparison ? activeComparison.destination : (hovered?.id ?? null);
   const [distanceStore] = useState(createDistanceStore);
   const distanceOrigin = canCompare ? system.bodies.find((body) => body.id === target) : undefined;
 
@@ -302,18 +338,24 @@ export function Explorer() {
     else if (oortView) void import('./scenes/galaxy-scene');
   }, [galaxyView, hasGalaxy, oortView]);
 
-  const enterGalaxy = useCallback((entry: ZoomHandoff) => {
-    setHovered(null);
-    setComparison(null);
-    setWheelView({ scene: 'galaxy', entry });
-    recordView(locale, null, 'galaxy', systemId, DEFAULT_SYSTEM_ID, milkyWay.id);
-  }, [locale, systemId, setHovered, setComparison]);
-  const enterZoomedSystem = useCallback((entry: ZoomHandoff) => {
-    setHovered(null);
-    const next = systemId === DEFAULT_SYSTEM_ID ? 'neighborhood' : null;
-    setWheelView(next ? null : { scene: 'system', entry });
-    recordView(locale, null, next, systemId, DEFAULT_SYSTEM_ID, milkyWay.id);
-  }, [locale, systemId, setHovered]);
+  const enterGalaxy = useCallback(
+    (entry: ZoomHandoff) => {
+      setHovered(null);
+      setComparison(null);
+      setWheelView({ scene: 'galaxy', entry });
+      recordView(locale, null, 'galaxy', systemId, DEFAULT_SYSTEM_ID, milkyWay.id);
+    },
+    [locale, systemId, setHovered, setComparison],
+  );
+  const enterZoomedSystem = useCallback(
+    (entry: ZoomHandoff) => {
+      setHovered(null);
+      const next = systemId === DEFAULT_SYSTEM_ID ? 'neighborhood' : null;
+      setWheelView(next ? null : { scene: 'system', entry });
+      recordView(locale, null, next, systemId, DEFAULT_SYSTEM_ID, milkyWay.id);
+    },
+    [locale, systemId, setHovered],
+  );
 
   const navigateTo = useCallback(
     (next: Target, nextOverview: ExplorerView = null, nextSystem = systemId) => {
@@ -395,10 +437,7 @@ export function Explorer() {
   );
 
   const enterMarkedSystem = useCallback((id: string, entry?: ZoomHandoff) => navigateSpace(systemPath(activeGalaxy.id, id), entry), [activeGalaxy.id, navigateSpace]);
-  const returnToExternalGalaxy = useCallback(
-    (entry: ZoomHandoff) => navigateSpace(galaxyFocusPath(activeGalaxy.id, systemId), entry),
-    [activeGalaxy.id, navigateSpace, systemId],
-  );
+  const returnToExternalGalaxy = useCallback((entry: ZoomHandoff) => navigateSpace(galaxyFocusPath(activeGalaxy.id, systemId), entry), [activeGalaxy.id, navigateSpace, systemId]);
 
   const selectFeaturedObject = useCallback((id: string) => navigateSpace(featuredObjectPath(activeGalaxy.id, id)), [activeGalaxy.id, navigateSpace]);
   const featuredObjectId = featuredObject?.id;
@@ -417,9 +456,12 @@ export function Explorer() {
   const openStarSystem = useCallback((item: StarSystem) => navigateSpace(systemPath(item.galaxyId ?? milkyWay.id, item.id, item.bodies[0].id)), [navigateSpace]);
   const focusNearbySystem = useCallback((item: StarSystem) => navigateTo(item.bodies[0].id, 'galaxy', item.id), [navigateTo]);
 
-  const hoverBody = useCallback((id: string, x: number, y: number) => {
-    setHovered({ id, x, y });
-  }, [setHovered]);
+  const hoverBody = useCallback(
+    (id: string, x: number, y: number) => {
+      setHovered({ id, x, y });
+    },
+    [setHovered],
+  );
 
   // memo(SystemScene) 가 hover 마다 다시 그려지지 않도록 안정된 콜백.
   const selectSystemBody = useCallback(
@@ -433,9 +475,12 @@ export function Explorer() {
     [activeComparison, navigateTo, setComparison, setHovered],
   );
 
-  const leaveBody = useCallback((id: string) => {
-    setHovered((current) => (current?.id === id ? null : current));
-  }, [setHovered]);
+  const leaveBody = useCallback(
+    (id: string) => {
+      setHovered((current) => (current?.id === id ? null : current));
+    },
+    [setHovered],
+  );
 
   return (
     <>
@@ -554,8 +599,7 @@ export function Explorer() {
           />
         )}
       </div>
-      {!activeComparison && hovered && hoveredBody && <BodyTooltip body={hoveredBody} x={hovered.x} y={hovered.y}
-        distanceFrom={distanceOrigin && { store: distanceStore, origin: distanceOrigin }} />}
+      {!activeComparison && hovered && hoveredBody && <BodyTooltip body={hoveredBody} x={hovered.x} y={hovered.y} distanceFrom={distanceOrigin && { store: distanceStore, origin: distanceOrigin }} />}
 
       <header className={styles.header}>
         <div className={styles.brand}>
@@ -570,14 +614,15 @@ export function Explorer() {
             systems={systems}
             onSelect={navigateSpace}
             currentPath={searchParams.size ? `${pathname}?${searchParams}` : pathname}
-            currentName={body && (galaxyView || target !== null) ? `${catalogText(heading)} · ${catalogText(body.name)}` : aroundName ? `${catalogText(heading)} · ${aroundName}` : catalogText(heading)}
+            currentName={
+              body && (galaxyView || target !== null) ? `${catalogText(heading)} · ${catalogText(body.name)}` : aroundName ? `${catalogText(heading)} · ${aroundName}` : catalogText(heading)
+            }
             quickLinks={[
-              ...(!cosmicView && !groupView && !externalGalaxy && !neighborhoodView
-                ? [{ label: catalogText(milkyWay.neighborhood.name), onSelect: () => navigateTo(null, 'neighborhood') }] : []),
+              ...(!cosmicView && !groupView && !externalGalaxy && !neighborhoodView ? [{ label: catalogText(milkyWay.neighborhood.name), onSelect: () => navigateTo(null, 'neighborhood') }] : []),
               ...(!cosmicView && !groupView && !externalGalaxy && (galaxyView || neighborhoodView || system.id !== DEFAULT_SYSTEM_ID || target !== null)
-                ? [{ label: catalogText(galaxyAnchor?.name ?? systems[0].name), onSelect: () => selectSystem(DEFAULT_SYSTEM_ID) }] : []),
-              ...(!galaxyView || focusGalacticCenter || activeGalaxy.id !== milkyWay.id
-                ? [{ label: catalogText(milkyWay.name), onSelect: () => enterExternalGalaxy(milkyWay) }] : []),
+                ? [{ label: catalogText(galaxyAnchor?.name ?? systems[0].name), onSelect: () => selectSystem(DEFAULT_SYSTEM_ID) }]
+                : []),
+              ...(!galaxyView || focusGalacticCenter || activeGalaxy.id !== milkyWay.id ? [{ label: catalogText(milkyWay.name), onSelect: () => enterExternalGalaxy(milkyWay) }] : []),
               ...(!groupView ? [{ label: catalogText(localGroup.name), onSelect: () => enterLocalGroup() }] : []),
               ...(!universeView || distantObject ? [{ label: catalogText(observableUniverse.name), onSelect: () => enterUniverse() }] : []),
             ].slice(0, 4)}
@@ -675,7 +720,11 @@ export function Explorer() {
                   </button>
                 )}
                 {outerRegion && (
-                  <button type="button" aria-pressed={!galaxyView && (scale === 'outer' || scale === 'distant' || (!oortView && outerSelection !== undefined))} onClick={() => navigateTo(null, 'outer')}>
+                  <button
+                    type="button"
+                    aria-pressed={!galaxyView && (scale === 'outer' || scale === 'distant' || (!oortView && outerSelection !== undefined))}
+                    onClick={() => navigateTo(null, 'outer')}
+                  >
                     {catalogText(outerRegion.name)}
                   </button>
                 )}
@@ -738,9 +787,13 @@ export function Explorer() {
               {galacticDemo && <p className={styles.hint}>{t('playback.galacticDemoSpeed', [measurement(milkyWay.demoYearsPerSecond, 1e4, 0)])}</p>}
             </>
           )}
-          {!animatedAccretion && !animatedFeaturedVolume && (distantObject || cosmicView || extraView || neighborhoodView || (featuredObject && !featuredObject.spinSeconds && !featuredObject.variabilityDays && !featuredObject.expansionPerYear)) && (
-            <p className={styles.hint}>{t('playback.fixedLayout')}</p>
-          )}
+          {!animatedAccretion &&
+            !animatedFeaturedVolume &&
+            (distantObject ||
+              cosmicView ||
+              extraView ||
+              neighborhoodView ||
+              (featuredObject && !featuredObject.spinSeconds && !featuredObject.variabilityDays && !featuredObject.expansionPerYear)) && <p className={styles.hint}>{t('playback.fixedLayout')}</p>}
           {!focusBlackHole && (!distantObject || distantObject.observationScale) && (!featuredObject || (featuredObject.extentLightYears > 0 && featuredObject.kind !== 'black-hole')) && (
             <div
               key={distantObject?.id ?? featuredObject?.id ?? (extraView ? pathname : neighborhoodView ? 'neighborhood' : galaxyView ? 'galaxy' : system.id)}
@@ -754,7 +807,9 @@ export function Explorer() {
           <p className={styles.hint}>{t('navigation.cameraInstructions')}</p>
           {canCompare && target && (
             <div className={styles.distanceComparison}>
-              <button type="button" aria-pressed={Boolean(activeComparison)}
+              <button
+                type="button"
+                aria-pressed={Boolean(activeComparison)}
                 onClick={() => {
                   setHovered(null);
                   setComparison(activeComparison ? null : { origin: target, destination: null });
@@ -781,10 +836,16 @@ export function Explorer() {
               <path d="M12 11v5m0-8v.01" />
             </svg>
           </button>
-          <div id={infoId} className={styles.infoPanel} data-default={infoPreference === undefined && !neighborsByDefault || undefined} hidden={!infoOpen}>
+          <div id={infoId} className={styles.infoPanel} data-default={(infoPreference === undefined && !neighborsByDefault) || undefined} hidden={!infoOpen}>
             {region ? (
-              <SuperclusterDetails region={region} association={association} onSelectCluster={enterAssociation} onSelectGalaxy={selectCatalogGalaxy}
-                showFlows={showSuperclusterFlows} onFlowsChange={setShowSuperclusterFlows} />
+              <SuperclusterDetails
+                region={region}
+                association={association}
+                onSelectCluster={enterAssociation}
+                onSelectGalaxy={selectCatalogGalaxy}
+                showFlows={showSuperclusterFlows}
+                onFlowsChange={setShowSuperclusterFlows}
+              />
             ) : universeView ? (
               <UniverseDetails object={distantObject} showCounterjet={showCounterjet} onCounterjetChange={setShowCounterjet} clusterLayer={clusterLayer} onClusterLayerChange={setClusterLayer} />
             ) : featuredObject ? (
@@ -794,20 +855,31 @@ export function Explorer() {
             ) : extraView ? (
               <GalaxySummaryDetails galaxy={activeGalaxy} />
             ) : neighborhoodView ? (
-              <NeighborhoodDetails showGaia={showGaia} onGaiaChange={setShowGaia}
-                aroundName={aroundName} neighbors={neighbors}
+              <NeighborhoodDetails
+                showGaia={showGaia}
+                onGaiaChange={setShowGaia}
+                aroundName={aroundName}
+                neighbors={neighbors}
                 radius={aroundRadius}
                 onChangeRadius={(radius: GaiaNeighborRadius) => navigateSpace(gaiaSourcePath(undefined, around ?? undefined, radius))}
                 counterparts={systemCounterparts ?? (aroundCounterpart ? [aroundCounterpart] : undefined)}
                 awaitingCenter={awaitingAroundSource}
                 centerUnavailable={!aroundPosition && !awaitingAroundSource}
-                selectedId={gaiaParam} onSelectNeighbor={selectGaiaNeighbor}
+                selectedId={gaiaParam}
+                onSelectNeighbor={selectGaiaNeighbor}
                 onCloseNeighbors={() => navigateSpace(gaiaSourcePath())}
               />
             ) : focusBlackHole ? (
               <BlackHoleDetails key={recenter} onClose={closeInfo} showPolarization={showCenterPolarization} onPolarizationChange={setShowCenterPolarization} />
             ) : body && !oortView && (galaxyView || target !== null) ? (
-              <BodyDetails key={`${body.id}:${recenter}`} system={system} body={body} onSelect={navigateTo} onClose={closeInfo} onOpenNeighbors={gaiaReachable ? () => openGaiaNeighbors(systemId) : undefined} />
+              <BodyDetails
+                key={`${body.id}:${recenter}`}
+                system={system}
+                body={body}
+                onSelect={navigateTo}
+                onClose={closeInfo}
+                onOpenNeighbors={gaiaReachable ? () => openGaiaNeighbors(systemId) : undefined}
+              />
             ) : galaxyView ? (
               <GalaxyDetails systems={galaxySystems} />
             ) : oortView && cloud ? (

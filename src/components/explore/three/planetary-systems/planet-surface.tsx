@@ -68,10 +68,7 @@ export function PlanetRings({ body }: { body: Body }) {
   const texture = useSurfaceMap(ringMap?.file);
   const innerRadius = (ringMap?.inner ?? 0) * displayRadius;
   const outerRadius = (ringMap?.outer ?? 0) * displayRadius;
-  const uniforms = useMemo(
-    () => ({ ringMap: { value: texture }, innerRadius: { value: innerRadius }, outerRadius: { value: outerRadius } }),
-    [texture, innerRadius, outerRadius],
-  );
+  const uniforms = useMemo(() => ({ ringMap: { value: texture }, innerRadius: { value: innerRadius }, outerRadius: { value: outerRadius } }), [texture, innerRadius, outerRadius]);
 
   if (texture && ringMap) {
     return (

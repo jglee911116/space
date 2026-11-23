@@ -146,7 +146,19 @@ function DetailPanel({ name, onClose, children }: { name: CatalogText; onClose: 
   );
 }
 
-export function BodyDetails({ system, body, onSelect, onClose, onOpenNeighbors }: { system: StarSystem; body: Body; onSelect: (target: Target) => void; onClose: () => void; onOpenNeighbors?: () => void }) {
+export function BodyDetails({
+  system,
+  body,
+  onSelect,
+  onClose,
+  onOpenNeighbors,
+}: {
+  system: StarSystem;
+  body: Body;
+  onSelect: (target: Target) => void;
+  onClose: () => void;
+  onOpenNeighbors?: () => void;
+}) {
   const { t, catalogText, number, measurement } = useLanguage();
   const parent = system.bodies.find((other) => other.id === body.parent);
   const children = system.bodies.filter((other) => other.parent === body.id && (other.kind === 'moon' || isMultiStar(system)));
@@ -242,7 +254,11 @@ export function BodyDetails({ system, body, onSelect, onClose, onOpenNeighbors }
       {body.note && <p>{catalogText(body.note)}</p>}
       <ModelNotes>{t('details.systemModelScale')}</ModelNotes>
       <DetailSources sources={systemDistance ? [...body.sources, systemDistance.source] : body.sources} />
-      {onOpenNeighbors && <button type="button" onClick={onOpenNeighbors}>{t('details.gaiaAroundSystem')}</button>}
+      {onOpenNeighbors && (
+        <button type="button" onClick={onOpenNeighbors}>
+          {t('details.gaiaAroundSystem')}
+        </button>
+      )}
     </DetailPanel>
   );
 }
@@ -284,7 +300,8 @@ export function BlackHoleDetails({ showPolarization, onPolarizationChange, onClo
         {t('details.ehtPolarizationToggle')}
       </label>
       <ModelNotes>
-        {t(showPolarization ? 'details.ehtPolarizationImage' : 'details.ehtIntensityImage')} {t('details.blackHoleShadow')} {t('details.blackHoleFlow')} {t('details.blackHoleFlares')} {t('details.blackHoleLensing')} {t('details.unscaledModel')}
+        {t(showPolarization ? 'details.ehtPolarizationImage' : 'details.ehtIntensityImage')} {t('details.blackHoleShadow')} {t('details.blackHoleFlow')} {t('details.blackHoleFlares')}{' '}
+        {t('details.blackHoleLensing')} {t('details.unscaledModel')}
       </ModelNotes>
       <DetailSources sources={center.sources} />
     </DetailPanel>
@@ -301,7 +318,13 @@ export function GalaxyDetails({ systems }: { systems: readonly StarSystem[] }) {
         {catalogText(milkyWay.summary)} {milkyWay.notes.map(catalogText).join(' ')}
         {modeled.length > 0 && ` ${t('details.modeledOrbits', [modeled.map(({ name }) => catalogText(name)).join(' · ')])}`}
       </ModelNotes>
-      <DetailSources sources={[...milkyWay.sources, ...systems.flatMap(({ bodies }) => bodies.flatMap(({ galacticOrbit }) => (galacticOrbit ? [galacticOrbit.source] : []))), ...systems.flatMap(({ galacticPath }) => (galacticPath ? [galacticPath.source] : []))]} />
+      <DetailSources
+        sources={[
+          ...milkyWay.sources,
+          ...systems.flatMap(({ bodies }) => bodies.flatMap(({ galacticOrbit }) => (galacticOrbit ? [galacticOrbit.source] : []))),
+          ...systems.flatMap(({ galacticPath }) => (galacticPath ? [galacticPath.source] : [])),
+        ]}
+      />
     </section>
   );
 }
@@ -355,7 +378,11 @@ export function SystemDetails({ system, onOpenNeighbors }: { system: StarSystem;
       <p>{catalogText(system.summary)}</p>
       <p>{t('details.starAndExoplanetCounts', [system.bodies.filter((body) => body.kind === 'star').length, planetCount])}</p>
       <ModelNotes>{t('details.auScaleEnlarged')}</ModelNotes>
-      {onOpenNeighbors && <button type="button" onClick={onOpenNeighbors}>{t('details.gaiaAroundSystem')}</button>}
+      {onOpenNeighbors && (
+        <button type="button" onClick={onOpenNeighbors}>
+          {t('details.gaiaAroundSystem')}
+        </button>
+      )}
       <DetailSources sources={system.sources} />
     </section>
   ) : (
@@ -364,7 +391,11 @@ export function SystemDetails({ system, onOpenNeighbors }: { system: StarSystem;
       <ModelNotes>
         {t('details.commonScaleEnlarged')} · {t('details.fixedJ2000')}
       </ModelNotes>
-      {onOpenNeighbors && <button type="button" onClick={onOpenNeighbors}>{t('details.gaiaAroundSystem')}</button>}
+      {onOpenNeighbors && (
+        <button type="button" onClick={onOpenNeighbors}>
+          {t('details.gaiaAroundSystem')}
+        </button>
+      )}
       <DetailSources sources={system.sources} />
     </section>
   );
@@ -402,8 +433,18 @@ export function GalaxySummaryDetails({ galaxy }: { galaxy: Galaxy }) {
 }
 
 export function NeighborhoodDetails({
-  showGaia, onGaiaChange, aroundName, neighbors, counterparts, awaitingCenter, centerUnavailable, selectedId,
-  onSelectNeighbor, onCloseNeighbors, radius, onChangeRadius,
+  showGaia,
+  onGaiaChange,
+  aroundName,
+  neighbors,
+  counterparts,
+  awaitingCenter,
+  centerUnavailable,
+  selectedId,
+  onSelectNeighbor,
+  onCloseNeighbors,
+  radius,
+  onChangeRadius,
 }: {
   showGaia: boolean;
   onGaiaChange: (show: boolean) => void;
@@ -424,7 +465,9 @@ export function NeighborhoodDetails({
       <section className={styles.details} aria-labelledby="body-name">
         <div className={styles.detailsHeading}>
           <h2 id="body-name">{t('details.gaiaAroundHeading', [aroundName])}</h2>
-          <button className={styles.closeDetails} type="button" aria-label={t('details.close')} onClick={onCloseNeighbors}>×</button>
+          <button className={styles.closeDetails} type="button" aria-label={t('details.close')} onClick={onCloseNeighbors}>
+            ×
+          </button>
         </div>
         {!!counterparts?.length && (
           <div role="group" aria-label={t('details.gaiaLinkedRecords')}>
@@ -443,16 +486,28 @@ export function NeighborhoodDetails({
         )}
         <div className={styles.gaiaRadii} role="group" aria-label={t('details.gaiaRadiusControl')}>
           {gaiaNeighborRadii.map((option) => (
-            <button key={option} type="button" aria-pressed={radius === option} onClick={() => {
-              if (radius !== option) onChangeRadius(option);
-            }}>{t('units.lightYears', [number(option, 0)])}</button>
+            <button
+              key={option}
+              type="button"
+              aria-pressed={radius === option}
+              onClick={() => {
+                if (radius !== option) onChangeRadius(option);
+              }}
+            >
+              {t('units.lightYears', [number(option, 0)])}
+            </button>
           ))}
         </div>
         <p>{t('details.gaiaAroundRadius', [radius])}</p>
-        <p role="status">{awaitingCenter || !neighbors && !centerUnavailable ? t('search.gaiaLoading')
-          : centerUnavailable || neighbors?.failed ? t('search.gaiaUnavailable')
-            : neighbors?.total ? t('details.gaiaAroundCount', [neighbors.entries.length, neighbors.total])
-              : t('details.gaiaAroundEmpty')}</p>
+        <p role="status">
+          {awaitingCenter || (!neighbors && !centerUnavailable)
+            ? t('search.gaiaLoading')
+            : centerUnavailable || neighbors?.failed
+              ? t('search.gaiaUnavailable')
+              : neighbors?.total
+                ? t('details.gaiaAroundCount', [neighbors.entries.length, neighbors.total])
+                : t('details.gaiaAroundEmpty')}
+        </p>
         {!!neighbors?.entries.length && (
           <ul className={styles.gaiaNeighbors}>
             {neighbors.entries.map(({ source, separation }) => {
@@ -483,7 +538,9 @@ export function NeighborhoodDetails({
         <input type="checkbox" checked={showGaia} onChange={(event) => onGaiaChange(event.currentTarget.checked)} />
         {t('details.gaiaPreview')}
       </label>
-      <ModelNotes>{catalogText(neighborhood.summary)} {showGaia && t('details.gaiaSample')}</ModelNotes>
+      <ModelNotes>
+        {catalogText(neighborhood.summary)} {showGaia && t('details.gaiaSample')}
+      </ModelNotes>
       <DetailSources sources={showGaia ? [neighborhood.source, { label: 'ESA/Gaia/DPAC · Gaia DR3', href: 'https://gea.esac.esa.int/archive/' }] : [neighborhood.source]} />
     </section>
   );
@@ -511,16 +568,24 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
         )}
         {object.blackHoleMassSolar !== undefined && (
           <DataRow label={t('details.estimatedBlackHoleMass')}>
-            {object.kind === 'x-ray-binary'
-              ? `${number(object.blackHoleMassSolar, 1)} M☉`
-              : t('details.solarMassHundredMillions', [measurement(object.blackHoleMassSolar, 1e8)])}
+            {object.kind === 'x-ray-binary' ? `${number(object.blackHoleMassSolar, 1)} M☉` : t('details.solarMassHundredMillions', [measurement(object.blackHoleMassSolar, 1e8)])}
           </DataRow>
         )}
       </dl>
       <p>{catalogText(object.description)}</p>
-      {object.observationImage && <p>{t(object.observationImage.telescope === 'hubble' ? 'details.hubbleObservationVolume'
-        : object.observationImage.telescope === 'chandra' ? 'details.chandraObservationVolume'
-          : object.observationImage.telescope === 'eso' ? 'details.esoObservationVolume' : 'details.nebulaObservationVolume')}</p>}
+      {object.observationImage && (
+        <p>
+          {t(
+            object.observationImage.telescope === 'hubble'
+              ? 'details.hubbleObservationVolume'
+              : object.observationImage.telescope === 'chandra'
+                ? 'details.chandraObservationVolume'
+                : object.observationImage.telescope === 'eso'
+                  ? 'details.esoObservationVolume'
+                  : 'details.nebulaObservationVolume',
+          )}
+        </p>
+      )}
       {radiusRatio !== undefined && (
         <div className={styles.radiusComparison}>
           <h3>{t('details.compareSolarRadius')}</h3>
@@ -547,16 +612,18 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
       )}
       {object.variabilityDays !== undefined && <p>{t('details.variabilityPeriod', [number(object.variabilityDays, 0)])}</p>}
       {object.expansionPerYear !== undefined && <p>{t('details.expansionModel', [t(object.kind === 'ring-remnant' ? 'details.centralEjecta' : 'details.nebula')])}</p>}
-      {object.kind !== 'x-ray-binary' && <ModelNotes>
-        {object.kind === 'black-hole' && <>{t('details.blackHoleLensing')} </>}
-        {t(
-          object.kind === 'open-cluster' || object.kind === 'globular-cluster'
-            ? 'details.clusterModelScale'
-            : object.extentLightYears > 0 && object.kind !== 'black-hole'
-              ? 'details.nebulaModelScale'
-              : 'details.unscaledModel',
-        )}
-      </ModelNotes>}
+      {object.kind !== 'x-ray-binary' && (
+        <ModelNotes>
+          {object.kind === 'black-hole' && <>{t('details.blackHoleLensing')} </>}
+          {t(
+            object.kind === 'open-cluster' || object.kind === 'globular-cluster'
+              ? 'details.clusterModelScale'
+              : object.extentLightYears > 0 && object.kind !== 'black-hole'
+                ? 'details.nebulaModelScale'
+                : 'details.unscaledModel',
+          )}
+        </ModelNotes>
+      )}
       <DetailSources sources={object.sources} />
     </section>
   );
@@ -565,14 +632,28 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
 type ClusterLayer = import('@/constants/space').ClusterLayer;
 const clusterLayers = ['galaxies', 'gas', 'mass'] as const satisfies readonly ClusterLayer[];
 
-export function UniverseDetails({ object, showCounterjet, onCounterjetChange, clusterLayer, onClusterLayerChange }: { object?: DistantObject; showCounterjet: boolean; onCounterjetChange: (visible: boolean) => void; clusterLayer: ClusterLayer; onClusterLayerChange: (layer: ClusterLayer) => void }) {
+export function UniverseDetails({
+  object,
+  showCounterjet,
+  onCounterjetChange,
+  clusterLayer,
+  onClusterLayerChange,
+}: {
+  object?: DistantObject;
+  showCounterjet: boolean;
+  onCounterjetChange: (visible: boolean) => void;
+  clusterLayer: ClusterLayer;
+  onClusterLayerChange: (layer: ClusterLayer) => void;
+}) {
   const { t, catalogText, locale, number, measurement } = useLanguage();
   if (!object) {
     return (
       <section className={styles.details} aria-labelledby="body-name">
         <h2 id="body-name">{catalogText(observableUniverse.name)}</h2>
         <p>{t('details.universeRadius')}</p>
-        <ModelNotes>{t('details.universeLayout')} {t('details.cosmicMapSymbols')}</ModelNotes>
+        <ModelNotes>
+          {t('details.universeLayout')} {t('details.cosmicMapSymbols')}
+        </ModelNotes>
         <DetailSources sources={observableUniverse.sources} />
       </section>
     );
@@ -585,7 +666,21 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange, cl
         <ObservationRow status={object.observationStatus} />
         <div>
           <dt>{t('details.type')}</dt>
-          <dd>{t(object.kind === 'quasar' ? 'details.quasar' : object.kind === 'ring-galaxy' ? 'details.ringGalaxy' : object.kind === 'galaxy-cluster' ? 'details.galaxyCluster' : object.kind === 'galaxy-group' ? 'details.galaxyGroup' : object.kind === 'galaxy-merger' ? 'details.galaxyMerger' : 'details.earlyGalaxy')}</dd>
+          <dd>
+            {t(
+              object.kind === 'quasar'
+                ? 'details.quasar'
+                : object.kind === 'ring-galaxy'
+                  ? 'details.ringGalaxy'
+                  : object.kind === 'galaxy-cluster'
+                    ? 'details.galaxyCluster'
+                    : object.kind === 'galaxy-group'
+                      ? 'details.galaxyGroup'
+                      : object.kind === 'galaxy-merger'
+                        ? 'details.galaxyMerger'
+                        : 'details.earlyGalaxy',
+            )}
+          </dd>
         </div>
         <div>
           <dt>{t('details.redshift')}</dt>
@@ -627,20 +722,24 @@ export function UniverseDetails({ object, showCounterjet, onCounterjetChange, cl
       )}
       {object.kind === 'ring-galaxy' && <p>{t('details.webbRingGalaxyModel')}</p>}
       {object.kind === 'galaxy-group' && <p>{t('details.quintetModel')}</p>}
-      {object.kind === 'galaxy-cluster' && (object.clusterModel === 'bullet' ? (
-        <>
-          <p>{t('details.bulletModel')}</p>
-          <div className={styles.clusterLayers} role="group" aria-label={t('details.clusterLayers')}>
-            {clusterLayers.map((layer) => (
-              <button key={layer} type="button" aria-pressed={clusterLayer === layer} onClick={() => onClusterLayerChange(layer)}>
-                {t(`details.clusterLayer.${layer}`)}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : <p>{t(object.clusterModel === 'macs-j0416' ? 'details.macsModel' : 'details.pandoraModel')}</p>)}
+      {object.kind === 'galaxy-cluster' &&
+        (object.clusterModel === 'bullet' ? (
+          <>
+            <p>{t('details.bulletModel')}</p>
+            <div className={styles.clusterLayers} role="group" aria-label={t('details.clusterLayers')}>
+              {clusterLayers.map((layer) => (
+                <button key={layer} type="button" aria-pressed={clusterLayer === layer} onClick={() => onClusterLayerChange(layer)}>
+                  {t(`details.clusterLayer.${layer}`)}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p>{t(object.clusterModel === 'macs-j0416' ? 'details.macsModel' : 'details.pandoraModel')}</p>
+        ))}
       <ModelNotes>
-        {object.kind === 'quasar' ? t('details.accretionModel') : t('details.galaxyModel')} {object.kind === 'quasar' && <>{t('details.blackHoleLensing')} </>}{t(object.observationScale ? 'details.calibratedGalaxyScale' : 'details.cosmicModelScale')}
+        {object.kind === 'quasar' ? t('details.accretionModel') : t('details.galaxyModel')} {object.kind === 'quasar' && <>{t('details.blackHoleLensing')} </>}
+        {t(object.observationScale ? 'details.calibratedGalaxyScale' : 'details.cosmicModelScale')}
       </ModelNotes>
       <DetailSources sources={[...object.sources, observableUniverse.sources[1]]} />
     </section>
@@ -666,19 +765,29 @@ export function SuperclusterDetails({
   if (association) {
     const featured = association.volumeMembers ? association.members.filter(({ morphology }) => morphology) : association.members;
     const survey = association.volumeMembers ? association.members.filter(({ morphology }) => !morphology) : [];
-    const memberButtons = (members: typeof association.members) => members.map(({ id, name, title }) => (
-      <button type="button" key={id} onClick={() => onSelectGalaxy(id)}>
-        {catalogText(title ?? name)}
-      </button>
-    ));
+    const memberButtons = (members: typeof association.members) =>
+      members.map(({ id, name, title }) => (
+        <button type="button" key={id} onClick={() => onSelectGalaxy(id)}>
+          {catalogText(title ?? name)}
+        </button>
+      ));
     return (
       <section className={styles.details} aria-labelledby="body-name">
         <h2 id="body-name">{catalogText(association.name)}</h2>
         {association.summary && <p>{catalogText(association.summary)}</p>}
         <p>{t('details.virgoClusterMembers')}</p>
         <p>{memberButtons(featured)}</p>
-        {survey.length > 0 && <details><summary>{t('details.surveyGalaxyMembers')} ({survey.length})</summary><p>{memberButtons(survey)}</p></details>}
-        <ModelNotes>{t('details.virgoClusterScale')} {!association.volumeMembers && t('details.cosmicMapSymbols')}</ModelNotes>
+        {survey.length > 0 && (
+          <details>
+            <summary>
+              {t('details.surveyGalaxyMembers')} ({survey.length})
+            </summary>
+            <p>{memberButtons(survey)}</p>
+          </details>
+        )}
+        <ModelNotes>
+          {t('details.virgoClusterScale')} {!association.volumeMembers && t('details.cosmicMapSymbols')}
+        </ModelNotes>
         <DetailSources sources={[...association.sources, ...association.members.flatMap(({ sources }) => sources)]} />
       </section>
     );
@@ -703,7 +812,9 @@ export function SuperclusterDetails({
             </button>
           ))}
       </p>
-      <ModelNotes>{t(region.flowModel ? 'details.laniakeaFlowModel' : 'details.superclusterBoundaries')} {t('details.cosmicMapSymbols')}</ModelNotes>
+      <ModelNotes>
+        {t(region.flowModel ? 'details.laniakeaFlowModel' : 'details.superclusterBoundaries')} {t('details.cosmicMapSymbols')}
+      </ModelNotes>
       <DetailSources sources={region.sources} />
     </section>
   );

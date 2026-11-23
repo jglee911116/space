@@ -136,7 +136,7 @@ function Star({
   useFrame((_, delta) => {
     const time = days.current;
     if (pulse.current && body.stellarPulseSeconds) {
-      const angle = time * 86_400 / body.stellarPulseSeconds * Math.PI * 2;
+      const angle = ((time * 86_400) / body.stellarPulseSeconds) * Math.PI * 2;
       pulse.current.opacity = 0.04 + 0.52 * Math.pow(0.5 + 0.5 * Math.cos(angle), 5);
     }
     if ((isSun || (photosphere && photosphere.granuleScale > 0)) && !paused && delta > 0) {
@@ -170,7 +170,13 @@ function Star({
         <sphereGeometry args={[body.displayRadius, 96, 64]} />
         <shaderMaterial ref={surface} uniforms={uniforms} vertexShader={surfaceVertex} fragmentShader={surfaceFragment} />
       </mesh>
-      <StellarGlow radius={body.displayRadius} color={body.stellar?.emissionColor ?? body.colors[2]} strength={body.stellar?.glowStrength} paused={paused} activityDays={isSun ? activityDays : undefined} />
+      <StellarGlow
+        radius={body.displayRadius}
+        color={body.stellar?.emissionColor ?? body.colors[2]}
+        strength={body.stellar?.glowStrength}
+        paused={paused}
+        activityDays={isSun ? activityDays : undefined}
+      />
       {body.stellarPulseSeconds && (
         <mesh raycast={() => {}}>
           <sphereGeometry args={[body.displayRadius * 1.003, 48, 32]} />
@@ -208,10 +214,7 @@ function Scene({
   const motions = useMemo(() => createMotions(system), [system]);
   // 동작 줄이기 설정이면 카메라가 목표로 바로 이동한다.
   const reduceMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, []);
-  const orbitPaths = useMemo(() => Object.fromEntries(system.bodies.map((body) => [
-    body.id,
-    { vertices: new Float32Array(motions[body.id].points), origin: new Vector3() },
-  ])), [system, motions]);
+  const orbitPaths = useMemo(() => Object.fromEntries(system.bodies.map((body) => [body.id, { vertices: new Float32Array(motions[body.id].points), origin: new Vector3() }])), [system, motions]);
   const illumination = useMemo(() => {
     const hosts: Record<string, string> = {};
     return Object.fromEntries(
@@ -308,7 +311,8 @@ function Scene({
     const currentRadius = scratch.offset.length();
     if (revealRedSpot.current && targetBody?.surfaceEffect === 'red-spot') {
       // Start on the storm-facing side at the current spin phase, then hand control back to the user.
-      scratch.offset.set(0, Math.sin(RED_SPOT_LATITUDE), Math.cos(RED_SPOT_LATITUDE))
+      scratch.offset
+        .set(0, Math.sin(RED_SPOT_LATITUDE), Math.cos(RED_SPOT_LATITUDE))
         .applyAxisAngle(SPIN_AXIS, rotationPhase(days.current, targetBody.spinDays))
         .applyQuaternion(motions[targetBody.id].orientation);
       revealRedSpot.current = false;
@@ -390,7 +394,7 @@ function Scene({
         surfacePoint.copy(group.position).applyMatrix4(camera.matrixWorldInverse);
         const depth = -surfacePoint.z;
         if (depth <= 0) continue;
-        const diameter = body.displayRadius * camera.projectionMatrix.elements[5] * height / depth;
+        const diameter = (body.displayRadius * camera.projectionMatrix.elements[5] * height) / depth;
         if (diameter < 24) continue;
         surfacePoint.applyMatrix4(camera.projectionMatrix);
         if (Math.abs(surfacePoint.x) <= 1 + diameter / width && Math.abs(surfacePoint.y) <= 1 + diameter / height) {
@@ -446,10 +450,10 @@ function Scene({
   function projectLabel(camera: Camera, size: { width: number; height: number }, radius: number) {
     labelPoint.applyMatrix4(camera.matrixWorldInverse);
     const inFront = labelPoint.z < 0;
-    const rim = Math.min(150, radius * camera.projectionMatrix.elements[5] * size.height / (2 * Math.max(0.001, -labelPoint.z)));
+    const rim = Math.min(150, (radius * camera.projectionMatrix.elements[5] * size.height) / (2 * Math.max(0.001, -labelPoint.z)));
     labelPoint.applyMatrix4(camera.projectionMatrix);
-    const x = (1 + labelPoint.x) * size.width / 2;
-    const y = (1 - labelPoint.y) * size.height / 2;
+    const x = ((1 + labelPoint.x) * size.width) / 2;
+    const y = ((1 - labelPoint.y) * size.height) / 2;
     return { x, y, rim, inFront, anchorX: x + rim * 0.52 + 9, anchorY: y + rim * 0.9 + 9 };
   }
 
@@ -503,15 +507,24 @@ function Scene({
       if (priority === 2 && old && Math.hypot(old.x - anchorX, old.y - anchorY) < rim + 90) {
         candidates.unshift([old.x, old.y]);
       }
-      const fits = (bounds: LabelBounds) => occupied.every((other) =>
-        bounds.x + bounds.width + LABEL_GAP <= other.x || other.x + other.width + LABEL_GAP <= bounds.x ||
-        bounds.y + bounds.height + LABEL_GAP <= other.y || other.y + other.height + LABEL_GAP <= bounds.y);
-      const bounds = onScreen && candidates.map(([left, top]) => ({
-        x: MathUtils.clamp(left, LABEL_MARGIN, Math.max(LABEL_MARGIN, width - entry.width - LABEL_MARGIN)),
-        y: MathUtils.clamp(top, LABEL_MARGIN, Math.max(LABEL_MARGIN, height - entry.height - LABEL_MARGIN)),
-        width: entry.width,
-        height: entry.height,
-      })).find(fits);
+      const fits = (bounds: LabelBounds) =>
+        occupied.every(
+          (other) =>
+            bounds.x + bounds.width + LABEL_GAP <= other.x ||
+            other.x + other.width + LABEL_GAP <= bounds.x ||
+            bounds.y + bounds.height + LABEL_GAP <= other.y ||
+            other.y + other.height + LABEL_GAP <= bounds.y,
+        );
+      const bounds =
+        onScreen &&
+        candidates
+          .map(([left, top]) => ({
+            x: MathUtils.clamp(left, LABEL_MARGIN, Math.max(LABEL_MARGIN, width - entry.width - LABEL_MARGIN)),
+            y: MathUtils.clamp(top, LABEL_MARGIN, Math.max(LABEL_MARGIN, height - entry.height - LABEL_MARGIN)),
+            width: entry.width,
+            height: entry.height,
+          }))
+          .find(fits);
       button.style.visibility = bounds ? 'visible' : 'hidden';
       if (!bounds) {
         previous.delete(id);
@@ -568,36 +581,49 @@ function Scene({
                 >
                   {body.shapeModel && bodyVisible(body) && (target === body.id || satelliteParent === body.parent) ? (
                     <group
-                      {...events(() => systemVisible.current ? body.id : undefined)}
+                      {...events(() => (systemVisible.current ? body.id : undefined))}
                       onClick={(event) => {
                         if (!systemVisible.current) return;
                         event.stopPropagation();
                         if (event.delta <= 4) onSelect(body.id);
                       }}
                     >
-                      <Suspense fallback={<mesh><sphereGeometry args={[body.displayRadius, 32, 24]} /><PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={false} /></mesh>}>
+                      <Suspense
+                        fallback={
+                          <mesh>
+                            <sphereGeometry args={[body.displayRadius, 32, 24]} />
+                            <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={false} />
+                          </mesh>
+                        }
+                      >
                         <ObservedBodyModel file={body.shapeModel} radius={body.displayRadius} />
                       </Suspense>
                     </group>
-                  ) : (body.lobes ?? [{ offset: [0, 0, 0] as const, shape: body.shape }]).map((part, index) => (
-                    <mesh
-                      key={index}
-                      position={part.offset.map((value) => value * body.displayRadius) as [number, number, number]}
-                      scale={part.shape}
-                      raycast={function (this: Mesh, raycaster, intersections) {
-                        if (systemVisible.current && bodyVisible(body)) Mesh.prototype.raycast.call(this, raycaster, intersections);
-                      }}
-                      {...events(() => body.id)}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (event.delta <= 4) onSelect(body.id);
-                      }}
-                    >
-                      <PlanetGeometry radius={body.displayRadius} body={body} />
-                      <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={shouldLoadSurfaceMap(body)}
-                        showSurfaceMap={!body.surfaceMap?.hidden || (showHiddenSurface && target === body.id)} />
-                    </mesh>
-                  ))}
+                  ) : (
+                    (body.lobes ?? [{ offset: [0, 0, 0] as const, shape: body.shape }]).map((part, index) => (
+                      <mesh
+                        key={index}
+                        position={part.offset.map((value) => value * body.displayRadius) as [number, number, number]}
+                        scale={part.shape}
+                        raycast={function (this: Mesh, raycaster, intersections) {
+                          if (systemVisible.current && bodyVisible(body)) Mesh.prototype.raycast.call(this, raycaster, intersections);
+                        }}
+                        {...events(() => body.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (event.delta <= 4) onSelect(body.id);
+                        }}
+                      >
+                        <PlanetGeometry radius={body.displayRadius} body={body} />
+                        <PlanetMaterial
+                          body={body}
+                          lightOffset={illumination[body.id].offset}
+                          loadSurfaceMap={shouldLoadSurfaceMap(body)}
+                          showSurfaceMap={!body.surfaceMap?.hidden || (showHiddenSurface && target === body.id)}
+                        />
+                      </mesh>
+                    ))
+                  )}
                   {body.surfaceEffect === 'ice-plumes' && target === body.id && <IcePlumes radius={body.displayRadius} paused={paused} />}
                 </group>
                 <PlanetRings body={body} />
@@ -680,11 +706,7 @@ export default function SystemScene(props: SceneProps) {
   return (
     <CanvasBoundary>
       <div className={styles.systemCanvas} role="group" aria-label={t('canvas.interactiveModel', [catalogText(props.system.name)])}>
-        <Canvas
-          camera={initialCamera}
-          dpr={[1, 1.5]}
-          fallback={<span aria-hidden="true">{t('canvas.systemModel', [catalogText(props.system.name)])}</span>}
-        >
+        <Canvas camera={initialCamera} dpr={[1, 1.5]} fallback={<span aria-hidden="true">{t('canvas.systemModel', [catalogText(props.system.name)])}</span>}>
           <Scene {...props} farOverview={farOverview} showHiddenSurface={showHiddenSurface} labels={labels} />
         </Canvas>
         {props.system.home && props.target && (
@@ -693,7 +715,9 @@ export default function SystemScene(props: SceneProps) {
               <button
                 key={body.id}
                 type="button"
-                ref={(element) => { labels.current[body.id] = element; }}
+                ref={(element) => {
+                  labels.current[body.id] = element;
+                }}
                 className={styles.solarBodyLabel}
                 aria-current={body.id === props.target ? 'true' : undefined}
                 data-comparison-target={body.id === props.comparisonTarget}
@@ -703,7 +727,9 @@ export default function SystemScene(props: SceneProps) {
                 }}
                 onPointerLeave={() => props.onLeaveBody(body.id)}
                 onPointerDown={() => props.onLeaveBody(body.id)}
-                onClick={() => { if (body.id !== props.target) props.onSelect(body.id); }}
+                onClick={() => {
+                  if (body.id !== props.target) props.onSelect(body.id);
+                }}
               >
                 {catalogText(body.name)}
               </button>

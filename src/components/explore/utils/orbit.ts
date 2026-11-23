@@ -77,7 +77,7 @@ function createMotion(body: Body, scale: number, parentOrientation?: Quaternion)
   const points = new Float64Array(segments * 3);
   const point = new Vector3();
   for (let index = 0; index < segments; index++) {
-    setPoint(point, index * 2 * Math.PI / segments).toArray(points, index * 3);
+    setPoint(point, (index * 2 * Math.PI) / segments).toArray(points, index * 3);
   }
 
   return {

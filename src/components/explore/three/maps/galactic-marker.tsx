@@ -104,7 +104,7 @@ export function GalacticLabelLayer({ children }: { children: ReactNode }) {
       projected.applyMatrix4(camera.projectionMatrix);
       const centerX = (projected.x + 1) * width * 0.5;
       const baseOffset = marker.labelOffset * (marker.wideLabelSpacing?.current ?? 1);
-      const modelRadiusPx = marker.modelRadius ? marker.modelRadius * camera.projectionMatrix.elements[5] * height / (2 * depth) : 0;
+      const modelRadiusPx = marker.modelRadius ? (marker.modelRadius * camera.projectionMatrix.elements[5] * height) / (2 * depth) : 0;
       const offset = modelRadiusPx > 14 ? Math.sign(baseOffset || 1) * Math.max(Math.abs(baseOffset), (modelRadiusPx + 16) / 30) : baseOffset;
       const centerY = (1 - projected.y) * height * 0.5 - offset * 30;
       bounds.left = centerX - marker.width * 0.25;
@@ -184,7 +184,7 @@ export function GalacticMarker({
     const material: SpriteMaterial = object.material;
     const marker: Marker = {
       sprite: object,
-      width: distanceLabel ? Math.ceil((labelWidth(label) - 66) * 20 / 28) + 14 : labelWidth(label),
+      width: distanceLabel ? Math.ceil(((labelWidth(label) - 66) * 20) / 28) + 14 : labelWidth(label),
       height: distanceLabel ? 12 : 30,
       opacity: distanceLabel ? 0.56 : 1,
       priority,

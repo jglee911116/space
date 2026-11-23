@@ -117,10 +117,7 @@ export function validateCatalog() {
   requireValue(new Set(galaxyAssociations.map(({ id }) => id)).size === galaxyAssociations.length, 'duplicate association id');
   for (const group of galaxyAssociations) {
     const region = superclusters.find(({ id }) => id === group.mapRegionId);
-    requireValue(
-      region && regionMarkers(region).some(({ clusterId }) => clusterId === group.id),
-      `${group.id}: no marker in its parent map`,
-    );
+    requireValue(region && regionMarkers(region).some(({ clusterId }) => clusterId === group.id), `${group.id}: no marker in its parent map`);
     requireValue(group.gridRadiusMly > 0 && group.members.length > 1 && group.members.every((member) => member.skyPosition && member.distanceKpc > 0), `${group.id}: invalid scale or members`);
   }
   checkText({ galaxyAssociations, galaxies, systems, featuredObjects, distantObjects, superclusters, localGroup, observableUniverse }, 'data');
@@ -128,7 +125,11 @@ export function validateCatalog() {
   const manifest = JSON.parse(readFileSync(join(process.cwd(), 'public', gaiaCatalogPath, 'manifest.json'), 'utf8'));
   requireValue(Math.abs(manifest.maxDistanceLightYears - gaiaSampleRadiusLightYears) < 1, 'gaiaSampleRadiusLightYears differs from the Gaia manifest');
   for (const region of superclusters) {
-    for (const id of Object.values(region.flowAnchors ?? {})) requireValue(regionMarkers(region).some(({ clusterId }) => clusterId === id), `${region.id}.flowAnchors: ${id} is not on the map`);
+    for (const id of Object.values(region.flowAnchors ?? {}))
+      requireValue(
+        regionMarkers(region).some(({ clusterId }) => clusterId === id),
+        `${region.id}.flowAnchors: ${id} is not on the map`,
+      );
   }
 
   const matchedSourceIds = new Set<string>();
@@ -136,7 +137,10 @@ export function validateCatalog() {
     requireValue(/^[1-9]\d{0,18}$/.test(sourceId) && !matchedSourceIds.has(sourceId), `invalid or duplicate Gaia source ${sourceId}`);
     matchedSourceIds.add(sourceId);
     const system = systems.find(({ id }) => id === systemId);
-    requireValue(system?.bodies.some((body) => body.id === bodyId && body.kind === 'star'), `unknown Gaia counterpart ${systemId}/${bodyId}`);
+    requireValue(
+      system?.bodies.some((body) => body.id === bodyId && body.kind === 'star'),
+      `unknown Gaia counterpart ${systemId}/${bodyId}`,
+    );
     // 다른 별의 ID 를 잘못 넣으면(예: 82 Eridani) 위치가 수 광년 이상 어긋난다.
     const shard = Number((BigInt(sourceId) >> BigInt(40)) & BigInt(63));
     const packet = readFileSync(join(process.cwd(), 'public', gaiaCatalogPath, 'index', `${shard}.bin`));

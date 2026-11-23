@@ -6,9 +6,15 @@ import { seededRandom } from '../../utils/random';
 
 // Approximate sky projection around Alcyone. The depth is illustrative.
 const brightStars = [
-  [0, 0, 0.12, 1], [0.51, -0.18, 0.03, 0.75], [0.51, -0.07, 0.08, 0.43],
-  [-0.19, -0.24, -0.10, 0.65], [-0.24, 0.20, 0.13, 0.72], [-0.50, -0.12, -0.04, 0.72],
-  [-0.49, 0.34, -0.13, 0.58], [-0.56, 0.16, 0.16, 0.37], [-0.31, 0.49, -0.17, 0.34],
+  [0, 0, 0.12, 1],
+  [0.51, -0.18, 0.03, 0.75],
+  [0.51, -0.07, 0.08, 0.43],
+  [-0.19, -0.24, -0.1, 0.65],
+  [-0.24, 0.2, 0.13, 0.72],
+  [-0.5, -0.12, -0.04, 0.72],
+  [-0.49, 0.34, -0.13, 0.58],
+  [-0.56, 0.16, 0.16, 0.37],
+  [-0.31, 0.49, -0.17, 0.34],
 ] as const;
 
 const vertex = /* glsl */ `
@@ -75,21 +81,20 @@ function clusterGeometry(preview: boolean) {
     const angle = random() * Math.PI * 2;
     const radius = random() ** 0.86 * 0.94;
     color.copy(pale).lerp(random() < 0.27 ? warm : blue, random() * 0.65);
-    push(Math.cos(angle) * radius - 0.08, Math.sin(angle) * radius * 0.82, (random() - 0.5) * (0.30 + radius * 0.73),
-      0.012 + random() ** 4 * 0.040, 0.20 + random() ** 2 * 0.48, 1);
+    push(Math.cos(angle) * radius - 0.08, Math.sin(angle) * radius * 0.82, (random() - 0.5) * (0.3 + radius * 0.73), 0.012 + random() ** 4 * 0.04, 0.2 + random() ** 2 * 0.48, 1);
   }
   for (let i = 0; i < (preview ? 450 : 2800); i++) {
     const lane = i % 7;
-    const distance = random() * 1.40 - 0.72;
+    const distance = random() * 1.4 - 0.72;
     const spread = (random() - 0.5) * 0.11;
     const x = distance * 0.91 - 0.12 + spread;
     const y = distance * 0.46 - 0.37 + lane * 0.12 + 0.07 * Math.sin(distance * 5 + lane * 0.8) + spread;
     const z = (lane - 3) * 0.079 + 0.17 * Math.sin(distance * 3.4 + lane * 0.72) + spread * 2.2;
     const nearMerope = Math.exp(-5 * ((x + 0.19) ** 2 + (y + 0.24) ** 2));
     color.copy(blue).lerp(pale, nearMerope * 0.45);
-    push(x, y, z, 0.031 + random() * 0.061, (preview ? 0.13 : 0.053) * (0.24 + 0.76 * nearMerope) * Math.sin((distance + 0.72) / 1.4 * Math.PI), 0);
+    push(x, y, z, 0.031 + random() * 0.061, (preview ? 0.13 : 0.053) * (0.24 + 0.76 * nearMerope) * Math.sin(((distance + 0.72) / 1.4) * Math.PI), 0);
   }
-  return [positions, colors, sizes, intensities, stars].map(values => new Float32Array(values));
+  return [positions, colors, sizes, intensities, stars].map((values) => new Float32Array(values));
 }
 
 export function PleiadesCluster({ radius, preview = false }: { radius: number; preview?: boolean }) {

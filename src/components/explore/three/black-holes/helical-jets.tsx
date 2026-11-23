@@ -75,8 +75,22 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
-export function HelicalJets({ color, time, previewDiameter, observation, counterjet = 0.30, collimation = 1, lowDetail = false }: {
-  color: string; time: RefObject<number>; previewDiameter?: number; observation?: Texture; counterjet?: number; collimation?: number; lowDetail?: boolean;
+export function HelicalJets({
+  color,
+  time,
+  previewDiameter,
+  observation,
+  counterjet = 0.3,
+  collimation = 1,
+  lowDetail = false,
+}: {
+  color: string;
+  time: RefObject<number>;
+  previewDiameter?: number;
+  observation?: Texture;
+  counterjet?: number;
+  collimation?: number;
+  lowDetail?: boolean;
 }) {
   const material = useRef<ShaderMaterial>(null);
   const points = useRef<Points>(null);
@@ -84,17 +98,20 @@ export function HelicalJets({ color, time, previewDiameter, observation, counter
   const bounds = useMemo(() => new Sphere(new Vector3(), 6.2), []);
   const pixelRatio = useThree((state) => state.viewport.dpr);
   const preview = previewDiameter !== undefined || lowDetail;
-  const uniforms = useMemo(() => ({
-    phase: { value: 0 },
-    pixelRatio: { value: pixelRatio },
-    tint: { value: new Color(color).lerp(new Color('#c5ddff'), 0.42) },
-    preview: { value: preview },
-    visibility: { value: 1 },
-    counterjet: { value: counterjet },
-    collimation: { value: collimation },
-    mapped: { value: observation !== undefined },
-    observationMap: { value: observation ?? null },
-  }), [collimation, color, counterjet, observation, pixelRatio, preview]);
+  const uniforms = useMemo(
+    () => ({
+      phase: { value: 0 },
+      pixelRatio: { value: pixelRatio },
+      tint: { value: new Color(color).lerp(new Color('#c5ddff'), 0.42) },
+      preview: { value: preview },
+      visibility: { value: 1 },
+      counterjet: { value: counterjet },
+      collimation: { value: collimation },
+      mapped: { value: observation !== undefined },
+      observationMap: { value: observation ?? null },
+    }),
+    [collimation, color, counterjet, observation, pixelRatio, preview],
+  );
   const particles = useMemo(() => {
     const count = preview ? PREVIEW_PARTICLES_PER_STRAND : FULL_PARTICLES_PER_STRAND;
     const positions = new Float32Array(count * STRANDS * 3);

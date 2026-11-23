@@ -43,7 +43,16 @@ function indexEntry(entry: Entry) {
     entry.parentContext ? translate(locale, entry.parentContext) : '',
   ]);
   // 'Messier 51' 은 m51 과 messier51 둘 다 색인해 'Messier' 만 쳐도 찾게 한다.
-  const terms = [...new Set(nameFields.flatMap((value) => { const tokens = words(value); return [tokens.join(''), compactTerm(tokens)]; }).filter(Boolean))];
+  const terms = [
+    ...new Set(
+      nameFields
+        .flatMap((value) => {
+          const tokens = words(value);
+          return [tokens.join(''), compactTerm(tokens)];
+        })
+        .filter(Boolean),
+    ),
+  ];
   const nameTokens = new Set(nameFields.flatMap(words));
   const tokens = new Set([...nameTokens, ...qualifiers.flatMap(words)]);
   return { ...entry, terms, nameTokens, tokens };
@@ -53,7 +62,13 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
   const entries: Entry[] = [
     { name: observableUniverse.name, path: UNIVERSE_PATH, kind: 'search.region', aliases: [] },
     { name: localGroup.name, path: LOCAL_GROUP_PATH, kind: 'search.region', aliases: [] },
-    { name: milkyWay.neighborhood.name, path: gaiaSourcePath(), kind: 'search.region', context: milkyWay.name, aliases: ['solar neighborhood', 'solar neighbourhood', 'solar vicinity', '태양 근방', '태양계 근방', '태양 주변'] },
+    {
+      name: milkyWay.neighborhood.name,
+      path: gaiaSourcePath(),
+      kind: 'search.region',
+      context: milkyWay.name,
+      aliases: ['solar neighborhood', 'solar neighbourhood', 'solar vicinity', '태양 근방', '태양계 근방', '태양 주변'],
+    },
     ...galaxyAssociations.map(({ id, name, mapRegionId, aliases = [] }): Entry => ({ name, path: associationPath(mapRegionId, id), kind: 'search.region', aliases })),
     ...superclusters.map(({ name, id }): Entry => ({ name, path: superclusterPath(id), kind: 'search.region', aliases: [id] })),
     ...galaxies.map(({ name, title, id, aliases = [] }): Entry => ({ name, designation: title, path: galaxyPath(id), kind: 'search.galaxy', aliases: [id, ...aliases] })),
@@ -64,36 +79,51 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
       kind: 'details.supermassiveBlackHole',
       aliases: ['Sgr A*', milkyWay.center.id],
     },
-    ...featuredObjects.filter(({ parentObjectId }) => !parentObjectId).map(
-      ({ id, name, designation, kind, galaxyId = milkyWay.id, aliases = [] }): Entry => ({
-        name,
-        designation,
-        context: galaxies.find((galaxy) => galaxy.id === galaxyId)?.name,
-        path: featuredObjectPath(galaxyId, id),
-        kind:
-          kind === 'pulsar' || kind === 'pulsar-wind-nebula'
-            ? 'search.pulsar'
-            : kind === 'neutron-star'
-              ? 'search.neutronStar'
-              : kind === 'magnetar'
-                ? 'search.magnetar'
-                : kind === 'supergiant'
-                  ? 'body.star'
-                  : kind === 'black-hole'
-                    ? 'details.supermassiveBlackHole'
-                    : kind === 'open-cluster' || kind === 'globular-cluster'
-                      ? 'search.starCluster'
-                      : kind === 'planetary-nebula'
-                        ? 'search.planetaryNebula'
-                        : kind === 'x-ray-binary' ? 'details.xRayBinary' : 'navigation.featuredObjects',
-        aliases: [id, ...aliases],
-      }),
-    ),
+    ...featuredObjects
+      .filter(({ parentObjectId }) => !parentObjectId)
+      .map(
+        ({ id, name, designation, kind, galaxyId = milkyWay.id, aliases = [] }): Entry => ({
+          name,
+          designation,
+          context: galaxies.find((galaxy) => galaxy.id === galaxyId)?.name,
+          path: featuredObjectPath(galaxyId, id),
+          kind:
+            kind === 'pulsar' || kind === 'pulsar-wind-nebula'
+              ? 'search.pulsar'
+              : kind === 'neutron-star'
+                ? 'search.neutronStar'
+                : kind === 'magnetar'
+                  ? 'search.magnetar'
+                  : kind === 'supergiant'
+                    ? 'body.star'
+                    : kind === 'black-hole'
+                      ? 'details.supermassiveBlackHole'
+                      : kind === 'open-cluster' || kind === 'globular-cluster'
+                        ? 'search.starCluster'
+                        : kind === 'planetary-nebula'
+                          ? 'search.planetaryNebula'
+                          : kind === 'x-ray-binary'
+                            ? 'details.xRayBinary'
+                            : 'navigation.featuredObjects',
+          aliases: [id, ...aliases],
+        }),
+      ),
     ...distantObjects.map(
       ({ id, name, kind, aliases = [] }): Entry => ({
         name,
         path: distantObjectPath(id),
-        kind: kind === 'quasar' ? 'details.quasar' : kind === 'ring-galaxy' ? 'details.ringGalaxy' : kind === 'galaxy-cluster' ? 'details.galaxyCluster' : kind === 'galaxy-group' ? 'details.galaxyGroup' : kind === 'galaxy-merger' ? 'details.galaxyMerger' : 'details.earlyGalaxy',
+        kind:
+          kind === 'quasar'
+            ? 'details.quasar'
+            : kind === 'ring-galaxy'
+              ? 'details.ringGalaxy'
+              : kind === 'galaxy-cluster'
+                ? 'details.galaxyCluster'
+                : kind === 'galaxy-group'
+                  ? 'details.galaxyGroup'
+                  : kind === 'galaxy-merger'
+                    ? 'details.galaxyMerger'
+                    : 'details.earlyGalaxy',
         aliases: [id, ...aliases],
       }),
     ),
@@ -150,8 +180,7 @@ export function searchCatalog(catalog: ReturnType<typeof createSearchCatalog>, q
     .flatMap((item) => {
       if (item.terms.includes(compact)) return [{ item, rank: 0 }];
       if (item.terms.some((term) => term.startsWith(compact))) return [{ item, rank: 1 }];
-      if (queryWords.length > 1 && queryWords.some((word) => item.nameTokens.has(word) && /\p{L}/u.test(word))
-        && queryWords.every((word) => item.tokens.has(word))) return [{ item, rank: 2 }];
+      if (queryWords.length > 1 && queryWords.some((word) => item.nameTokens.has(word) && /\p{L}/u.test(word)) && queryWords.every((word) => item.tokens.has(word))) return [{ item, rank: 2 }];
       if (item.terms.some((term) => term.includes(compact))) return [{ item, rank: 3 }];
       return [];
     })

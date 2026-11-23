@@ -5,7 +5,7 @@ const coordinates = { label: message('catalog.magellanic-clouds.coordinates.sour
 
 export const largeMagellanicCloud: Galaxy = {
   id: 'large-magellanic-cloud',
-  structure: { axis: 0.80, bar: 0.37, asymmetry: 0.45 },
+  structure: { axis: 0.8, bar: 0.37, asymmetry: 0.45 },
   name: message('catalog.magellanic-clouds.large-magellanic-cloud.name'),
   title: message('catalog.magellanic-clouds.large-magellanic-cloud.title'),
   summary: message('catalog.magellanic-clouds.large-magellanic-cloud.summary'),

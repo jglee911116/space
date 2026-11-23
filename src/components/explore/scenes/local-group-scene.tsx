@@ -23,7 +23,17 @@ import { pointBudget, projectedDiameter, updatePointDetail } from '../three/maps
 import { GalacticLabelLayer, GalacticMarker } from '../three/maps/galactic-marker';
 import { DistanceRings } from '../three/maps/distance-rings';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
-import { ACCRETION_MODEL_EINSTEIN_RADIUS, ACCRETION_MODEL_EXIT_DISTANCE, EXTERNAL_SYSTEM_ENTRY_KPC, EXTERNAL_SYSTEM_RETURN_KPC, GALAXY_ENTRY_KPC, GALAXY_EXIT_KPC, LOCAL_GROUP_EXIT_KPC, featuredOverviewDistanceKpc, type ZoomHandoff } from '../utils/zoom';
+import {
+  ACCRETION_MODEL_EINSTEIN_RADIUS,
+  ACCRETION_MODEL_EXIT_DISTANCE,
+  EXTERNAL_SYSTEM_ENTRY_KPC,
+  EXTERNAL_SYSTEM_RETURN_KPC,
+  GALAXY_ENTRY_KPC,
+  GALAXY_EXIT_KPC,
+  LOCAL_GROUP_EXIT_KPC,
+  featuredOverviewDistanceKpc,
+  type ZoomHandoff,
+} from '../utils/zoom';
 
 type Props = {
   systemMarkers: readonly { id: string; name: CatalogText; position: readonly [number, number, number] }[];
@@ -93,12 +103,8 @@ function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
   });
   return (
     <group rotation-x={galaxy.diskTilt ?? 0}>
-      {(!observation || (!compact && observation.blendProcedural)) && (
-        <ProceduralGalaxy galaxy={galaxy} compact={compact} opacity={texture ? 0.48 : 1} blendObservation={!!texture} />
-      )}
-      {!compact && galaxy.ramPressureTail && (
-        <RamPressureTail radius={galaxy.modelRadiusKpc} twin={!!galaxy.ramPressureTail.twin} />
-      )}
+      {(!observation || (!compact && observation.blendProcedural)) && <ProceduralGalaxy galaxy={galaxy} compact={compact} opacity={texture ? 0.48 : 1} blendObservation={!!texture} />}
+      {!compact && galaxy.ramPressureTail && <RamPressureTail radius={galaxy.modelRadiusKpc} twin={!!galaxy.ramPressureTail.twin} />}
       {observation && compact && <GalaxyPreview galaxy={galaxy} texture={texture} />}
       {!compact && texture && observation && (
         <GalaxyObservationDisk texture={texture} radius={galaxy.modelRadiusKpc} center={observation.center} span={observation.span} rotation={observation.rotation} />
@@ -109,15 +115,37 @@ function GalaxyDisk({ galaxy, compact }: { galaxy: Galaxy; compact: boolean }) {
             <bufferAttribute attach="attributes-position" args={[points.positions, 3]} />
             <bufferAttribute attach="attributes-color" args={[points.colors, 3]} />
           </bufferGeometry>
-          <pointsMaterial vertexColors size={compact ? 1.25 : 1.2} sizeAttenuation={false} transparent opacity={compact ? 0 : diffuse ? 0.33 : 0.45}
-            blending={diffuse ? AdditiveBlending : NormalBlending} depthWrite={false} />
+          <pointsMaterial
+            vertexColors
+            size={compact ? 1.25 : 1.2}
+            sizeAttenuation={false}
+            transparent
+            opacity={compact ? 0 : diffuse ? 0.33 : 0.45}
+            blending={diffuse ? AdditiveBlending : NormalBlending}
+            depthWrite={false}
+          />
         </points>
       )}
     </group>
   );
 }
 
-function Scene({ overview, centerOnGalaxy, galaxy, entry, reportDistance, onEnterGalaxy, onExitGalaxy, onExitGroup, systemMarkers, objectMarkers, accretionPlaybackTime, onSelectObject, onSelectSystem, focusId }: Props) {
+function Scene({
+  overview,
+  centerOnGalaxy,
+  galaxy,
+  entry,
+  reportDistance,
+  onEnterGalaxy,
+  onExitGalaxy,
+  onExitGroup,
+  systemMarkers,
+  objectMarkers,
+  accretionPlaybackTime,
+  onSelectObject,
+  onSelectSystem,
+  focusId,
+}: Props) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const cursorZoomRef = useCursorZoom();
   const background = useRef<Group>(null);
@@ -149,7 +177,15 @@ function Scene({ overview, centerOnGalaxy, galaxy, entry, reportDistance, onEnte
     cursorZoomRef.current = false;
     const returnFromSystem = entry && !overview && focusId && focusPosition;
     const entryLimit = overview ? groupExit * 0.95 : defaultRadius;
-    const distance = focusedObject ? (entry ? entry.distanceAu / AU_PER_KPC : objectDistance) : returnFromSystem ? EXTERNAL_SYSTEM_RETURN_KPC : entry ? Math.min(entryLimit, entry.distanceAu / AU_PER_KPC) : defaultRadius;
+    const distance = focusedObject
+      ? entry
+        ? entry.distanceAu / AU_PER_KPC
+        : objectDistance
+      : returnFromSystem
+        ? EXTERNAL_SYSTEM_RETURN_KPC
+        : entry
+          ? Math.min(entryLimit, entry.distanceAu / AU_PER_KPC)
+          : defaultRadius;
     orbit.target.copy(overview ? overviewTarget : origin);
     if (returnFromSystem) orbit.target.set(...focusPosition);
     if (focusedObject) orbit.target.set(...focusedObject.position);
@@ -187,11 +223,7 @@ function Scene({ overview, centerOnGalaxy, galaxy, entry, reportDistance, onEnte
   return (
     <>
       {focusedObject?.object.kind === 'black-hole' && (
-        <LensedStarfield
-          center={focusedObject.position}
-          einsteinRadius={objectDistance * ACCRETION_MODEL_EINSTEIN_RADIUS / ACCRETION_MODEL_EXIT_DISTANCE}
-          fadeRange={lensFade}
-        />
+        <LensedStarfield center={focusedObject.position} einsteinRadius={(objectDistance * ACCRETION_MODEL_EINSTEIN_RADIUS) / ACCRETION_MODEL_EXIT_DISTANCE} fadeRange={lensFade} />
       )}
       <group ref={background}>
         <Stars radius={60} depth={45} count={1400} factor={3.5} saturation={0} fade speed={0} />
@@ -203,19 +235,17 @@ function Scene({ overview, centerOnGalaxy, galaxy, entry, reportDistance, onEnte
             const dwarf = dwarfs.has(item);
             const select = () => onEnterGalaxy(item);
             const staggeredOffset = index % 2 === 0 ? 0.85 : -0.92;
-            const labelOffset = dwarf ? staggeredOffset : item.parentGalaxyId
-              ? 0.95 + localGroup.galaxies.filter((other) => other.parentGalaxyId === item.parentGalaxyId).indexOf(item) * 1.1
-              : item.distanceKpc < 100 ? nearbyGalaxies.indexOf(item) * -1.1 + 0.85 : staggeredOffset;
+            const labelOffset = dwarf
+              ? staggeredOffset
+              : item.parentGalaxyId
+                ? 0.95 + localGroup.galaxies.filter((other) => other.parentGalaxyId === item.parentGalaxyId).indexOf(item) * 1.1
+                : item.distanceKpc < 100
+                  ? nearbyGalaxies.indexOf(item) * -1.1 + 0.85
+                  : staggeredOffset;
             return (
               <group key={item.id} position={positions[index]}>
                 {dwarf ? <GalaxyPreview galaxy={item} radius={Math.max(7, item.modelRadiusKpc)} onSelect={select} /> : <GalaxyDisk galaxy={item} compact />}
-                <GalacticMarker
-                  name={item.name}
-                  priority={item.id === galaxy.id ? 3 : dwarf ? 0 : 1}
-                  color={item.color}
-                  labelOffset={labelOffset}
-                  onSelect={select}
-                />
+                <GalacticMarker name={item.name} priority={item.id === galaxy.id ? 3 : dwarf ? 0 : 1} color={item.color} labelOffset={labelOffset} onSelect={select} />
               </group>
             );
           })}
@@ -241,7 +271,14 @@ function Scene({ overview, centerOnGalaxy, galaxy, entry, reportDistance, onEnte
               {(object.extentLightYears > 0 || object.photosphere || object.id === focusId) && (
                 <FeaturedObjectPreview object={object} focused={object.id === focusId} playbackTime={object.kind === 'black-hole' ? accretionPlaybackTime : undefined} />
               )}
-              <GalacticMarker name={object.name} color={object.color} labelOffset={-1.0} modelRadius={object.id === focusId ? objectDistance * 0.13 : undefined} priority={object.id === focusId ? 3 : 0} onSelect={() => onSelectObject(object.id)} />
+              <GalacticMarker
+                name={object.name}
+                color={object.color}
+                labelOffset={-1.0}
+                modelRadius={object.id === focusId ? objectDistance * 0.13 : undefined}
+                priority={object.id === focusId ? 3 : 0}
+                onSelect={() => onSelectObject(object.id)}
+              />
             </group>
           ))}
           {systemMarkers.map((item) => (

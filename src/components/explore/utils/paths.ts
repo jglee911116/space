@@ -33,7 +33,8 @@ function withQuery(path: string, query: ExplorerQuery) {
 
 export function updateSystemLocation(url: URL, pathname: string, system: string | null, target: string | null, view: string | null) {
   const current = readExplorerQuery(url.searchParams);
-  if (url.pathname === pathname && current.system === system && current.target === target && current.view === view && current.gaia === null && current.around === null && current.radius === null) return false;
+  if (url.pathname === pathname && current.system === system && current.target === target && current.view === view && current.gaia === null && current.around === null && current.radius === null)
+    return false;
 
   url.pathname = pathname;
   setExplorerQuery(url.searchParams, { focus: null, gaia: null, around: null, radius: null, system, target, view });

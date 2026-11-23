@@ -47,13 +47,23 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
-export function FeaturedObjectPreview({ object, focused, playbackTime, simulationDays }: { object: FeaturedObject; focused: boolean; playbackTime?: RefObject<number>; simulationDays?: RefObject<number> }) {
+export function FeaturedObjectPreview({
+  object,
+  focused,
+  playbackTime,
+  simulationDays,
+}: {
+  object: FeaturedObject;
+  focused: boolean;
+  playbackTime?: RefObject<number>;
+  simulationDays?: RefObject<number>;
+}) {
   const image = object.observationImage;
   const texture = useSurfaceMap(image?.file, focused);
   const distance = featuredOverviewDistanceKpc(object);
 
   if (object.clusterModel === 'pleiades') return <PleiadesCluster radius={distance * 0.13} preview />;
-  if (object.kind === 'globular-cluster') return <GlobularCluster radius={distance * 0.10} profile={object.clusterModel} preview />;
+  if (object.kind === 'globular-cluster') return <GlobularCluster radius={distance * 0.1} profile={object.clusterModel} preview />;
   if (object.kind === 'x-ray-binary' && playbackTime && simulationDays) {
     return <CygnusBinary disk={object.accretionDisk} size={distance / 5} days={simulationDays} time={playbackTime} preview />;
   }
@@ -78,11 +88,14 @@ function CompactObjectPreview({ object, diameter }: { object: FeaturedObject; di
   const material = useRef<ShaderMaterial>(null);
   const position = useMemo(() => new Vector3(), []);
   const form = object.kind === 'open-cluster' ? 1 : object.extentLightYears > 0 ? 2 : 3;
-  const uniforms = useMemo(() => ({
-    tint: { value: new Color(object.color) },
-    form: { value: form },
-    visibility: { value: 0 },
-  }), [form, object.color]);
+  const uniforms = useMemo(
+    () => ({
+      tint: { value: new Color(object.color) },
+      form: { value: form },
+      visibility: { value: 0 },
+    }),
+    [form, object.color],
+  );
 
   useFrame(({ camera, size }) => {
     if (!mesh.current || !material.current) return;

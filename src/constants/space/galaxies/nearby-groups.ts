@@ -22,7 +22,7 @@ export const m81Members = [
   },
   {
     id: 'm82',
-    structure: { shape: 'spiral', axis: 0.68, thickness: 0.039, arms: 0, bar: 0.30, dust: 1.5, wind: 1 },
+    structure: { shape: 'spiral', axis: 0.68, thickness: 0.039, arms: 0, bar: 0.3, dust: 1.5, wind: 1 },
     name: 'M82',
     title: 'M82 · NGC 3034',
     aliases: ['Cigar Galaxy'],
@@ -64,7 +64,7 @@ export const fornaxMembers = [
   },
   {
     id: 'ngc-1365',
-    structure: { bar: 0.52, winding: 1.62, asymmetry: 0.20, dust: 0.95 },
+    structure: { bar: 0.52, winding: 1.62, asymmetry: 0.2, dust: 0.95 },
     name: 'NGC 1365',
     aliases: ['Great Barred Spiral Galaxy'],
     summary: message('catalog.nearby-groups.ngc1365.summary'),
@@ -95,7 +95,7 @@ export const leoMembers = [
   },
   {
     id: 'm95',
-    structure: { bar: 0.34, winding: 2.66, ring: 0.36, dust: 0.60 },
+    structure: { bar: 0.34, winding: 2.66, ring: 0.36, dust: 0.6 },
     name: 'M95',
     title: 'M95 · NGC 3351',
     summary: message('catalog.nearby-groups.m95.summary'),

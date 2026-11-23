@@ -129,7 +129,7 @@ export function CosmicMapMarkers({ markers, referenceDepth, accretionTime }: { m
       marker.position.toArray(positions, offset);
       tint.set(marker.color).toArray(colors, offset);
       const { form, size } = styles[marker.style];
-      appearances.set([form, size * referenceDepth / referenceFocalLength, ((index * 0.618) % 1) * Math.PI - 0.6], offset);
+      appearances.set([form, (size * referenceDepth) / referenceFocalLength, ((index * 0.618) % 1) * Math.PI - 0.6], offset);
     });
     return { positions, colors, appearances };
   }, [markers, referenceDepth]);

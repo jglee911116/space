@@ -17,15 +17,20 @@ type QuickLink = { label: string; onSelect: () => void };
 function readVisits(key: string): Visit[] {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(key) ?? '[]');
-    return Array.isArray(value) ? value.filter((item): item is Visit =>
-      typeof item?.path === 'string' && item.path.startsWith('/') && typeof item.name === 'string',
-    ).slice(0, 5) : [];
+    return Array.isArray(value) ? value.filter((item): item is Visit => typeof item?.path === 'string' && item.path.startsWith('/') && typeof item.name === 'string').slice(0, 5) : [];
   } catch {
     return [];
   }
 }
 
-export function CatalogSearch({ systems, onSelect, currentPath, currentName, quickLinks, children }: {
+export function CatalogSearch({
+  systems,
+  onSelect,
+  currentPath,
+  currentName,
+  quickLinks,
+  children,
+}: {
   systems: readonly StarSystem[];
   onSelect: (path: string) => void;
   currentPath: string;
@@ -49,7 +54,10 @@ export function CatalogSearch({ systems, onSelect, currentPath, currentName, qui
 
   const catalog = useMemo(() => createSearchCatalog(systems), [systems]);
   const results = useMemo(() => searchCatalog(catalog, query), [catalog, query]);
-  const exactGaia = query.normalize('NFKC').trim().match(/^(?:gaia\s+DR3\s+|gaia\s+)?([1-9]\d{9,18})$/i);
+  const exactGaia = query
+    .normalize('NFKC')
+    .trim()
+    .match(/^(?:gaia\s+DR3\s+|gaia\s+)?([1-9]\d{9,18})$/i);
   const gaiaId = readGaiaSourceId(exactGaia?.[1] ?? null);
   const gaia = useGaiaSource(gaiaId);
   const gaiaName = gaiaId ? gaiaCounterpartsBySource.get(gaiaId)?.name : undefined;
@@ -102,7 +110,9 @@ export function CatalogSearch({ systems, onSelect, currentPath, currentName, qui
         }}
       >
         <div className={styles.searchHeader}>
-          <button className={styles.searchClose} type="button" aria-label={t('search.close')} onClick={closePanel}>×</button>
+          <button className={styles.searchClose} type="button" aria-label={t('search.close')} onClick={closePanel}>
+            ×
+          </button>
           <form
             className={styles.searchForm}
             role="search"
@@ -129,7 +139,10 @@ export function CatalogSearch({ systems, onSelect, currentPath, currentName, qui
               }}
             />
             {query && (
-              <button className={styles.searchClear} type="button" aria-label={t('search.clear')}
+              <button
+                className={styles.searchClear}
+                type="button"
+                aria-label={t('search.clear')}
                 onClick={() => {
                   setQuery('');
                   input.current?.focus();
@@ -150,22 +163,38 @@ export function CatalogSearch({ systems, onSelect, currentPath, currentName, qui
                 <div className={styles.controls} role="group" aria-label={t('search.quickLinks')}>
                   <h2>{t('search.quickLinks')}</h2>
                   {quickLinks.map(({ label, onSelect: open }) => (
-                    <button key={label} type="button" onClick={() => { closePanel(); open(); }}>{label}</button>
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => {
+                        closePanel();
+                        open();
+                      }}
+                    >
+                      {label}
+                    </button>
                   ))}
                 </div>
               )}
               {recent.length > 0 && (
                 <div className={styles.controls} role="group" aria-label={t('search.recent')}>
                   <h2>{t('search.recent')}</h2>
-                  {recent.map(({ path, name }) => <button key={path} type="button" onClick={() => select(path)}>{name}</button>)}
+                  {recent.map(({ path, name }) => (
+                    <button key={path} type="button" onClick={() => select(path)}>
+                      {name}
+                    </button>
+                  ))}
                 </div>
               )}
               <details className={styles.searchAll} open={showAll} onToggle={(event) => setShowAll(event.currentTarget.open)}>
                 <summary>{t('search.allDestinations')}</summary>
                 {showAll && (
-                  <nav aria-label={t('search.allDestinations')} onClick={(event) => {
-                    if (event.target instanceof Element && event.target.closest('button')) closePanel();
-                  }}>
+                  <nav
+                    aria-label={t('search.allDestinations')}
+                    onClick={(event) => {
+                      if (event.target instanceof Element && event.target.closest('button')) closePanel();
+                    }}
+                  >
                     {children}
                   </nav>
                 )}
@@ -193,8 +222,7 @@ export function CatalogSearch({ systems, onSelect, currentPath, currentName, qui
                 const designation = result.designation && catalogText(result.designation);
                 const context = result.context && catalogText(result.context);
                 const parentContext = result.parentContext && catalogText(result.parentContext);
-                const subtitle = [...new Set([t(result.kind), context, parentContext, designation]
-                  .filter((value) => value && value !== name))].join(' · ');
+                const subtitle = [...new Set([t(result.kind), context, parentContext, designation].filter((value) => value && value !== name))].join(' · ');
                 return (
                   <li key={result.path}>
                     <button ref={index === 0 ? firstResult : undefined} type="button" onClick={() => select(result.path)}>

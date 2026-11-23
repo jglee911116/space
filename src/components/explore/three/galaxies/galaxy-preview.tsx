@@ -84,7 +84,19 @@ const fragment = /* glsl */ `
   }
 `;
 
-export function GalaxyPreview({ galaxy, texture, radius = galaxy.modelRadiusKpc, opacity = 1, onSelect }: { galaxy: Galaxy; texture?: Texture; radius?: number; opacity?: number; onSelect?: () => void }) {
+export function GalaxyPreview({
+  galaxy,
+  texture,
+  radius = galaxy.modelRadiusKpc,
+  opacity = 1,
+  onSelect,
+}: {
+  galaxy: Galaxy;
+  texture?: Texture;
+  radius?: number;
+  opacity?: number;
+  onSelect?: () => void;
+}) {
   const { diskObservation, morphology } = galaxy;
   const mesh = useRef<Mesh>(null);
   const material = useRef<ShaderMaterial>(null);
@@ -115,11 +127,19 @@ export function GalaxyPreview({ galaxy, texture, radius = galaxy.modelRadiusKpc,
   });
 
   return (
-    <mesh ref={mesh} scale={radius} {...(onSelect ? { onClick: (event: import('@react-three/fiber').ThreeEvent<MouseEvent>) => {
-      if (!mesh.current?.visible || event.delta > 4) return;
-      event.stopPropagation();
-      onSelect();
-    } } : { raycast: () => {} })}>
+    <mesh
+      ref={mesh}
+      scale={radius}
+      {...(onSelect
+        ? {
+            onClick: (event: import('@react-three/fiber').ThreeEvent<MouseEvent>) => {
+              if (!mesh.current?.visible || event.delta > 4) return;
+              event.stopPropagation();
+              onSelect();
+            },
+          }
+        : { raycast: () => {} })}
+    >
       <boxGeometry args={[2, 1.68, 2]} />
       <shaderMaterial ref={material} uniforms={uniforms} vertexShader={vertex} fragmentShader={fragment} side={BackSide} transparent depthWrite={false} blending={AdditiveBlending} />
     </mesh>

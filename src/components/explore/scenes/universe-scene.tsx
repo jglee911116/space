@@ -101,7 +101,20 @@ function cameraLimits(gridRadius: number, association: GalaxyAssociation | undef
   return { preset, landmarkReturnDistance: preset * 0.38, outerLimit };
 }
 
-function UniverseMap({ focus, entry, region, association, reportDistance, onStepIn, onStepOut, onSelectDistantObject, onSelectGalaxy, onSelectCluster, accretionPlaybackTime, showSuperclusterFlows }: Props) {
+function UniverseMap({
+  focus,
+  entry,
+  region,
+  association,
+  reportDistance,
+  onStepIn,
+  onStepOut,
+  onSelectDistantObject,
+  onSelectGalaxy,
+  onSelectCluster,
+  accretionPlaybackTime,
+  showSuperclusterFlows,
+}: Props) {
   const { t, catalogText } = useLanguage();
   // superclusters 는 안쪽 → 바깥 순서, 우주 전체는 마지막 다음 칸.
   const previousRegion = superclusters[(region ? superclusters.indexOf(region) : superclusters.length) - 1];
@@ -178,7 +191,9 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
     const { preset, landmarkReturnDistance, outerLimit } = cameraLimits(gridRadius, association, region, width, height);
     const distance = entry
       ? Math.min(outerLimit ? outerLimit * 0.94 : RADIUS * 4, Math.max(entryLimit * 1.12, (entry.distanceAu * KM_PER_AU) / KM_PER_MAP_UNIT))
-      : focusedLandmark ? landmarkReturnDistance : Math.min(preset, outerLimit ? outerLimit * 0.94 : Infinity);
+      : focusedLandmark
+        ? landmarkReturnDistance
+        : Math.min(preset, outerLimit ? outerLimit * 0.94 : Infinity);
     const cameraDirection = association ? new Vector3(-0.72, 0.48, 0.5).normalize() : entry ? new Vector3(...entry.direction) : VIEW;
     orbit.target.copy(orbitTarget);
     camera.position.copy(orbitTarget).addScaledVector(cameraDirection, distance);
@@ -201,26 +216,37 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
     <>
       <DistanceRings center={mapCenter} outerRadius={gridRadius} lightYearsPerUnit={KM_PER_MAP_UNIT / KM_PER_LIGHT_YEAR} showReferencePlanes={!region} />
       {flowRegion && <LaniakeaVolume span={flowRegion.spanMly} anchors={flowAnchors} showFlows={showSuperclusterFlows} />}
-      {association?.volumeMembers ? markers.map(({ galaxy, position }, index) => galaxy && (
-        <group key={galaxy.id} position={position} rotation={[galaxy.diskTilt ?? (index % 7) * 0.26, index * 0.71, index * 0.41]}>
-          <GalaxyPreview galaxy={galaxy} radius={0.12 + galaxy.modelRadiusKpc * 0.004} onSelect={() => onSelectGalaxy(galaxy.id)} />
-        </group>
-      )) : <CosmicMapMarkers markers={bodies} referenceDepth={preset} accretionTime={region ? undefined : accretionPlaybackTime} />}
-      {!association && <GalacticMarker name={flowRegion ? `${catalogText(milkyWay.name)} · ${catalogText(innerName)}` : innerName}
-        priority={2} color="#ffd195" labelOffset={-0.92} onSelect={() => onStepIn()} />}
-      {markers.map(({ name, position, color, galaxyId, clusterId, galaxy }, index) => (!association?.volumeMembers || galaxy?.morphology) && (
-        <MapMarker
-          key={typeof name === 'string' ? name : name.key}
-          name={name}
-          position={position}
-          origin={mapCenter}
-          color={color}
-          opacity={0.35}
-          offset={index % 2 ? -0.85 : 0.95}
-          priority={clusterId ? 2 : 0}
-          onSelect={clusterId ? () => onSelectCluster(clusterId) : galaxyId ? () => onSelectGalaxy(galaxyId) : undefined}
-        />
-      ))}
+      {association?.volumeMembers ? (
+        markers.map(
+          ({ galaxy, position }, index) =>
+            galaxy && (
+              <group key={galaxy.id} position={position} rotation={[galaxy.diskTilt ?? (index % 7) * 0.26, index * 0.71, index * 0.41]}>
+                <GalaxyPreview galaxy={galaxy} radius={0.12 + galaxy.modelRadiusKpc * 0.004} onSelect={() => onSelectGalaxy(galaxy.id)} />
+              </group>
+            ),
+        )
+      ) : (
+        <CosmicMapMarkers markers={bodies} referenceDepth={preset} accretionTime={region ? undefined : accretionPlaybackTime} />
+      )}
+      {!association && (
+        <GalacticMarker name={flowRegion ? `${catalogText(milkyWay.name)} · ${catalogText(innerName)}` : innerName} priority={2} color="#ffd195" labelOffset={-0.92} onSelect={() => onStepIn()} />
+      )}
+      {markers.map(
+        ({ name, position, color, galaxyId, clusterId, galaxy }, index) =>
+          (!association?.volumeMembers || galaxy?.morphology) && (
+            <MapMarker
+              key={typeof name === 'string' ? name : name.key}
+              name={name}
+              position={position}
+              origin={mapCenter}
+              color={color}
+              opacity={0.35}
+              offset={index % 2 ? -0.85 : 0.95}
+              priority={clusterId ? 2 : 0}
+              onSelect={clusterId ? () => onSelectCluster(clusterId) : galaxyId ? () => onSelectGalaxy(galaxyId) : undefined}
+            />
+          ),
+      )}
       {!region &&
         landmarks.map(({ id, name, color, position }, index) => (
           <MapMarker
@@ -253,7 +279,7 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
             direction: direction.subVectors(orbit.object.position, orbit.target).normalize().toArray(),
           };
           if (outerLimit && radius > initialDistance.current && radius >= outerLimit) onStepOut(handoff);
-          else if (focusedLandmark && radius < initialDistance.current && radius <= landmarkReturnDistance * 0.50) onSelectDistantObject(focusedLandmark.id);
+          else if (focusedLandmark && radius < initialDistance.current && radius <= landmarkReturnDistance * 0.5) onSelectDistantObject(focusedLandmark.id);
           else if (!association && radius < initialDistance.current && radius <= entryLimit && orbit.target.length() < entryLimit * 2) onStepIn(handoff);
         }}
       />
@@ -261,17 +287,26 @@ function UniverseMap({ focus, entry, region, association, reportDistance, onStep
   );
 }
 
-function DistantGalaxyModel({ object, onExit, clusterLayer, reportDistance }: { object: Exclude<DistantObject, { kind: 'quasar' }>; onExit: () => void; clusterLayer: ClusterLayer; reportDistance: ReportDistanceScale }) {
+function DistantGalaxyModel({
+  object,
+  onExit,
+  clusterLayer,
+  reportDistance,
+}: {
+  object: Exclude<DistantObject, { kind: 'quasar' }>;
+  onExit: () => void;
+  clusterLayer: ClusterLayer;
+  reportDistance: ReportDistanceScale;
+}) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const initialDistance = useRef(0);
-  const volumeShape = object.kind === 'ring-galaxy' ? 'cartwheel'
-    : object.kind === 'galaxy-group' ? 'quintet' : object.kind === 'galaxy-merger' ? 'merger' : undefined;
+  const volumeShape = object.kind === 'ring-galaxy' ? 'cartwheel' : object.kind === 'galaxy-group' ? 'quintet' : object.kind === 'galaxy-merger' ? 'merger' : undefined;
   const texture = useSurfaceMap('observationImage' in object ? object.observationImage : undefined);
   useFrame(({ camera, size }) => {
     const scale = object.observationScale;
     const distance = controls.current?.getDistance();
     if (!scale || !distance) return;
-    const kmPerWorldUnit = scale.lightYears * KM_PER_LIGHT_YEAR / (scale.spanInModelRadii * DISTANT_VOLUME_RADIUS);
+    const kmPerWorldUnit = (scale.lightYears * KM_PER_LIGHT_YEAR) / (scale.spanInModelRadii * DISTANT_VOLUME_RADIUS);
     reportDistance(kmPerPixel(camera, size.height, distance, kmPerWorldUnit));
   });
   const stars = useMemo(() => {
@@ -299,7 +334,9 @@ function DistantGalaxyModel({ object, onExit, clusterLayer, reportDistance }: { 
           </bufferGeometry>
           <pointsMaterial color={object.color} size={0.043} transparent opacity={0.38} depthWrite={false} blending={AdditiveBlending} />
         </points>
-      ) : volumeShape && <NebulaVolume texture={texture} radius={DISTANT_VOLUME_RADIUS} shape={volumeShape} />}
+      ) : (
+        volumeShape && <NebulaVolume texture={texture} radius={DISTANT_VOLUME_RADIUS} shape={volumeShape} />
+      )}
       <OrbitControls
         ref={controls}
         enablePan={false}
@@ -323,11 +360,18 @@ export default function UniverseScene(props: Props) {
   const exit = () => {
     if (object) onExitDistantObject(object.id);
   };
-  const position: [number, number, number] = object?.kind === 'ring-galaxy'
-    ? [1.7, 1.0, 14.6]
-    : object?.kind === 'galaxy-cluster' && object.clusterModel !== 'pandora' ? [0, 0, 9.1]
-    : object?.kind === 'galaxy-merger' ? [0.32, 0.36, 12.5]
-    : object?.kind === 'galaxy-group' || object?.kind === 'galaxy-cluster' ? [0.36, 0.46, 15.8] : object ? [5, 5.6, 13] : [0, 0, RADIUS * 2.65];
+  const position: [number, number, number] =
+    object?.kind === 'ring-galaxy'
+      ? [1.7, 1.0, 14.6]
+      : object?.kind === 'galaxy-cluster' && object.clusterModel !== 'pandora'
+        ? [0, 0, 9.1]
+        : object?.kind === 'galaxy-merger'
+          ? [0.32, 0.36, 12.5]
+          : object?.kind === 'galaxy-group' || object?.kind === 'galaxy-cluster'
+            ? [0.36, 0.46, 15.8]
+            : object
+              ? [5, 5.6, 13]
+              : [0, 0, RADIUS * 2.65];
   return (
     <CanvasBoundary>
       <Canvas

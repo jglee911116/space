@@ -86,14 +86,17 @@ type Props = {
 
 export function GalaxyObservationDisk({ texture, radius, center, span, rotation = 0, opacity }: Props) {
   const mesh = useRef<Mesh<import('three').BufferGeometry, ShaderMaterial>>(null);
-  const uniforms = useMemo(() => ({
-    diskMap: { value: texture },
-    center: { value: new Vector2(...center) },
-    span: { value: new Vector2(...span) },
-    halfHeight: { value: halfHeight },
-    layerOpacity: { value: 1 },
-    basis: { value: new Vector2(Math.cos(rotation), Math.sin(rotation)) },
-  }), [texture, center, span, rotation]);
+  const uniforms = useMemo(
+    () => ({
+      diskMap: { value: texture },
+      center: { value: new Vector2(...center) },
+      span: { value: new Vector2(...span) },
+      halfHeight: { value: halfHeight },
+      layerOpacity: { value: 1 },
+      basis: { value: new Vector2(Math.cos(rotation), Math.sin(rotation)) },
+    }),
+    [texture, center, span, rotation],
+  );
 
   useFrame(() => {
     if (!mesh.current || !opacity) return;

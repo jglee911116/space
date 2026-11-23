@@ -48,7 +48,7 @@ export function RamPressureTail({ radius, twin }: { radius: number; twin: boolea
       const angle = random() * Math.PI * 2;
       const y = (0.22 + 0.25 * branch) * t + width * Math.cos(angle);
       const z = branch * (0.14 + 0.34 * t) + 0.07 * Math.sin(t * 15 + branch) + width * Math.sin(angle);
-      positions.set([-radius * (0.30 + (twin ? 2.55 : 1.82) * t), y * radius, z * radius], index * 3);
+      positions.set([-radius * (0.3 + (twin ? 2.55 : 1.82) * t), y * radius, z * radius], index * 3);
       grains[index] = random();
     }
     return { positions, grains };

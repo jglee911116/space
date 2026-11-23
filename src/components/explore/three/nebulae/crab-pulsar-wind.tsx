@@ -53,11 +53,14 @@ export function CrabPulsarWind({ paused, daysPerSecond, texture, scale }: { paus
   const material = useRef<ShaderMaterial>(null);
   const phase = useRef(0);
   const brightness = useRef(1);
-  const uniforms = useMemo(() => ({
-    phase: { value: 0 },
-    observation: { value: texture ?? null },
-    mapped: { value: texture !== undefined },
-  }), [texture]);
+  const uniforms = useMemo(
+    () => ({
+      phase: { value: 0 },
+      observation: { value: texture ?? null },
+      mapped: { value: texture !== undefined },
+    }),
+    [texture],
+  );
   const rate = daysPerSecond >= 1 ? 1.1 + 0.27 * Math.log10(daysPerSecond) : 1.1 * Math.min(1, daysPerSecond * 86400);
 
   useFrame((_, delta) => {

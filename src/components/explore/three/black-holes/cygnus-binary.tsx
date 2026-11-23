@@ -13,12 +13,15 @@ import type { AccretionDisk } from '@/constants/space';
 export function CygnusBinary({ disk, size, days, time, preview = false }: { disk?: AccretionDisk; size: number; days: RefObject<number>; time: RefObject<number>; preview?: boolean }) {
   const binary = useRef<Group>(null);
   const center = useMemo(() => new Vector3(), []);
-  const surfaceUniforms = useMemo(() => ({
-    surfaceDark: { value: new Color('#456aaf') },
-    surfaceBright: { value: new Color('#d9ecff') },
-    cellScale: { value: 10 },
-    brightness: { value: 1 },
-  }), []);
+  const surfaceUniforms = useMemo(
+    () => ({
+      surfaceDark: { value: new Color('#456aaf') },
+      surfaceBright: { value: new Color('#d9ecff') },
+      cellScale: { value: 10 },
+      brightness: { value: 1 },
+    }),
+    [],
+  );
   useFrame(({ camera, size: viewport }) => {
     if (!binary.current) return;
     binary.current.rotation.y = rotationPhase(days.current, 5.6);

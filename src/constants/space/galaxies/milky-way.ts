@@ -12,7 +12,7 @@ export const milkyWay: HostGalaxy = {
   diskObservation: {
     file: '/textures/galaxies/milky-way/disk-spitzer.webp',
     previewFile: '/textures/galaxies/milky-way/disk-spitzer-preview.webp',
-    center: [0.496, 0.50],
+    center: [0.496, 0.5],
     span: [0.49, 0.49],
     rotation: 1.05,
   },

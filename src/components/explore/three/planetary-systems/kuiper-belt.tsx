@@ -42,7 +42,7 @@ function sampleBelt(innerAu: number, outerAu: number) {
 
   for (let index = 0; index < BODY_COUNT; index++) {
     const broadOrbit = random() < 0.23;
-    const fraction = broadOrbit ? (random() + random()) * 0.5 : 0.15 + 0.84 * (random() + random() + random()) / 3;
+    const fraction = broadOrbit ? (random() + random()) * 0.5 : 0.15 + (0.84 * (random() + random() + random())) / 3;
     const radius = (innerAu + (outerAu - innerAu) * fraction) * UNITS_PER_AU;
     const longitude = random() * 2 * Math.PI;
     const latitude = (random() - random()) * (broadOrbit ? 0.29 : 0.085);

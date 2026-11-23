@@ -84,7 +84,19 @@ const diskFragment = /* glsl */ `
   }
 `;
 
-export function AccretionGeometry({ disk: profile = DEFAULT_DISK, color, previewDiameter, time, lowDetail = false }: { disk?: AccretionDisk; color: string; previewDiameter?: number; time?: RefObject<number>; lowDetail?: boolean }) {
+export function AccretionGeometry({
+  disk: profile = DEFAULT_DISK,
+  color,
+  previewDiameter,
+  time,
+  lowDetail = false,
+}: {
+  disk?: AccretionDisk;
+  color: string;
+  previewDiameter?: number;
+  time?: RefObject<number>;
+  lowDetail?: boolean;
+}) {
   const group = useRef<Group>(null);
   const disk = useRef<ShaderMaterial>(null);
   const shadow = useRef<MeshBasicMaterial>(null);
@@ -93,17 +105,20 @@ export function AccretionGeometry({ disk: profile = DEFAULT_DISK, color, preview
   const { rate, width, contrast } = profile;
   const observation = useSurfaceMap(profile.observationMap);
   const preview = previewDiameter !== undefined;
-  const uniforms = useMemo(() => ({
-    tint: { value: new Color(color) },
-    visibility: { value: 1 },
-    phase: { value: 0 },
-    animated: { value: animated },
-    width: { value: width },
-    contrast: { value: contrast },
-    preview: { value: preview },
-    observationMap: { value: observation ?? null },
-    hasObservation: { value: observation !== undefined },
-  }), [animated, color, contrast, observation, preview, width]);
+  const uniforms = useMemo(
+    () => ({
+      tint: { value: new Color(color) },
+      visibility: { value: 1 },
+      phase: { value: 0 },
+      animated: { value: animated },
+      width: { value: width },
+      contrast: { value: contrast },
+      preview: { value: preview },
+      observationMap: { value: observation ?? null },
+      hasObservation: { value: observation !== undefined },
+    }),
+    [animated, color, contrast, observation, preview, width],
+  );
   const diameter = previewDiameter ?? ACCRETION_MODEL_DIAMETER;
   const segments = animated ? (preview || lowDetail ? 20 : 64) : 1;
 
@@ -135,15 +150,24 @@ export function AccretionGeometry({ disk: profile = DEFAULT_DISK, color, preview
       {animated && !preview && !lowDetail && (
         <mesh raycast={() => {}}>
           <planeGeometry args={[LENSED_FLOW_DIAMETER, LENSED_FLOW_DIAMETER]} />
-          <shaderMaterial uniforms={uniforms} vertexShader={lensedAccretionVertex} fragmentShader={lensedAccretionFragment}
-            transparent depthWrite={false} blending={AdditiveBlending} />
+          <shaderMaterial uniforms={uniforms} vertexShader={lensedAccretionVertex} fragmentShader={lensedAccretionFragment} transparent depthWrite={false} blending={AdditiveBlending} />
         </mesh>
       )}
     </group>
   );
 }
 
-export function AccretionModel({ object, onExit, showCounterjet, time }: { object: { color: string; visibleJet: boolean; accretionDisk?: AccretionDisk }; onExit: (direction: [number, number, number]) => void; showCounterjet?: boolean; time: RefObject<number> }) {
+export function AccretionModel({
+  object,
+  onExit,
+  showCounterjet,
+  time,
+}: {
+  object: { color: string; visibleJet: boolean; accretionDisk?: AccretionDisk };
+  onExit: (direction: [number, number, number]) => void;
+  showCounterjet?: boolean;
+  time: RefObject<number>;
+}) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const initialDistance = useRef(0);
   const jet = object.accretionDisk?.jet;
@@ -155,8 +179,7 @@ export function AccretionModel({ object, onExit, showCounterjet, time }: { objec
       <group rotation-z={-0.23}>
         <AccretionGeometry disk={object.accretionDisk} color={object.color} time={time} />
         {object.visibleJet && (
-          <HelicalJets color={object.color} time={time} observation={jetObservation}
-            counterjet={jet ? (showCounterjet ? jet.counterjet : 0) : 0.30} collimation={jet?.collimation ?? 1} />
+          <HelicalJets color={object.color} time={time} observation={jetObservation} counterjet={jet ? (showCounterjet ? jet.counterjet : 0) : 0.3} collimation={jet?.collimation ?? 1} />
         )}
       </group>
       <OrbitControls

@@ -5,12 +5,17 @@ import { formatLightYearDistance } from '../../utils/distance-scale';
 import { GalacticMarker } from './galactic-marker';
 
 const ring = Array.from({ length: 129 }, (_, index) => {
-  const angle = index * Math.PI / 64;
+  const angle = (index * Math.PI) / 64;
   return new Vector3(Math.cos(angle), 0, Math.sin(angle));
 });
 const fractions = [0.25, 0.5, 0.75, 1];
 
-export function DistanceRings({ center, outerRadius, lightYearsPerUnit, showReferencePlanes = false }: {
+export function DistanceRings({
+  center,
+  outerRadius,
+  lightYearsPerUnit,
+  showReferencePlanes = false,
+}: {
   center?: Vector3;
   outerRadius: number;
   lightYearsPerUnit: number;

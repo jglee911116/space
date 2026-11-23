@@ -219,13 +219,17 @@ function fragment(shape: NebulaVolumeShape, preview: boolean) {
     vec3 exit = max(a, b);
     float start = max(0.0, max(entry.x, max(entry.y, entry.z)));
     float end = min(exit.x, min(exit.y, exit.z));
-    ${stellarWindShapes.has(shape) ? `
+    ${
+      stellarWindShapes.has(shape)
+        ? `
       // Integrate only the gas in front of the opaque photosphere.
       float closest = -dot(eye, direction);
       float impact = dot(eye, eye) - closest * closest;
       float disk = ${(1 / STELLAR_WIND_RADIUS ** 2).toFixed(8)} - impact;
       if (closest > 0.0 && disk > 0.0) end = min(end, closest - sqrt(disk));
-    ` : ''}
+    `
+        : ''
+    }
     if (end <= start) discard;
 
     const int steps = ${preview ? 28 : shape === 'quintet' || shape === 'butterfly' || shape === 'light-echo' || shape === 'horsehead' || shape === 'tycho-shell' || shape === 'sn-1006-shell' || shape === 'wolf-rayet-ejecta' ? 64 : shape === 'cats-eye' ? 54 : 44};
@@ -260,7 +264,23 @@ function fragment(shape: NebulaVolumeShape, preview: boolean) {
 `;
 }
 
-export function NebulaVolume({ texture, radius, shape, preview = false, paused = true, daysPerSecond = REALTIME_DAYS_PER_SECOND, activityDays }: { texture?: Texture; radius: number; shape: NebulaVolumeShape; preview?: boolean; paused?: boolean; daysPerSecond?: number; activityDays?: RefObject<number> }) {
+export function NebulaVolume({
+  texture,
+  radius,
+  shape,
+  preview = false,
+  paused = true,
+  daysPerSecond = REALTIME_DAYS_PER_SECOND,
+  activityDays,
+}: {
+  texture?: Texture;
+  radius: number;
+  shape: NebulaVolumeShape;
+  preview?: boolean;
+  paused?: boolean;
+  daysPerSecond?: number;
+  activityDays?: RefObject<number>;
+}) {
   const mesh = useRef<Mesh>(null);
   const material = useRef<ShaderMaterial>(null);
   const position = useMemo(() => new Vector3(), []);
@@ -268,12 +288,15 @@ export function NebulaVolume({ texture, radius, shape, preview = false, paused =
   const motion = useRef(initialPhase);
   const activityStart = useRef<number | null>(null);
   const rate = Math.max(0.18, 1 + 0.32 * Math.log10(daysPerSecond / REALTIME_DAYS_PER_SECOND));
-  const uniforms = useMemo(() => ({
-    observation: { value: texture ?? null },
-    mapped: { value: texture !== undefined },
-    visibility: { value: 1 },
-    motion: { value: initialPhase },
-  }), [texture, initialPhase]);
+  const uniforms = useMemo(
+    () => ({
+      observation: { value: texture ?? null },
+      mapped: { value: texture !== undefined },
+      visibility: { value: 1 },
+      motion: { value: initialPhase },
+    }),
+    [texture, initialPhase],
+  );
 
   useFrame(({ camera, size }, delta) => {
     if (!mesh.current || !material.current) return;
@@ -285,17 +308,27 @@ export function NebulaVolume({ texture, radius, shape, preview = false, paused =
         motion.current += Math.min(delta, 0.1) * rate * (shape === 'rigel-wind' ? 1.05 : 0.65);
       }
       mesh.current.getWorldPosition(position);
-      const distanceInStellarRadii = camera.position.distanceTo(position) * STELLAR_WIND_RADIUS / radius;
+      const distanceInStellarRadii = (camera.position.distanceTo(position) * STELLAR_WIND_RADIUS) / radius;
       const visibility = 1 - MathUtils.smoothstep(distanceInStellarRadii, ...STELLAR_WIND_FADE);
       mesh.current.visible = visibility > 0;
       material.current.uniforms.visibility.value = visibility;
       material.current.uniforms.motion.value = motion.current;
-    } else if (!preview && (shape === 'bipolar-jet' || shape === 'shocked-shell' || shape === 'dust-spiral' || shape === 'edge-on-disk' || shape === 'light-echo' || shape === 'vela-wind' || shape === 'symbiotic-outflow' || shape === 'protostar-bows')) {
+    } else if (
+      !preview &&
+      (shape === 'bipolar-jet' ||
+        shape === 'shocked-shell' ||
+        shape === 'dust-spiral' ||
+        shape === 'edge-on-disk' ||
+        shape === 'light-echo' ||
+        shape === 'vela-wind' ||
+        shape === 'symbiotic-outflow' ||
+        shape === 'protostar-bows')
+    ) {
       if (!paused) {
         const elapsed = motion.current + Math.min(delta, 0.1) * rate;
         if (shape === 'shocked-shell') motion.current = Math.min(elapsed, 18);
         else if (shape === 'dust-spiral') motion.current = Math.min(elapsed, 16);
-        else motion.current = elapsed % (shape === 'light-echo' ? 14 : 2 * Math.PI / 5);
+        else motion.current = elapsed % (shape === 'light-echo' ? 14 : (2 * Math.PI) / 5);
       }
       material.current.uniforms.motion.value = motion.current;
     }

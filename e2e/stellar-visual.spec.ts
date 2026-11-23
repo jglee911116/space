@@ -3,28 +3,34 @@ import { expect, test, type Page } from '@playwright/test';
 const milkyWay = '/ko/galaxies/milky-way';
 
 async function countWindPixels(page: Page, screenshot: Buffer, warm: boolean, inner: number, outer: number) {
-  return page.evaluate(async ({ png, warm, inner, outer }) => {
-    const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${png}`)).blob());
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const context = canvas.getContext('2d')!;
-    context.drawImage(bitmap, 0, 0);
-    bitmap.close();
-    const { width, height, data } = context.getImageData(0, 0, canvas.width, canvas.height);
-    let pixels = 0;
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const radiusSquared = (x - width / 2) ** 2 + (y - height / 2) ** 2;
-        if (radiusSquared < inner ** 2 || radiusSquared > outer ** 2) continue;
-        const index = (y * width + x) * 4;
-        const [red, green, blue] = data.subarray(index, index + 3);
-        if (warm ? red > 47 && red - blue > 18 && red - green > 8 : blue > 51 && blue - red > 18 && green > 36) pixels++;
+  return page.evaluate(
+    async ({ png, warm, inner, outer }) => {
+      const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${png}`)).blob());
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const context = canvas.getContext('2d')!;
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      const { width, height, data } = context.getImageData(0, 0, canvas.width, canvas.height);
+      let pixels = 0;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const radiusSquared = (x - width / 2) ** 2 + (y - height / 2) ** 2;
+          if (radiusSquared < inner ** 2 || radiusSquared > outer ** 2) continue;
+          const index = (y * width + x) * 4;
+          const [red, green, blue] = data.subarray(index, index + 3);
+          if (warm ? red > 47 && red - blue > 18 && red - green > 8 : blue > 51 && blue - red > 18 && green > 36) pixels++;
+        }
       }
-    }
-    return pixels;
-  }, { png: screenshot.toString('base64'), warm, inner, outer });
+      return pixels;
+    },
+    { png: screenshot.toString('base64'), warm, inner, outer },
+  );
 }
 
-for (const [id, warm, surfaceEdge] of [['betelgeuse', true, 151], ['rigel-a', false, 192]] as const) {
+for (const [id, warm, surfaceEdge] of [
+  ['betelgeuse', true, 151],
+  ['rigel-a', false, 192],
+] as const) {
   test(`${id}의 항성풍은 회전 후에도 보이고 지도에서 서서히 작아진다`, async ({ page }, testInfo) => {
     await page.goto(`${milkyWay}?view=object&target=${id}`);
     await expect(page.locator('main canvas')).toBeVisible();
@@ -46,10 +52,15 @@ for (const [id, warm, surfaceEdge] of [['betelgeuse', true, 151], ['rigel-a', fa
     expect(await countWindPixels(page, side, warm, surfaceEdge, 224)).toBeGreaterThan(100);
 
     await page.mouse.move(720, 450);
-    await expect.poll(async () => {
-      await page.mouse.wheel(0, 530);
-      return new URL(page.url()).search;
-    }, { intervals: [135], timeout: 12_000 }).toBe(`?focus=${id}`);
+    await expect
+      .poll(
+        async () => {
+          await page.mouse.wheel(0, 530);
+          return new URL(page.url()).search;
+        },
+        { intervals: [135], timeout: 12_000 },
+      )
+      .toBe(`?focus=${id}`);
     await expect(page.getByRole('group', { name: '화면 거리 축척' })).toContainText('화면 축척');
     const overview = await capture('map-handoff');
     const overviewWind = await countWindPixels(page, overview, warm, 96, 217);

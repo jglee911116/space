@@ -116,13 +116,16 @@ export function SagittariusAccretionFlow({ observationMap, paused, daysPerSecond
   const shadow = useRef<Mesh>(null);
   const diameter = overviewDiameter ?? SAGITTARIUS_FLOW_DIAMETER;
   const speed = Math.max(0.18, 1 + 0.32 * Math.log10(daysPerSecond / REALTIME_DAYS_PER_SECOND));
-  const uniforms = useMemo(() => ({
-    phase: { value: 0 },
-    visibility: { value: 1 },
-    showFlares: { value: overviewDiameter === undefined },
-    observationMap: { value: observationMap ?? null },
-    hasObservation: { value: observationMap !== undefined },
-  }), [observationMap, overviewDiameter]);
+  const uniforms = useMemo(
+    () => ({
+      phase: { value: 0 },
+      visibility: { value: 1 },
+      showFlares: { value: overviewDiameter === undefined },
+      observationMap: { value: observationMap ?? null },
+      hasObservation: { value: observationMap !== undefined },
+    }),
+    [observationMap, overviewDiameter],
+  );
 
   useFrame(({ camera, size }, delta) => {
     if (!paused) {

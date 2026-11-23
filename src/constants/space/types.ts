@@ -177,7 +177,15 @@ export type HostGalaxy = Galaxy & {
   /** 은하 장면 상세 패널에서 summary 앞에 놓는 문단. */
   notes: readonly CatalogText[];
   demoYearsPerSecond: number;
-  center: { id: string; name: CatalogText; distanceLightYears: number; massSolar: number; shadowDiameterMicroarcseconds: number; observationMaps?: { intensity: string; polarization: string }; sources: readonly Source[] };
+  center: {
+    id: string;
+    name: CatalogText;
+    distanceLightYears: number;
+    massSolar: number;
+    shadowDiameterMicroarcseconds: number;
+    observationMaps?: { intensity: string; polarization: string };
+    sources: readonly Source[];
+  };
 };
 
 export type LocalGroup = {
@@ -231,7 +239,35 @@ export type FeaturedObject = {
   observationImage?: {
     file: string;
     telescope?: 'hubble' | 'chandra' | 'eso';
-    shape: 'crab' | 'ring' | 'pillars' | 'ejecta' | 'nursery' | 'hourglass' | 'bipolar-jet' | 'shocked-shell' | 'southern-ring' | 'dust-spiral' | 'edge-on-disk' | 'homunculus' | 'light-echo' | 'cats-eye' | 'debris-disk' | 'vela-wind' | 'butterfly' | 'horsehead' | 'wolf-rayet-ejecta' | 'tycho-shell' | 'helix' | 'sn-1006-shell' | 'ngc-346-ridges' | 'jewel-bug' | 'wind-bubble' | 'oxygen-remnant' | 'symbiotic-outflow' | 'protostar-bows';
+    shape:
+      | 'crab'
+      | 'ring'
+      | 'pillars'
+      | 'ejecta'
+      | 'nursery'
+      | 'hourglass'
+      | 'bipolar-jet'
+      | 'shocked-shell'
+      | 'southern-ring'
+      | 'dust-spiral'
+      | 'edge-on-disk'
+      | 'homunculus'
+      | 'light-echo'
+      | 'cats-eye'
+      | 'debris-disk'
+      | 'vela-wind'
+      | 'butterfly'
+      | 'horsehead'
+      | 'wolf-rayet-ejecta'
+      | 'tycho-shell'
+      | 'helix'
+      | 'sn-1006-shell'
+      | 'ngc-346-ridges'
+      | 'jewel-bug'
+      | 'wind-bubble'
+      | 'oxygen-remnant'
+      | 'symbiotic-outflow'
+      | 'protostar-bows';
   };
   photosphere?: { dark: string; bright: string; cellScale: number };
   expansionPerYear?: number;
@@ -309,11 +345,12 @@ type DistantObjectFields = {
   sources: readonly Source[];
 };
 
-export type DistantObject = DistantObjectFields & (
-  | { kind: 'quasar'; visibleJet: boolean; blackHoleMassSolar?: number; accretionDisk: AccretionDisk }
-  | { kind: 'early-galaxy'; ultravioletHalfLightRadiusParsecs: number }
-  | { kind: 'ring-galaxy'; observationImage: string }
-  | { kind: 'galaxy-group'; observationImage: string }
-  | { kind: 'galaxy-cluster'; clusterModel: 'pandora' | 'bullet' | 'macs-j0416' }
-  | { kind: 'galaxy-merger'; observationImage: string }
-);
+export type DistantObject = DistantObjectFields &
+  (
+    | { kind: 'quasar'; visibleJet: boolean; blackHoleMassSolar?: number; accretionDisk: AccretionDisk }
+    | { kind: 'early-galaxy'; ultravioletHalfLightRadiusParsecs: number }
+    | { kind: 'ring-galaxy'; observationImage: string }
+    | { kind: 'galaxy-group'; observationImage: string }
+    | { kind: 'galaxy-cluster'; clusterModel: 'pandora' | 'bullet' | 'macs-j0416' }
+    | { kind: 'galaxy-merger'; observationImage: string }
+  );

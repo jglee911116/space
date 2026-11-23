@@ -15,7 +15,14 @@ const star: Body = {
   tilt: 0,
   mass: message('catalog.trappist-1.trappist-1-star.mass'),
   colors: ['#631416', '#dc613b', '#ffaa84'],
-  stellar: { evolutionaryStage: message('catalog.stellar-stage.mainSequence'), spectralType: 'M8 V', temperatureK: 2566, luminosityWatts: 0.000553 * SOLAR_LUMINOSITY_W, emissionColor: '#ff5036', photosphere: { seed: 127, granuleScale: 96, activeRegions: 0.61 } },
+  stellar: {
+    evolutionaryStage: message('catalog.stellar-stage.mainSequence'),
+    spectralType: 'M8 V',
+    temperatureK: 2566,
+    luminosityWatts: 0.000553 * SOLAR_LUMINOSITY_W,
+    emissionColor: '#ff5036',
+    photosphere: { seed: 127, granuleScale: 96, activeRegions: 0.61 },
+  },
   sources: [ARCHIVE, AGOL],
 };
 

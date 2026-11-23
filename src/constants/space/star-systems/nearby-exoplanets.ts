@@ -58,10 +58,8 @@ export const lhs1140: StarSystem = {
   neighborhood: { distanceLightYears: 14.9861 * lightYearsPerParsec, rightAscension: 11.24863, declination: -15.27411, source: lhsSource },
   bodies: [
     redDwarf('lhs-1140-star', 'LHS 1140', 0.2159, 3096, 'M4.5 V', { seed: 139, granuleScale: 121, activeRegions: 0.18 }, [lhsSource]),
-    transitPlanet('lhs-1140-b', 'LHS 1140 b', 'lhs-1140-star', 1.73, 0.0946, 24.73723,
-      { colors: ['#293742', '#657985', '#bfccd0'], rockySurface: [337, 0.58, 0.48, 0.12] }, [lhsSource]),
-    transitPlanet('lhs-1140-c', 'LHS 1140 c', 'lhs-1140-star', 1.272, 0.027, 3.77794,
-      { colors: ['#3d2927', '#896455', '#c99f83'], rockySurface: [347, 0.15, 0.83, 0.68] }, [lhsSource]),
+    transitPlanet('lhs-1140-b', 'LHS 1140 b', 'lhs-1140-star', 1.73, 0.0946, 24.73723, { colors: ['#293742', '#657985', '#bfccd0'], rockySurface: [337, 0.58, 0.48, 0.12] }, [lhsSource]),
+    transitPlanet('lhs-1140-c', 'LHS 1140 c', 'lhs-1140-star', 1.272, 0.027, 3.77794, { colors: ['#3d2927', '#896455', '#c99f83'], rockySurface: [347, 0.15, 0.83, 0.68] }, [lhsSource]),
   ],
   sources: [lhsSource],
 };
@@ -74,8 +72,10 @@ export const gliese12: StarSystem = {
   neighborhood: { distanceLightYears: 12.21 * lightYearsPerParsec, rightAscension: 3.95792, declination: 13.55762, source: glieseSource },
   bodies: [
     redDwarf('gliese-12-star', 'Gliese 12', 0.262, 3296, 'M3 V', { seed: 137, granuleScale: 139, activeRegions: 0.27 }, [glieseSource, glieseDiscovery]),
-    transitPlanet('gliese-12-b', 'Gliese 12 b', 'gliese-12-star', 0.96, 0.0668, 12.761408,
-      { colors: ['#342d2b', '#8a7864', '#c3aa8e'], rockySurface: [331, 0.38, 0.72, 0.48] }, [glieseSource, glieseDiscovery]),
+    transitPlanet('gliese-12-b', 'Gliese 12 b', 'gliese-12-star', 0.96, 0.0668, 12.761408, { colors: ['#342d2b', '#8a7864', '#c3aa8e'], rockySurface: [331, 0.38, 0.72, 0.48] }, [
+      glieseSource,
+      glieseDiscovery,
+    ]),
   ],
   sources: [glieseSource, glieseDiscovery],
 };
