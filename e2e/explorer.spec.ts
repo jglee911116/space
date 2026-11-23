@@ -1098,3 +1098,45 @@ test('찾기에서 동의어, 카탈로그 번호와 이름이 같은 천체를 
   await input.press('Enter');
   await expect(page).toHaveURL(`${milkyWay}?system=ross-128&target=ross-128-star`);
 });
+
+test('찾기에서 카탈로그 이름만 입력해도 메시에 천체를 찾는다', async ({ page }) => {
+  await page.goto(milkyWay);
+  await page.getByRole('button', { name: '천체·영역 찾기' }).click();
+  const panel = page.getByRole('region', { name: '천체·영역 찾기' });
+  for (const text of ['Messier', '메시에']) {
+    await panel.getByRole('searchbox').fill(text);
+    await expect(panel.getByRole('list').getByRole('button', { name: /메시에 87/ }).first()).toBeVisible();
+  }
+});
+
+test('Gaia 표본 반경 밖의 항성계에는 주변 관측원 버튼을 두지 않는다', async ({ page }) => {
+  const button = details(page).getByRole('button', { name: '항성계 주변 Gaia 관측원 보기' });
+  await page.goto(`${milkyWay}?system=barnard-star`);
+  await expect(button).toBeVisible();
+  // Kepler-16 은 약 245광년으로 표본(약 163광년) 밖이다.
+  await page.goto(`${milkyWay}?system=kepler-16`);
+  await expect(details(page).getByRole('heading', { level: 2 })).toBeVisible();
+  await expect(button).toHaveCount(0);
+});
+
+test('Gaia 대응 관측원은 자기 항성계의 별이고 주변 목록에서 빠진다', async ({ page }) => {
+  for (const { system, name, id } of [
+    { system: 'epsilon-eridani', name: /에리다누스자리 엡실론/, id: '5164707970261890560' },
+    { system: '51-pegasi', name: /페가수스/, id: '2835207319109249920' },
+  ]) {
+    await page.goto(`/ko?view=neighborhood&around=${system}`);
+    const linked = details(page).getByRole('group', { name: '연결된 Gaia 관측 기록' });
+    await expect(linked.getByRole('button', { name })).toContainText(`Gaia DR3 ${id}`);
+    await expect(details(page).getByRole('status')).toContainText('개 표시');
+    await expect(details(page).getByRole('list').nth(1).getByRole('button', { name: new RegExp(id) })).toHaveCount(0);
+  }
+});
+
+test('닫은 정보 패널은 다른 천체로 이동하면 다시 열린다', async ({ page }) => {
+  await page.goto(`${milkyWay}?system=barnard-star&target=barnard`);
+  await details(page).getByRole('button', { name: '천체 정보 닫기' }).click();
+  await expect(details(page)).toBeHidden();
+  await search(page, '시리우스', /^시리우스 항성계/);
+  await expect(page).toHaveURL(/system=sirius/);
+  await expect(details(page)).toBeVisible();
+});
