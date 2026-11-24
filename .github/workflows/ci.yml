@@ -22,3 +22,7 @@ jobs:
       - run: pnpm format:check
       # 빌드가 generateStaticParams 에서 카탈로그·Gaia 대응 ID 검증을 함께 돌린다.
       - run: pnpm build
+      # 셰이더 컴파일·장면 런타임 오류는 lint·build 가 못 잡으므로 @smoke 테스트만 빌드 결과로 실제 브라우저에서 연다(전체 e2e 는 로컬).
+      # 기본 headless 실행은 headless shell 만 쓰므로 전체 Chromium 은 받지 않는다.
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
+      - run: pnpm exec playwright test --grep @smoke

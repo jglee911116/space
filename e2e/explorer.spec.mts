@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { PerspectiveCamera, Vector3 } from 'three';
 
+// @smoke: CI 가 빌드 뒤 돌리는 테스트 — 장면 종류마다 하나 이상(실제 브라우저로 셰이더 컴파일·페이지 오류 확인)과 라우팅(로케일 리다이렉트·404). 픽셀·휠 타이밍에 기대지 않는 것만.
 const milkyWay = '/ko/galaxies/milky-way';
 const details = (page: Page) => page.locator('section[aria-labelledby="body-name"]');
 
@@ -199,7 +200,7 @@ for (const { query, name, member, id, region, association } of associationCases)
   });
 }
 
-test('국부 은하군의 왜소은하와 두 위성은하 계열을 검색한다', async ({ page }) => {
+test('국부 은하군의 왜소은하와 두 위성은하 계열을 검색한다', { tag: '@smoke' }, async ({ page }) => {
   await page.goto('/ko/local-group?galaxy=wlm');
   await expect(details(page).getByText('WLM', { exact: false }).first()).toBeVisible();
   await waitForRenderedMap(page);
@@ -244,7 +245,7 @@ test('라니아케아에서 노르마 은하단 마커와 분광 관측 은하�
   await waitForRenderedMap(page);
 });
 
-test('오중주와 수레바퀴 은하 상세의 관측 기준과 광년 축척이 표시된다', async ({ page }) => {
+test('오중주와 수레바퀴 은하 상세의 관측 기준과 광년 축척이 표시된다', { tag: '@smoke' }, async ({ page }) => {
   const objects = [
     { id: 'stephans-quintet', label: '관측 영상 시야 폭', value: '62만 광년' },
     { id: 'cartwheel-galaxy', label: '바깥 고리 지름', value: '15만 광년' },
@@ -257,7 +258,7 @@ test('오중주와 수레바퀴 은하 상세의 관측 기준과 광년 축척�
   }
 });
 
-test('목성과 토성의 대기 특징을 표시하고 행성 셰이더를 컴파일한다', async ({ page }) => {
+test('목성과 토성의 대기 특징을 표시하고 행성 셰이더를 컴파일한다', { tag: '@smoke' }, async ({ page }) => {
   const saturnRings = page.waitForResponse((response) => response.url().endsWith('/saturn/rings-sss.png') && response.ok());
   const jupiterMap = page.waitForResponse(
     (response) => response.url().endsWith('/textures/star-systems/solar/planets/jupiter/jupiter-cassini-pia07782.webp') && (response.ok() || response.status() === 304),
@@ -290,7 +291,7 @@ test('태양 코로나와 새 행성·위성 표면의 설명을 열고 WebGL �
   }
 });
 
-test('태양계 밖 성운의 관측 텍스처를 로드한다', async ({ page }) => {
+test('태양계 밖 성운의 관측 텍스처를 로드한다', { tag: '@smoke' }, async ({ page }) => {
   for (const [target, category] of [
     ['m57', 'planetary'],
     ['pillars-of-creation', 'star-forming'],
@@ -541,7 +542,7 @@ test('타이탄의 대기와 관측 지표를 전환한다', async ({ page }) =>
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
 });
 
-test('궁수자리 A*에서 EHT 기본 영상과 편광 영상을 전환한다', async ({ page }) => {
+test('궁수자리 A*에서 EHT 기본 영상과 편광 영상을 전환한다', { tag: '@smoke' }, async ({ page }) => {
   const intensity = page.waitForResponse((response) => response.url().endsWith('/sgr-a/eht-2022.webp') && response.ok());
   await page.goto(`${milkyWay}?target=sgr-a`);
   await intensity;
@@ -574,7 +575,7 @@ test('궁수자리 A* 편광 영상 로드 실패 후 다시 켜면 재시도한
   await loaded;
 });
 
-test('M87*와 퀘이사의 중력렌즈 장면을 렌더링한다', async ({ page }) => {
+test('M87*와 퀘이사의 중력렌즈 장면을 렌더링한다', { tag: '@smoke' }, async ({ page }) => {
   for (const path of ['/ko/galaxies/m87?view=object&target=m87-star', '/ko/universe?target=3c-273']) {
     await page.goto(path);
     await expect(details(page)).toContainText('중력렌즈');
@@ -1098,7 +1099,7 @@ test('Gaia 표본 반경 밖의 항성계에는 주변 관측원 버튼을 두�
   await expect(button).toHaveCount(0);
 });
 
-test('Gaia 대응 관측원은 자기 항성계의 별이고 주변 목록에서 빠진다', async ({ page }) => {
+test('Gaia 대응 관측원은 자기 항성계의 별이고 주변 목록에서 빠진다', { tag: '@smoke' }, async ({ page }) => {
   for (const { system, name, id } of [
     { system: 'epsilon-eridani', name: /에리다누스자리 엡실론/, id: '5164707970261890560' },
     { system: '51-pegasi', name: /페가수스/, id: '2835207319109249920' },
@@ -1125,7 +1126,7 @@ test('닫은 정보 패널은 다른 천체로 이동하면 다시 열린다', a
   await expect(details(page)).toBeVisible();
 });
 
-test('로케일 없는 주소는 브라우저 언어로, lang 지정은 영구 이동으로 보낸다', async ({ request }) => {
+test('로케일 없는 주소는 브라우저 언어로, lang 지정은 영구 이동으로 보낸다', { tag: '@smoke' }, async ({ request }) => {
   const english = await request.get('/', { maxRedirects: 0, headers: { 'accept-language': 'en-US,en;q=0.9' } });
   expect(english.status()).toBe(307);
   expect(new URL(english.headers().location, 'http://x').pathname).toBe('/en');
@@ -1134,7 +1135,7 @@ test('로케일 없는 주소는 브라우저 언어로, lang 지정은 영구 �
   expect(new URL(korean.headers().location, 'http://x').pathname).toBe('/ko/universe');
 });
 
-test('없는 주소는 두 언어 404 화면과 돌아갈 링크를 보여 준다', async ({ page }) => {
+test('없는 주소는 두 언어 404 화면과 돌아갈 링크를 보여 준다', { tag: '@smoke' }, async ({ page }) => {
   const response = await page.goto('/ko/galaxies/not-a-galaxy');
   expect(response?.status()).toBe(404);
   await expect(page.getByRole('heading', { name: '404' })).toBeVisible();
