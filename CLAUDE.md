@@ -28,7 +28,7 @@ pnpm build
   - 대상마다 다른 UI 문구·형태는 데이터에 둔다(`overviewLabel`, `wideOverview.label`, `outerRegion`, `summary`, `title`, `notes`, `diskTilt`, `embeddedCluster` 등). 모델 형태도 필드로: 은하 `structure`·`ramPressureTail`·`diskObservation.blendProcedural`, 은하 속 천체 `clusterModel`·`stellarWind`·`thermalSurface`·`accretionDisk`·`modelCameraDistance`, 천체 `stellar.prominences`·`surfaceEffect`·`surfaceMap.hidden`·`silhouette`·`rockySurface`, 항성계 `home`, 초은하단 `flowModel`·`flowAnchors`, 원거리 은하 `observationModel`(관측 영상·볼륨 `shape`·설명 `note`). 출처도 데이터에: 이웃 지도 `gaiaSource`, 우주론 거리 `observableUniverse.cosmologySource`.
 - 렌더링은 `src/components/explore/` — 천체·계·은하 id 로 분기하지 않고 데이터 필드만 읽는다. 특정 대상 전용 처리가 필요하면 필드를 추가.
   - `explorer.tsx` URL 상태와 화면 조립, `details.tsx` 정보 패널·툴팁, `language-select.tsx`.
-  - `scenes/` — WebGL 장면(`system`·`galaxy`·`neighborhood`·`local-group`·`featured-object`·`universe`), `ssr:false` 로만 로드.
+  - `scenes/` — WebGL 장면(`system`·`galaxy`·`neighborhood`·`local-group`·`featured-object`·`universe`), `ssr:false` 로만 로드. 새 장면은 Canvas 안에 `<KeyboardOrbitControls />`(방향키 회전·+/− 확대)를 두고 OrbitControls 에 `makeDefault` 를 준다. 줌 전환(onEnd)의 확대·축소 판정은 `utils/zoom.ts` 의 `zoomedIn`·`zoomedOut` 으로 한다(회전만 해도 생기는 부동소수 오차를 무시).
   - `three/` — 장면들이 공유하는 three 부품. `utils/` — 궤도·줌·거리 축척·좌표·우주론 거리·포맷·경로·seeded 난수(`random.ts`)·카탈로그 검증.
 - 스타일은 `*.module.scss`, 공용 토큰은 `src/styles/_variables.scss`(모든 scss 에 자동 @use).
 - 포맷은 Prettier(`printWidth 200`, singleQuote).

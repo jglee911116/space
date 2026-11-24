@@ -9,6 +9,7 @@ import { AdditiveBlending, Box3, MathUtils, NormalBlending, Quaternion, Vector3,
 import { localGroup, type FeaturedObject, type Galaxy } from '@/constants/space';
 import { AU_PER_KPC, KM_PER_KPC, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
+import { KeyboardOrbitControls } from '../three/shared/keyboard-orbit';
 import { GalaxyObservationDisk } from '../three/galaxies/galaxy-observation-disk';
 import { galaxyObservationPoints } from '../three/galaxies/galaxy-observation-points';
 import { useSurfaceMap } from '../three/shared/use-surface-map';
@@ -33,6 +34,8 @@ import {
   LOCAL_GROUP_EXIT_KPC,
   featuredOverviewDistanceKpc,
   type ZoomHandoff,
+  zoomedIn,
+  zoomedOut,
 } from '../utils/zoom';
 
 type Props = {
@@ -285,6 +288,7 @@ function Scene({
         </>
       )}
       <OrbitControls
+        makeDefault
         ref={controls}
         enablePan={false}
         minDistance={overview ? entryDistance * 0.8 : focusedObject ? objectDistance * 0.55 : focusedSystem ? EXTERNAL_SYSTEM_ENTRY_KPC * 0.7 : Math.min(8, galaxy.modelRadiusKpc * 0.9)}
@@ -299,11 +303,11 @@ function Scene({
           const radius = orbit.getDistance();
           const direction = scratch.offset.subVectors(camera.position, orbit.target).normalize().toArray();
           const handoff = { direction, distanceAu: radius * AU_PER_KPC };
-          if (overview && radius > start.current && radius >= groupExit) onExitGroup(handoff);
-          else if (overview && radius < start.current && radius <= entryDistance) onEnterGalaxy(galaxy, handoff);
-          else if (!overview && radius > start.current && radius >= exitDistance) onExitGalaxy(handoff);
-          else if (focusedObject && radius < start.current && radius <= objectDistance * 0.72) onSelectObject(focusedObject.object.id);
-          else if (focusedSystem && radius < start.current && radius <= EXTERNAL_SYSTEM_ENTRY_KPC) onSelectSystem(focusedSystem.id, handoff);
+          if (overview && zoomedOut(start.current, radius) && radius >= groupExit) onExitGroup(handoff);
+          else if (overview && zoomedIn(start.current, radius) && radius <= entryDistance) onEnterGalaxy(galaxy, handoff);
+          else if (!overview && zoomedOut(start.current, radius) && radius >= exitDistance) onExitGalaxy(handoff);
+          else if (focusedObject && zoomedIn(start.current, radius) && radius <= objectDistance * 0.72) onSelectObject(focusedObject.object.id);
+          else if (focusedSystem && zoomedIn(start.current, radius) && radius <= EXTERNAL_SYSTEM_ENTRY_KPC) onSelectSystem(focusedSystem.id, handoff);
         }}
       />
     </>
@@ -316,6 +320,7 @@ export default function LocalGroupScene(props: Props) {
   return (
     <CanvasBoundary>
       <Canvas camera={CAMERA} dpr={[1, 1.5]} role="group" aria-label={t('canvas.namedModel', [catalogText(label)])}>
+        <KeyboardOrbitControls />
         <GalacticLabelLayer>
           <Scene {...props} />
         </GalacticLabelLayer>

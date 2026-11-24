@@ -23,7 +23,8 @@ import { STELLAR_WIND_RADIUS } from '../three/stellar/stellar-wind-density';
 import { StellarGlow } from '../three/stellar/stellar-glow';
 import { useSurfaceMap } from '../three/shared/use-surface-map';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
-import { systemHandoffDistanceAu, oortRadius, zoomLayers, type ZoomHandoff, type ZoomScale } from '../utils/zoom';
+import { KeyboardOrbitControls } from '../three/shared/keyboard-orbit';
+import { systemHandoffDistanceAu, oortRadius, zoomLayers, type ZoomHandoff, type ZoomScale, zoomedOut } from '../utils/zoom';
 
 /** 선택된 천체 id. null 은 계 전체 보기. */
 export type Target = string | null;
@@ -655,6 +656,7 @@ function Scene({
         <pointsMaterial ref={markerMaterial} vertexColors size={5} sizeAttenuation={false} transparent depthTest={false} depthWrite={false} />
       </points>
       <OrbitControls
+        makeDefault
         ref={controls}
         target={initialTarget}
         enablePan={false}
@@ -670,7 +672,7 @@ function Scene({
           const orbit = controls.current;
           if (!orbit || !onZoomOut) return;
           const radius = orbit.getDistance();
-          if (radius <= distanceAtStart.current || radius / UNITS_PER_AU < systemHandoffDistanceAu(system, farOverview)) return;
+          if (!zoomedOut(distanceAtStart.current, radius) || radius / UNITS_PER_AU < systemHandoffDistanceAu(system, farOverview)) return;
           const direction = scratch.offset.subVectors(orbit.object.position, orbit.target).normalize().toArray();
           onZoomOut({ distanceAu: radius / UNITS_PER_AU, direction });
         }}
@@ -700,6 +702,7 @@ export default function SystemScene(props: SceneProps) {
     <CanvasBoundary>
       <div className={styles.systemCanvas} role="group" aria-label={t('canvas.interactiveModel', [catalogText(props.system.name)])}>
         <Canvas camera={initialCamera} dpr={[1, 1.5]}>
+          <KeyboardOrbitControls />
           <Scene {...props} farOverview={farOverview} showHiddenSurface={showHiddenSurface} labels={labels} />
         </Canvas>
         {props.system.home && props.target && (

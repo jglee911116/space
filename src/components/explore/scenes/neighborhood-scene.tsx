@@ -12,7 +12,8 @@ import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { nearbyPositions, neighborhoodOverviewDistance } from '../utils/nearby-positions';
 import { GaiaPreview } from '../three/maps/gaia-preview';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
-import type { ZoomHandoff } from '../utils/zoom';
+import { KeyboardOrbitControls } from '../three/shared/keyboard-orbit';
+import { zoomedIn, zoomedOut, type ZoomHandoff } from '../utils/zoom';
 import { readGaiaSourceId, useGaiaSource, type GaiaNeighbor, type GaiaNeighborRadius, type GaiaSource } from '../utils/gaia-catalog';
 import { gaiaCounterpartsBySource } from '../utils/gaia-counterparts';
 import { gaiaSourcePath, systemPath } from '../utils/paths';
@@ -138,6 +139,7 @@ function Map({
     <>
       <PerspectiveCamera makeDefault fov={44} far={maxDistance + distance} position={cameraPosition} />
       <OrbitControls
+        makeDefault
         target={center}
         enablePan={false}
         minDistance={minDistance}
@@ -148,9 +150,9 @@ function Map({
         onEnd={() => {
           const offset = projected.copy(camera.position).sub(center);
           const current = offset.length();
-          if (current > zoomStart.current && current >= maxDistance * 0.99) {
+          if (zoomedOut(zoomStart.current, current) && current >= maxDistance * 0.99) {
             onExit({ direction: offset.normalize().toArray(), distanceAu: (current * KM_PER_LIGHT_YEAR) / KM_PER_AU });
-          } else if (current < zoomStart.current && current <= minDistance * 1.01) {
+          } else if (zoomedIn(zoomStart.current, current) && current <= minDistance * 1.01) {
             if (!focusPosition) onEnterSolar();
           }
         }}
@@ -343,6 +345,7 @@ export default function NeighborhoodScene({
     <>
       <CanvasBoundary>
         <Canvas dpr={[1, 1.5]} role="group" aria-label={t('canvas.solarNeighborhood')} onPointerMissed={() => setSource(null)}>
+          <KeyboardOrbitControls />
           <Map
             key={aroundPosition ? 'around' : (focusedSource?.id ?? 'overview')}
             focusedSource={focusedSource}

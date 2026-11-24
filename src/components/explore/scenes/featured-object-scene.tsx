@@ -11,6 +11,8 @@ import { AccretionModel } from '../three/black-holes/accretion-model';
 import { CygnusBinary } from '../three/black-holes/cygnus-binary';
 import { CrabPulsarWind } from '../three/nebulae/crab-pulsar-wind';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
+import { KeyboardOrbitControls } from '../three/shared/keyboard-orbit';
+import { zoomedOut } from '../utils/zoom';
 import { surfaceVertex, supergiantFragment } from '../three/shared/shaders';
 import { NebulaVolume, OBSERVATION_VIEW } from '../three/nebulae/nebula-volume';
 import { PleiadesCluster } from '../three/stellar/pleiades-cluster';
@@ -330,6 +332,7 @@ function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTim
         </>
       )}
       <OrbitControls
+        makeDefault
         ref={controls}
         enablePan={false}
         minDistance={object.extentLightYears * 0.23}
@@ -342,7 +345,7 @@ function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTim
           const orbit = controls.current;
           if (!orbit) return;
           const distance = orbit.getDistance();
-          if (distance >= limit && distance > start.current) onLeave(orbit.object.position.clone().sub(orbit.target).normalize().toArray());
+          if (distance >= limit && zoomedOut(start.current, distance)) onLeave(orbit.object.position.clone().sub(orbit.target).normalize().toArray());
         }}
       />
     </>
@@ -443,6 +446,7 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
         </>
       )}
       <OrbitControls
+        makeDefault
         ref={controls}
         enablePan={false}
         minDistance={2.5}
@@ -454,7 +458,7 @@ function StellarModel({ object, simulationDaysRef, daysPerSecond, paused, onLeav
           const orbit = controls.current;
           if (!orbit) return;
           const distance = orbit.getDistance();
-          if (distance >= STELLAR_DETAIL_EXIT && distance > start.current) onLeave(orbit.object.position.clone().sub(orbit.target).normalize().toArray());
+          if (distance >= STELLAR_DETAIL_EXIT && zoomedOut(start.current, distance)) onLeave(orbit.object.position.clone().sub(orbit.target).normalize().toArray());
         }}
       />
     </>
@@ -485,6 +489,7 @@ export default function FeaturedObjectScene(props: Props) {
         role="group"
         aria-label={t('canvas.namedObjectModel', [catalogText(object.name)])}
       >
+        <KeyboardOrbitControls />
         {blackHole ? (
           <AccretionModel object={{ color: object.color, visibleJet: true, accretionDisk: object.accretionDisk }} onExit={props.onLeave} time={props.accretionPlaybackTime} />
         ) : stellar ? (

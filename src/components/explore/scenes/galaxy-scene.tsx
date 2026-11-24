@@ -16,6 +16,7 @@ import { useSurfaceMap } from '../three/shared/use-surface-map';
 import { updatePointDetail } from '../three/maps/map-detail';
 import { GalacticLabelLayer, GalacticMarker } from '../three/maps/galactic-marker';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
+import { KeyboardOrbitControls } from '../three/shared/keyboard-orbit';
 import { OortCloudModel } from '../three/planetary-systems/oort-cloud';
 import { AU_PER_KPC, DAYS_PER_YEAR, KM_PER_KPC, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
@@ -28,6 +29,8 @@ import {
   featuredOverviewDistanceKpc,
   galaxyHandoffDistanceAu,
   type ZoomHandoff,
+  zoomedIn,
+  zoomedOut,
 } from '../utils/zoom';
 import { seededRandom } from '../utils/random';
 
@@ -634,6 +637,7 @@ function Scene({
       )}
       <SagittariusAccretionFlow observationMap={observationMap} paused={paused} daysPerSecond={daysPerSecond} overviewDiameter={close ? undefined : CENTER_OVERVIEW_DIAMETER_KPC} />
       <OrbitControls
+        makeDefault
         ref={controls}
         enablePan={false}
         minDistance={close ? 2.4 : centerFocused ? GALACTIC_CENTER_ENTRY_KPC * 0.7 : focusedPosition ? focusedDistance * 0.55 : handoffRadius * 0.65}
@@ -648,8 +652,8 @@ function Scene({
           const radius = orbit.getDistance();
           const direction = scratch.offset.subVectors(camera.position, orbit.target).normalize().toArray();
           const handoff = { distanceAu: radius * AU_PER_KPC, direction };
-          const zoomingOut = radius > distanceAtStart.current;
-          const zoomingIn = radius < distanceAtStart.current;
+          const zoomingOut = zoomedOut(distanceAtStart.current, radius);
+          const zoomingIn = zoomedIn(distanceAtStart.current, radius);
           if (close) {
             if (zoomingOut && radius >= BLACK_HOLE_EXIT_DISTANCE) onCenterZoom(false, handoff);
           } else if (zoomingOut && radius >= GALAXY_EXIT_KPC) {
@@ -676,6 +680,7 @@ export default function GalaxyScene(props: GalaxySceneProps) {
   return (
     <CanvasBoundary>
       <Canvas camera={CAMERA_OPTIONS} dpr={[1, 1.5]} role="group" aria-label={t('canvas.milkyWayBlackHole')}>
+        <KeyboardOrbitControls />
         <GalacticLabelLayer>
           <Scene {...props} />
         </GalacticLabelLayer>

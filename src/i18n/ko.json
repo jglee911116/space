@@ -620,7 +620,7 @@
   "details.virgoClusterScale": "은하 위치는 관측 방향과 추정 거리를 바탕으로 배치했습니다. 고리는 은하단 지도의 거리 눈금입니다.",
   "navigation.titanSurface": "타이탄 지표 보기",
   "navigation.around": "{0} 주변",
-  "navigation.cameraInstructions": "드래그로 회전 · 휠 또는 핀치로 확대·축소",
+  "navigation.cameraInstructions": "드래그·방향키로 회전 · 휠·핀치·+/−로 확대·축소",
   "navigation.cameraViews": "카메라 시점",
   "navigation.currentView": "현재 장면",
   "navigation.distanceReference": "거리 기준점",

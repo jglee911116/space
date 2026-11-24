@@ -620,7 +620,7 @@
   "details.virgoClusterScale": "Galaxies are placed using their observed directions and estimated distances. The rings are distance guides for this map.",
   "navigation.titanSurface": "Titan surface view",
   "navigation.around": "Around {0}",
-  "navigation.cameraInstructions": "Drag to rotate · Scroll or pinch to zoom",
+  "navigation.cameraInstructions": "Drag or arrow keys to rotate · Scroll, pinch or +/− to zoom",
   "navigation.cameraViews": "Camera views",
   "navigation.currentView": "Current view",
   "navigation.distanceReference": "Distance reference",

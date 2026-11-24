@@ -1181,3 +1181,120 @@ test('큰 수는 언어마다 알맞은 단위로 표시한다', async ({ page }
   await page.goto('/en/galaxies/milky-way?target=sgr-a');
   await expect(page.getByText('About 4 million solar masses', { exact: true })).toBeVisible();
 });
+
+test('방향키로 시점을 돌리고 검색창에 입력할 때는 시점이 그대로다', async ({ page }) => {
+  await page.goto(`${milkyWay}?system=solar&target=earth`);
+  const scene = page.getByLabel('회전하고 확대할 수 있는 태양계 3D 모델');
+  await expect(scene.getByRole('button', { name: '지구', exact: true })).toHaveAttribute('aria-current', 'true');
+  const moon = scene.getByRole('button', { name: '달', exact: true });
+  const moonX = async () => (await moon.boundingBox())?.x ?? Number.NaN;
+  const holdKey = async (key: string, milliseconds: number) => {
+    await page.keyboard.down(key);
+    await page.waitForTimeout(milliseconds);
+    await page.keyboard.up(key);
+  };
+  // 첫 화면의 카메라 이동이 끝나 라벨이 멈출 때까지 기다린다.
+  const settle = () =>
+    expect
+      .poll(async () => {
+        const before = await moonX();
+        await page.waitForTimeout(200);
+        return Math.abs((await moonX()) - before);
+      })
+      .toBeLessThan(0.5);
+  await settle();
+
+  await page.getByRole('button', { name: '천체·영역 찾기' }).click();
+  const searchbox = page.getByRole('region', { name: '천체·영역 찾기' }).getByRole('searchbox');
+  await expect(searchbox).toBeFocused();
+  const typing = await moonX();
+  await holdKey('ArrowRight', 500);
+  await settle();
+  expect(Math.abs((await moonX()) - typing)).toBeLessThan(1);
+  await page.keyboard.press('Escape');
+
+  const start = await moonX();
+  await holdKey('ArrowRight', 600);
+  await expect.poll(async () => Math.abs((await moonX()) - start)).toBeGreaterThan(20);
+
+  // 보조 입력처럼 프레임 사이에 눌렀다 떼도 한 번은 움직인다.
+  await settle();
+  const tap = await moonX();
+  await page.keyboard.press('ArrowLeft');
+  await expect.poll(async () => Math.abs((await moonX()) - tap)).toBeGreaterThan(1);
+});
+
+test('정보 패널 안에서는 위아래 방향키가 패널을 스크롤하고 시점은 그대로다', async ({ page }) => {
+  // 이 높이에서 지구 정보 패널(최대 58svh)이 넘쳐 스크롤된다.
+  await page.setViewportSize({ width: 1440, height: 520 });
+  await page.goto(`${milkyWay}?system=solar&target=earth`);
+  const scene = page.getByLabel('회전하고 확대할 수 있는 태양계 3D 모델');
+  await expect(scene.getByRole('button', { name: '지구', exact: true })).toHaveAttribute('aria-current', 'true');
+  const moon = scene.getByRole('button', { name: '달', exact: true });
+  const moonX = async () => (await moon.boundingBox())?.x ?? Number.NaN;
+  const settle = () =>
+    expect
+      .poll(async () => {
+        const before = await moonX();
+        await page.waitForTimeout(200);
+        return Math.abs((await moonX()) - before);
+      })
+      .toBeLessThan(0.5);
+  const panel = details(page);
+  await expect.poll(() => panel.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await panel.getByRole('link').first().focus();
+  await settle();
+  const top = await panel.evaluate((element) => element.scrollTop);
+  const camera = await moonX();
+  // 링크에 포커스하면서 패널이 아래로 내려갔다면 위로, 아니면 아래로 스크롤해 본다.
+  const key = top > 0 ? 'ArrowUp' : 'ArrowDown';
+  await page.keyboard.down(key);
+  await page.waitForTimeout(400);
+  await page.keyboard.up(key);
+  await expect.poll(() => panel.evaluate((element) => element.scrollTop)).not.toBe(top);
+  await settle();
+  expect(Math.abs((await moonX()) - camera)).toBeLessThan(1);
+});
+
+test('Shift+방향키와 +/−로 확대·축소하고 끝까지 축소하면 우리은하 지도로 넘어간다', async ({ page }) => {
+  await page.goto(`${milkyWay}?system=solar`);
+  await waitForRenderedMap(page);
+  // 축척 글자는 깔끔한 수로 반올림되므로 막대 길이까지 함께 본다.
+  const scale = page.getByRole('group', { name: '화면 거리 축척' });
+  const reading = () => scale.evaluate((bar: HTMLElement) => `${bar.textContent} ${bar.style.getPropertyValue('--scale-width')}`);
+  const overview = await reading();
+  await page.keyboard.down('Shift');
+  await page.keyboard.down('ArrowUp');
+  await page.waitForTimeout(500);
+  await page.keyboard.up('ArrowUp');
+  await page.keyboard.up('Shift');
+  await expect.poll(reading).not.toBe(overview);
+
+  // 휠·핀치처럼 키를 뗄 때 축소 거리를 보고 상위 지도로 넘긴다.
+  await expect
+    .poll(
+      async () => {
+        await page.keyboard.down('-');
+        await page.waitForTimeout(800);
+        await page.keyboard.up('-');
+        return new URL(page.url()).search;
+      },
+      { intervals: [100], timeout: 40_000 },
+    )
+    .toBe('?system=solar&view=galaxy');
+  await expect(details(page).getByRole('heading', { name: '우리은하', exact: true })).toBeVisible();
+
+  // 축소해 넘어온 직후엔 카메라가 하위 지도 진입 거리 안쪽이라, 회전만 하는 제스처를 확대로 읽으면 태양계 이웃으로 튄다.
+  const canvas = await page.locator('main canvas').boundingBox();
+  if (!canvas) throw new Error('Milky Way canvas not mounted');
+  for (let turn = 0; turn < 6; turn++) {
+    await page.keyboard.press(turn % 2 ? 'ArrowLeft' : 'ArrowRight');
+    await page.waitForTimeout(120);
+    await page.mouse.move(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(canvas.x + canvas.width / 2 + (turn % 2 ? -60 : 60), canvas.y + canvas.height / 2, { steps: 4 });
+    await page.mouse.up();
+    await page.waitForTimeout(120);
+  }
+  await expect(page).toHaveURL(/\?system=solar&view=galaxy$/);
+});

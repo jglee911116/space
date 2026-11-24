@@ -4,6 +4,12 @@ import { UNITS_PER_AU } from './orbit';
 
 export type ZoomScale = 'system' | 'outer' | 'distant' | 'oort';
 
+// 제스처 시작·끝의 카메라 거리로 확대·축소를 가른다. 회전만 해도 생기는 부동소수 오차(상대 1e-12 수준)를
+// 확대로 읽으면 드래그·방향키 회전만으로 하위 지도로 넘어가므로 작은 허용 오차를 둔다.
+const ZOOM_TOLERANCE = 1e-6;
+export const zoomedOut = (start: number, end: number) => end > start * (1 + ZOOM_TOLERANCE);
+export const zoomedIn = (start: number, end: number) => end < start * (1 - ZOOM_TOLERANCE);
+
 function blend(distance: number, from: number, to: number) {
   const progress = Math.min(1, Math.max(0, Math.log(distance / from) / Math.log(to / from)));
   return progress * progress * (3 - 2 * progress);

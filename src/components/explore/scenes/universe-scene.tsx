@@ -22,10 +22,11 @@ import type { ClusterLayer } from '@/constants/space';
 import { DistanceRings } from '../three/maps/distance-rings';
 import { LaniakeaVolume } from '../three/maps/laniakea-volume';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
+import { KeyboardOrbitControls } from '../three/shared/keyboard-orbit';
 import { GalacticLabelLayer, GalacticMarker } from '../three/maps/galactic-marker';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import { equatorialPosition } from '../utils/nearby-positions';
-import { LOCAL_GROUP_ENTRY_MILLION_LIGHT_YEARS, type ZoomHandoff } from '../utils/zoom';
+import { LOCAL_GROUP_ENTRY_MILLION_LIGHT_YEARS, type ZoomHandoff, zoomedIn, zoomedOut } from '../utils/zoom';
 
 type Props = {
   object?: DistantObject;
@@ -260,6 +261,7 @@ function UniverseMap({
           />
         ))}
       <OrbitControls
+        makeDefault
         ref={controls}
         target={orbitTarget}
         enablePan={false}
@@ -276,9 +278,9 @@ function UniverseMap({
             distanceAu: (radius * KM_PER_MAP_UNIT) / KM_PER_AU,
             direction: direction.subVectors(orbit.object.position, orbit.target).normalize().toArray(),
           };
-          if (outerLimit && radius > initialDistance.current && radius >= outerLimit) onStepOut(handoff);
-          else if (focusedLandmark && radius < initialDistance.current && radius <= landmarkReturnDistance * 0.5) onSelectDistantObject(focusedLandmark.id);
-          else if (!association && radius < initialDistance.current && radius <= entryLimit && orbit.target.length() < entryLimit * 2) onStepIn(handoff);
+          if (outerLimit && zoomedOut(initialDistance.current, radius) && radius >= outerLimit) onStepOut(handoff);
+          else if (focusedLandmark && zoomedIn(initialDistance.current, radius) && radius <= landmarkReturnDistance * 0.5) onSelectDistantObject(focusedLandmark.id);
+          else if (!association && zoomedIn(initialDistance.current, radius) && radius <= entryLimit && orbit.target.length() < entryLimit * 2) onStepIn(handoff);
         }}
       />
     </>
@@ -337,6 +339,7 @@ function DistantGalaxyModel({
         volumeShape && <NebulaVolume texture={texture} radius={DISTANT_VOLUME_RADIUS} shape={volumeShape} />
       )}
       <OrbitControls
+        makeDefault
         ref={controls}
         enablePan={false}
         minDistance={3.8}
@@ -346,7 +349,7 @@ function DistantGalaxyModel({
         }}
         onEnd={() => {
           const distance = controls.current?.getDistance() ?? 0;
-          if (distance > initialDistance.current && distance >= 25) onExit();
+          if (zoomedOut(initialDistance.current, distance) && distance >= 25) onExit();
         }}
       />
     </>
@@ -377,6 +380,7 @@ export default function UniverseScene(props: Props) {
         role="group"
         aria-label={object ? t('canvas.namedObjectModel', [catalogText(object.name)]) : t('canvas.namedMap', [catalogText(props.association?.name ?? props.region?.name ?? observableUniverse.name)])}
       >
+        <KeyboardOrbitControls />
         {object?.kind === 'quasar' ? (
           <AccretionModel object={object} showCounterjet={props.showCounterjet} onExit={exit} time={props.accretionPlaybackTime} />
         ) : object ? (

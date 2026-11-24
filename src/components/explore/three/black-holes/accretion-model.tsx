@@ -4,7 +4,7 @@ import { OrbitControls } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef, type ComponentRef, type RefObject } from 'react';
 import { AdditiveBlending, Color, DoubleSide, Vector3, type Group, type MeshBasicMaterial, type ShaderMaterial } from 'three';
-import { ACCRETION_MODEL_DIAMETER, ACCRETION_MODEL_EINSTEIN_RADIUS, ACCRETION_MODEL_EXIT_DISTANCE } from '../../utils/zoom';
+import { ACCRETION_MODEL_DIAMETER, ACCRETION_MODEL_EINSTEIN_RADIUS, ACCRETION_MODEL_EXIT_DISTANCE, zoomedOut } from '../../utils/zoom';
 import { LensedStarfield } from './black-hole-lensing';
 import { HelicalJets } from './helical-jets';
 import { previewVisibility } from '../maps/map-detail';
@@ -183,6 +183,7 @@ export function AccretionModel({
         )}
       </group>
       <OrbitControls
+        makeDefault
         ref={controls}
         enablePan={false}
         minDistance={2.4}
@@ -194,7 +195,7 @@ export function AccretionModel({
           const orbit = controls.current;
           if (!orbit) return;
           const radius = orbit.getDistance();
-          if (radius > initialDistance.current && radius >= ACCRETION_MODEL_EXIT_DISTANCE) onExit(orbit.object.position.clone().sub(orbit.target).normalize().toArray());
+          if (zoomedOut(initialDistance.current, radius) && radius >= ACCRETION_MODEL_EXIT_DISTANCE) onExit(orbit.object.position.clone().sub(orbit.target).normalize().toArray());
         }}
       />
     </>
