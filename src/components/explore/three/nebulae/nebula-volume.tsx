@@ -16,21 +16,10 @@ import { galaxyMergerDensity } from '../galaxies/merger-density';
 import { protostarBowsDensity, symbioticOutflowDensity } from './stellar-outflow-density';
 import { betelgeusePlumeDensity } from '../stellar/betelgeuse-plume';
 import { STELLAR_WIND_FADE, STELLAR_WIND_RADIUS, rigelWindDensity, solarWindDensity } from '../stellar/stellar-wind-density';
-import { spatialNoise } from '../shared/shaders';
+import { spatialNoise, volumeVertex } from '../shared/shaders';
 
-const vertex = /* glsl */ `
-  varying vec3 boxPoint;
-  varying vec3 localEye;
-  varying float viewZ;
-
-  void main() {
-    boxPoint = position;
-    localEye = (inverse(modelMatrix) * vec4(cameraPosition, 1.0)).xyz;
-    vec4 view = modelViewMatrix * vec4(position, 1.0);
-    viewZ = view.z;
-    gl_Position = projectionMatrix * view;
-  }
-`;
+// 관측 이미지를 맞춘 기본 카메라(distance·볼륨 radius 는 extent 배수, offset 은 distance 배수). observedPlane 이 이 원근으로 이미지를 되투영하므로 장면 카메라도 같은 값을 쓴다.
+export const OBSERVATION_VIEW = { offset: [0.023, 0.063], distance: 1.75, radius: 0.61 } as const;
 
 const crabDensity = /* glsl */ `
   vec4 density(vec3 p) {
@@ -203,6 +192,9 @@ function fragment(shape: NebulaVolumeShape, preview: boolean) {
   vec3 observe(vec2 uv, float bias, vec3 fallback) {
     return mapped ? texture2D(observation, clamp(uv, 0.002, 0.998), bias).rgb : fallback;
   }
+  vec2 observedPlane(vec3 p, float depth) {
+    return (p.xy - depth * vec2(${OBSERVATION_VIEW.offset.join(', ')})) / (1.0 - depth / ${(OBSERVATION_VIEW.distance / OBSERVATION_VIEW.radius).toFixed(2)});
+  }
 
   ${shape === 'crab' ? '#define CRAB_VOLUME' : ''}
   ${densityByShape[shape]}
@@ -333,7 +325,7 @@ export function NebulaVolume({
   return (
     <mesh ref={mesh} scale={radius} raycast={() => {}}>
       <boxGeometry args={[2, 2, 2]} />
-      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={vertex} fragmentShader={fragmentShader} transparent depthWrite={false} side={BackSide} />
+      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={volumeVertex} fragmentShader={fragmentShader} transparent depthWrite={false} side={BackSide} />
     </mesh>
   );
 }

@@ -3,6 +3,7 @@ import { useMemo, useRef } from 'react';
 import { AdditiveBlending, BackSide, Color, Vector2, Vector3, type Mesh, type ShaderMaterial, type Texture } from 'three';
 import type { Galaxy } from '@/constants/space';
 import { previewVisibility } from '../maps/map-detail';
+import { galaxyStructure } from './galaxy-structure';
 
 const vertex = /* glsl */ `
   varying vec3 boxPoint;
@@ -103,7 +104,9 @@ export function GalaxyPreview({
   const position = useMemo(() => new Vector3(), []);
   const uniforms = useMemo(() => {
     const rotation = diskObservation?.rotation ?? 0;
-    const shape = morphology?.includes('elliptical') || (onSelect && !morphology) ? 2 : morphology?.includes('irregular') ? 1 : 0;
+    // 가까이서 그리는 모형과 같은 형태·막대(galaxy.structure 덮어쓰기 포함)를 쓴다.
+    const model = galaxyStructure(galaxy);
+    const shape = model.shape === 'elliptical' || (onSelect && !morphology) ? 2 : model.shape === 'irregular' ? 1 : 0;
     return {
       diskMap: { value: texture ?? null },
       mapped: { value: texture !== undefined },
@@ -113,10 +116,10 @@ export function GalaxyPreview({
       tint: { value: new Color(galaxy.color) },
       pitch: { value: morphology === 'open-spiral' ? 1.65 : 2.5 },
       shape: { value: shape },
-      barred: { value: morphology === 'barred-spiral' },
+      barred: { value: model.bar > 0 },
       visibility: { value: 0 },
     };
-  }, [diskObservation, galaxy.color, morphology, onSelect, texture]);
+  }, [diskObservation, galaxy, morphology, onSelect, texture]);
 
   useFrame(({ camera, size }) => {
     if (!mesh.current || !material.current) return;

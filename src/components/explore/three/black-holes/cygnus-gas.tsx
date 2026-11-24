@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef, type RefObject } from 'react';
 import { BackSide, type ShaderMaterial } from 'three';
 import { spatialNoise } from '../shared/shaders';
+import { ACCRETION_SHADOW_RADIUS } from './lensed-accretion-flow';
 
 const vertex = /* glsl */ `
   varying vec3 localEye;
@@ -14,7 +15,7 @@ const vertex = /* glsl */ `
   }
 `;
 
-const fragment = /* glsl */ `
+const fragment = (samples: number) => /* glsl */ `
   uniform float time;
   uniform float diskPhase;
   varying vec3 localEye;
@@ -24,7 +25,7 @@ const fragment = /* glsl */ `
   const vec3 donor = vec3(0.44, 0.0, 0.0);
   const vec3 hole = vec3(-0.31, 0.0, 0.0);
   const float donorRadius = 0.19;
-  const float shadowRadius = 0.73 * 0.081;
+  const float shadowRadius = ${ACCRETION_SHADOW_RADIUS.toFixed(2)} * 0.081;
   const vec3 diskX = vec3(0.971338, -0.237703, 0.0);
   const vec3 diskNormal = vec3(0.237703, 0.971338, 0.0);
 
@@ -99,7 +100,7 @@ const fragment = /* glsl */ `
     end = opaqueSurface(ray, hole, shadowRadius, end);
     if (end <= start) discard;
 
-    const int samples = 48;
+    const int samples = ${samples};
     float stepSize = (end - start) / float(samples);
     vec3 accumulated = vec3(0.0);
     float remaining = 1.0;
@@ -124,7 +125,7 @@ const fragment = /* glsl */ `
 export function CygnusGas({ rate, time, preview = false }: { rate: number; time: RefObject<number>; preview?: boolean }) {
   const material = useRef<ShaderMaterial>(null);
   const uniforms = useMemo(() => ({ time: { value: 0 }, diskPhase: { value: 0 } }), []);
-  const shader = preview ? fragment.replace('const int samples = 48;', 'const int samples = 18;') : fragment;
+  const shader = fragment(preview ? 18 : 48);
   useFrame(() => {
     if (!material.current) return;
     material.current.uniforms.time.value = time.current;

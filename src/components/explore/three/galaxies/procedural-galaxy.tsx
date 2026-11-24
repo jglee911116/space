@@ -4,21 +4,7 @@ import { BackSide, Color, Vector3, Vector4, type Mesh, type ShaderMaterial } fro
 import type { Galaxy } from '@/constants/space';
 import { galaxyStructure } from './galaxy-structure';
 import { previewVisibility } from '../maps/map-detail';
-import { spatialNoise } from '../shared/shaders';
-
-const vertex = /* glsl */ `
-  varying vec3 boxPoint;
-  varying vec3 localEye;
-  varying float viewZ;
-
-  void main() {
-    boxPoint = position;
-    localEye = (inverse(modelMatrix) * vec4(cameraPosition, 1.0)).xyz;
-    vec4 view = modelViewMatrix * vec4(position, 1.0);
-    viewZ = view.z;
-    gl_Position = projectionMatrix * view;
-  }
-`;
+import { spatialNoise, volumeVertex } from '../shared/shaders';
 
 function fragment(compact: boolean) {
   return /* glsl */ `
@@ -196,7 +182,7 @@ export function ProceduralGalaxy({ galaxy, compact, opacity = 1, blendObservatio
   return (
     <mesh ref={mesh} scale={galaxy.modelRadiusKpc} raycast={() => {}}>
       <boxGeometry args={[2.6, 2.2, 2.6]} />
-      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={vertex} fragmentShader={shader} side={BackSide} transparent depthWrite={false} />
+      <shaderMaterial ref={material} uniforms={uniforms} vertexShader={volumeVertex} fragmentShader={shader} side={BackSide} transparent depthWrite={false} />
     </mesh>
   );
 }

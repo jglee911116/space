@@ -45,7 +45,7 @@ export const butterflyDensity = /* glsl */ `
     // Project the observation from both faces. The rear camera supplies the
     // screen-space reflection while the projection stays on the 3D gas.
     float faceDepth = view.z < 0.0 ? -p.z : p.z;
-    vec2 projected = (p.xy - faceDepth * vec2(0.023, 0.063)) / (1.0 - faceDepth / 2.87);
+    vec2 projected = observedPlane(p, faceDepth);
     vec3 base = mix(vec3(0.54, 0.13, 0.052), vec3(0.63, 0.63, 0.88), 1.0 - smoothstep(0.09, 0.56, h));
     vec3 image = observe(vec2(0.525, 0.54) + projected * vec2(0.49, 0.48), 0.25, base);
     float signal = smoothstep(0.014, 0.56, max(image.r, max(image.g, image.b)));

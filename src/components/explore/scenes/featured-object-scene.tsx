@@ -12,7 +12,7 @@ import { CygnusBinary } from '../three/black-holes/cygnus-binary';
 import { CrabPulsarWind } from '../three/nebulae/crab-pulsar-wind';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { surfaceVertex, supergiantFragment } from '../three/shared/shaders';
-import { NebulaVolume } from '../three/nebulae/nebula-volume';
+import { NebulaVolume, OBSERVATION_VIEW } from '../three/nebulae/nebula-volume';
 import { PleiadesCluster } from '../three/stellar/pleiades-cluster';
 import { GlobularCluster } from '../three/stellar/globular-cluster';
 import { neutronThermalFragment } from '../three/stellar/neutron-thermal-surface';
@@ -263,7 +263,15 @@ function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTim
       {pleiades && <PleiadesCluster radius={object.extentLightYears * 0.61} />}
       {globular && <GlobularCluster radius={object.extentLightYears * 0.5} profile={object.clusterModel} />}
       {object.kind === 'x-ray-binary' && <CygnusBinary disk={object.accretionDisk} size={object.extentLightYears} days={simulationDaysRef} time={accretionPlaybackTime} />}
-      {image && <NebulaVolume texture={texture} radius={object.extentLightYears * (image.shape === 'crab' ? 0.71 : 0.61)} shape={image.shape} paused={paused} daysPerSecond={daysPerSecond} />}
+      {image && (
+        <NebulaVolume
+          texture={texture}
+          radius={object.extentLightYears * (image.shape === 'crab' ? 0.71 : OBSERVATION_VIEW.radius)}
+          shape={image.shape}
+          paused={paused}
+          daysPerSecond={daysPerSecond}
+        />
+      )}
       {particles && (
         <points scale={scale} visible={!image || image.shape === 'crab' || image.shape === 'ejecta'}>
           <bufferGeometry>
@@ -304,7 +312,7 @@ function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTim
       )}
       {image?.shape === 'crab' && <CrabPulsarWind paused={paused} daysPerSecond={daysPerSecond} texture={texture} scale={object.extentLightYears * 0.048} />}
       {object.remnantPulsar && (
-        <group position={object.remnantPulsar.position.map((value) => value * object.extentLightYears * 0.61) as [number, number, number]}>
+        <group position={object.remnantPulsar.position.map((value) => value * object.extentLightYears * OBSERVATION_VIEW.radius) as [number, number, number]}>
           <StellarGlow radius={object.extentLightYears * 0.012} color={object.remnantPulsar.color} strength={0.65} paused={paused} />
           <mesh raycast={() => {}}>
             <sphereGeometry args={[object.extentLightYears * 0.003, 12, 8]} />
@@ -458,7 +466,7 @@ export default function FeaturedObjectScene(props: Props) {
   const { object } = props;
   const blackHole = object.kind === 'black-hole';
   const stellar = object.kind === 'pulsar' || object.kind === 'neutron-star' || object.kind === 'magnetar' || object.kind === 'supergiant';
-  const distance = object.extentLightYears * (object.observationImage?.shape === 'hourglass' ? 2.15 : 1.75);
+  const distance = object.extentLightYears * (object.observationImage?.shape === 'hourglass' ? 2.15 : OBSERVATION_VIEW.distance);
   return (
     <CanvasBoundary>
       <Canvas
@@ -467,7 +475,7 @@ export default function FeaturedObjectScene(props: Props) {
             ? [5, 5.6, 13]
             : stellar
               ? [0, 1.5, object.modelCameraDistance ?? (object.photosphere ? 5.7 : 8)]
-              : [distance * 0.023, distance * (object.kind === 'x-ray-binary' ? 0.38 : 0.063), distance],
+              : [distance * OBSERVATION_VIEW.offset[0], distance * (object.kind === 'x-ray-binary' ? 0.38 : OBSERVATION_VIEW.offset[1]), distance],
           fov: 45,
           near: stellar || blackHole ? 0.05 : Math.min(0.05, object.extentLightYears * 0.015),
           far: Math.max(170, object.extentLightYears * 32),

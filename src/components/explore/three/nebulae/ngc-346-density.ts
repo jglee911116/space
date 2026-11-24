@@ -33,7 +33,7 @@ export const ngc346Density = /* glsl */ `
 
     vec3 view = normalize(localEye);
     float depth = view.z < 0.0 ? -p.z : p.z;
-    vec2 projected = (p.xy - depth * vec2(0.023, 0.063)) / (1.0 - depth / 2.87);
+    vec2 projected = observedPlane(p, depth);
     vec2 uv = vec2(0.51, 0.50) + projected * vec2(0.64, 0.48);
     vec3 faint = mix(vec3(0.18, 0.065, 0.19), vec3(0.57, 0.21, 0.35), knots);
     vec3 color = mix(faint, vec3(1.0, 0.57, 0.30), clamp(tight * (0.35 + knots), 0.0, 0.91));

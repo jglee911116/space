@@ -4,6 +4,7 @@ import type { Galaxy } from '@/constants/space';
 import { macsImages, macsMembers, pandoraArcs, pandoraMembers } from '@/constants/space';
 import { GalacticLabelLayer, GalacticMarker } from '../maps/galactic-marker';
 import { GalaxyPreview } from './galaxy-preview';
+import { haloVertex } from './bullet-cluster';
 
 const centerRa = 3.5876;
 const centerDec = -30.3975;
@@ -99,16 +100,6 @@ const arcFragment = /* glsl */ `
     float brightness = (0.76 * exp(-ridge * ridge) + 0.22 * exp(-0.21 * ridge * ridge)) * taper * knots;
     gl_FragColor = vec4(mix(vec3(0.25, 0.49, 0.79), vec3(0.92, 0.77, 0.63), smoothstep(-0.4, 0.8, point.x)), brightness * 0.81);
     #include <colorspace_fragment>
-  }
-`;
-
-const haloVertex = /* glsl */ `
-  varying vec3 surface;
-  varying vec3 eye;
-  void main() {
-    surface = position;
-    eye = (inverse(modelMatrix) * vec4(cameraPosition, 1.0)).xyz;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
 

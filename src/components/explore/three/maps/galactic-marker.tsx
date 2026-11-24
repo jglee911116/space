@@ -7,13 +7,12 @@ import { createContext, useContext, useEffect, useRef, type ReactNode, type RefO
 import { CanvasTexture, SRGBColorSpace, Sprite, Vector3, type Object3D, type SpriteMaterial } from 'three';
 import { labelBudget, labelsOverlap } from './map-detail';
 
-function createMarkerTexture(name: string, color: string) {
+function createMarkerTexture(name: string, color: string, width: number) {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   if (!context) return null;
 
-  context.font = '500 28px system-ui, sans-serif';
-  canvas.width = Math.ceil(context.measureText(name).width) + 66;
+  canvas.width = width;
   canvas.height = 60;
   context.font = '500 28px system-ui, sans-serif';
   context.fillStyle = '#12131e';
@@ -198,7 +197,7 @@ export function GalacticMarker({
       onHover: (hovered) => hoverCallback.current?.(hovered),
       showTexture: () => {
         if (texture !== undefined) return;
-        texture = distanceLabel ? createDistanceTexture(label, marker.width) : createMarkerTexture(label, color);
+        texture = distanceLabel ? createDistanceTexture(label, marker.width) : createMarkerTexture(label, color, marker.width);
         material.map = texture;
         material.needsUpdate = true;
       },

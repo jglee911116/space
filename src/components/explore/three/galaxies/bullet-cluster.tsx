@@ -39,7 +39,7 @@ for (const { nearest, depth } of members) {
   if (nearest >= 0) depths[nearest] = depth;
 }
 
-const vertex = /* glsl */ `
+export const haloVertex = /* glsl */ `
   varying vec3 surface;
   varying vec3 eye;
   void main() {
@@ -100,7 +100,7 @@ export function BulletCluster({ layer }: { layer: ClusterLayer }) {
         {clouds.map((cloud, index) => (
           <mesh key={index} position={cloud.position} scale={cloud.scale} rotation-z={-0.28} raycast={() => {}}>
             <sphereGeometry args={[1, 32, 24]} />
-            <shaderMaterial vertexShader={vertex} fragmentShader={fragment} uniforms={uniforms} transparent depthWrite={false} side={BackSide} blending={AdditiveBlending} />
+            <shaderMaterial vertexShader={haloVertex} fragmentShader={fragment} uniforms={uniforms} transparent depthWrite={false} side={BackSide} blending={AdditiveBlending} />
           </mesh>
         ))}
       </group>

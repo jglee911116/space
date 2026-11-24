@@ -38,7 +38,7 @@ export const lightEchoDensity = /* glsl */ `
     float pulse = exp(-echoOffset * echoOffset) *
       smoothstep(0.0, 0.13, progress) * (1.0 - smoothstep(0.77, 1.0, progress));
     vec3 base = mix(vec3(0.11, 0.23, 0.38), vec3(0.88, 0.39, 0.18), smoothstep(0.28, 0.72, structure));
-    vec2 projected = (p.xy - p.z * vec2(0.023, 0.063)) / (1.0 - p.z / 2.87);
+    vec2 projected = observedPlane(p, p.z);
     vec3 image = observe(vec2(0.56, 0.56) + projected * vec2(0.45, 0.43), 0.7, base);
     float imageWeight = mapped ? 0.51 * smoothstep(0.35, 0.98, normalize(localEye).z) : 0.0;
     vec3 color = mix(base, min(image * 1.75, vec3(0.73)), imageWeight);
@@ -74,7 +74,7 @@ export const catsEyeDensity = /* glsl */ `
 
     // Register the image to the default observation view. The shell geometry
     // still determines where gas is visible as the camera moves around it.
-    vec2 projection = (p.xy - p.z * vec2(0.023, 0.063)) / (1.0 - p.z / 2.87);
+    vec2 projection = observedPlane(p, p.z);
     vec3 image = observe(vec2(0.485, 0.455) + projection * vec2(0.49, 0.46), 0.0, vec3(0.0));
     float signal = smoothstep(0.012, 0.58, max(image.r, max(image.g, image.b)));
     vec3 blue = mix(vec3(0.12, 0.28, 0.58), vec3(0.57, 0.75, 1.0), 0.32 + 0.68 * fine);

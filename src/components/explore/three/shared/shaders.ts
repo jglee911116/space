@@ -17,6 +17,20 @@ float noise(vec3 p) {
 }
 `;
 
+export const volumeVertex = /* glsl */ `
+  varying vec3 boxPoint;
+  varying vec3 localEye;
+  varying float viewZ;
+
+  void main() {
+    boxPoint = position;
+    localEye = (inverse(modelMatrix) * vec4(cameraPosition, 1.0)).xyz;
+    vec4 view = modelViewMatrix * vec4(position, 1.0);
+    viewZ = view.z;
+    gl_Position = projectionMatrix * view;
+  }
+`;
+
 export const surfaceVertex = /* glsl */ `
   varying vec3 surface;
   varying vec2 starUv;
