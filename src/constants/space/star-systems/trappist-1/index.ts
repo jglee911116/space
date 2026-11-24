@@ -1,10 +1,9 @@
 import { message } from '@/i18n/messages';
 import type { Body, StarSystem } from '../../types';
-import { SOLAR_LUMINOSITY_W, SOLAR_RADIUS_KM } from '../../units';
+import { EARTH_RADIUS_KM, SOLAR_LUMINOSITY_W, SOLAR_RADIUS_KM } from '../../units';
 
 const ARCHIVE = { label: 'NASA Exoplanet Archive · TRAPPIST-1', href: 'https://exoplanetarchive.ipac.caltech.edu/overview/TRAPPIST-1' };
 const AGOL = { label: message('catalog.trappist-1.agol.source.agol-et-al-planet-masses-and-radii'), href: 'https://doi.org/10.3847/PSJ/abd022' };
-const EARTH_RADIUS_KM = 6371;
 const star: Body = {
   id: 'trappist-1-star',
   name: message('catalog.trappist-1.trappist-1-star.name'),

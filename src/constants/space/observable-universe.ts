@@ -1,5 +1,7 @@
 import { message } from '@/i18n/messages';
-import type { DistantObject, ObservableUniverse } from './types';
+import type { DistantObject, ObservableUniverse, Source } from './types';
+
+const planck2018: Source = { label: message('catalog.observable-universe.observable-universe.source.planck-2018-cosmological-parameters'), href: 'https://doi.org/10.1051/0004-6361/201833910' };
 
 export const observableUniverse: ObservableUniverse = {
   name: message('catalog.observable-universe.observable-universe.name'),
@@ -9,8 +11,9 @@ export const observableUniverse: ObservableUniverse = {
       label: message('catalog.observable-universe.observable-universe.source.nasa-size-of-the-observable-universe'),
       href: 'https://www.nasa.gov/science-research/astrophysics/how-big-is-space-we-asked-a-nasa-expert-episode-61/',
     },
-    { label: message('catalog.observable-universe.observable-universe.source.planck-2018-cosmological-parameters'), href: 'https://doi.org/10.1051/0004-6361/201833910' },
+    planck2018,
   ],
+  cosmologySource: planck2018,
 };
 
 export const distantObjects: readonly DistantObject[] = [
@@ -25,7 +28,7 @@ export const distantObjects: readonly DistantObject[] = [
     rightAscension: 64.038,
     declination: -24.067,
     color: '#e6c6a8',
-    summary: message('catalog.next.macs.summary'),
+    summary: message('catalog.observable-universe.macs-j0416.summary'),
     sources: [
       { label: 'NASA, ESA, CSA & STScI · Hubble and Webb', href: 'https://esawebb.org/images/weic2327a/' },
       { label: 'Bergamini et al. · Strong-lensing model and catalogs', href: 'https://www.fe.infn.it/astro/lensing/M0416_Bergamini22/' },
@@ -41,8 +44,8 @@ export const distantObjects: readonly DistantObject[] = [
     rightAscension: 16.9466,
     declination: -17.5055,
     color: '#d6bac8',
-    observationImage: '/textures/galaxies/ic-1623/webb.webp',
-    summary: message('catalog.next.ic1623.summary'),
+    observationModel: { file: '/textures/galaxies/ic-1623/webb.webp', shape: 'merger' },
+    summary: message('catalog.observable-universe.ic-1623.summary'),
     sources: [{ label: 'NASA, ESA, CSA, L. Armus & A. Evans · Webb', href: 'https://esawebb.org/images/potm2210a/' }],
   },
   {
@@ -66,14 +69,14 @@ export const distantObjects: readonly DistantObject[] = [
     id: 'bullet-cluster',
     kind: 'galaxy-cluster',
     clusterModel: 'bullet',
-    name: message('catalog.additions.bullet.name'),
+    name: message('catalog.observable-universe.bullet-cluster.name'),
     aliases: ['Bullet Cluster', '1E 0657−56', '1E 0657-56'],
     observationStatus: 'observed',
     redshift: 0.296,
     rightAscension: 104.64708,
     declination: -55.94897,
     color: '#ddc1aa',
-    summary: message('catalog.additions.bullet.summary'),
+    summary: message('catalog.observable-universe.bullet-cluster.summary'),
     sources: [
       { label: 'NASA Webb · Bullet Cluster', href: 'https://science.nasa.gov/missions/webb/nasa-webb-pierces-bullet-cluster-refines-its-mass/' },
       { label: 'Webb NIRCam · NASA, ESA, CSA, STScI, J. Jee, S. Cha & K. Finner (CC BY 4.0)', href: 'https://esawebb.org/images/bullet-cluster/' },
@@ -91,7 +94,7 @@ export const distantObjects: readonly DistantObject[] = [
     rightAscension: 339.014,
     declination: 33.964,
     color: '#e8b5ad',
-    observationImage: '/textures/galaxies/stephans-quintet/webb.webp',
+    observationModel: { file: '/textures/galaxies/stephans-quintet/webb.webp', shape: 'quintet', note: message('details.quintetModel') },
     summary: message('catalog.observable-universe.stephans-quintet.summary'),
     sources: [
       { label: 'NASA, ESA, CSA & STScI · Webb NIRCam and MIRI mosaic', href: 'https://esawebb.org/images/weic2208a/' },
@@ -110,7 +113,7 @@ export const distantObjects: readonly DistantObject[] = [
     rightAscension: 9.44295,
     declination: -33.71286,
     color: '#ffc075',
-    observationImage: '/textures/galaxies/cartwheel-galaxy/webb.webp',
+    observationModel: { file: '/textures/galaxies/cartwheel-galaxy/webb.webp', shape: 'cartwheel', note: message('details.webbRingGalaxyModel') },
     summary: message('catalog.observable-universe.cartwheel-galaxy.summary'),
     sources: [
       { label: 'NASA, ESA, CSA, STScI · CC BY 4.0', href: 'https://esawebb.org/images/weic2211a/' },

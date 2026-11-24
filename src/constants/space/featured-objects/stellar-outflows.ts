@@ -3,10 +3,10 @@ import type { FeaturedObject } from '../types';
 
 export const rAquarii: FeaturedObject = {
   id: 'r-aquarii',
-  name: message('catalog.next.rAqr.name'),
+  name: message('catalog.featured-objects.r-aquarii.name'),
   designation: 'R Aqr · HD 222800',
   aliases: ['R Aquarii', 'R Aqr', '물병자리R'],
-  description: message('catalog.next.rAqr.summary'),
+  description: message('catalog.featured-objects.r-aquarii.summary'),
   kind: 'wind-binary',
   observationStatus: 'observed',
   distanceLightYears: 700,
@@ -23,10 +23,10 @@ export const rAquarii: FeaturedObject = {
 
 export const hh46: FeaturedObject = {
   id: 'hh-46-47',
-  name: message('catalog.next.hh46.name'),
+  name: message('catalog.featured-objects.hh-46-47.name'),
   designation: 'Herbig–Haro 46/47',
   aliases: ['HH 46', 'HH 47', 'HH 46/47', 'Herbig-Haro 46/47'],
-  description: message('catalog.next.hh46.summary'),
+  description: message('catalog.featured-objects.hh-46-47.summary'),
   kind: 'star-forming-region',
   observationStatus: 'observed',
   distanceLightYears: 1470,

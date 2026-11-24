@@ -3,10 +3,10 @@ import type { FeaturedObject } from '../types';
 
 export const bubbleNebula: FeaturedObject = {
   id: 'ngc-7635',
-  name: message('catalog.additions.bubble.name'),
+  name: message('catalog.featured-objects.ngc-7635.name'),
   designation: 'NGC 7635 · Caldwell 11',
   aliases: ['Bubble Nebula', '거품성운'],
-  description: message('catalog.additions.bubble.summary'),
+  description: message('catalog.featured-objects.ngc-7635.summary'),
   kind: 'star-forming-region',
   observationStatus: 'observed',
   distanceLightYears: 8000,
@@ -24,7 +24,7 @@ export const g292Remnant: FeaturedObject = {
   name: 'G292.0+1.8',
   designation: 'SNR G292.0+1.8 · MSH 11−54',
   aliases: ['G292', 'G292 초신성 잔해'],
-  description: message('catalog.additions.g292.summary'),
+  description: message('catalog.featured-objects.g292.summary'),
   kind: 'supernova-remnant',
   observationStatus: 'observed',
   distanceLightYears: 20000,

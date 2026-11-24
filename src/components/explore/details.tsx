@@ -1,4 +1,4 @@
-import type { CatalogText } from '@/i18n/messages';
+import type { CatalogText, MessageKey } from '@/i18n/messages';
 import { useLanguage } from '@/i18n/language';
 import {
   type Supercluster,
@@ -524,7 +524,7 @@ export function NeighborhoodDetails({
           </ul>
         )}
         <p>{t('details.gaiaAroundSample')}</p>
-        <DetailSources sources={[{ label: 'ESA/Gaia/DPAC · Gaia DR3', href: 'https://gea.esac.esa.int/archive/' }]} />
+        <DetailSources sources={[milkyWay.neighborhood.gaiaSource]} />
       </section>
     );
   }
@@ -540,7 +540,7 @@ export function NeighborhoodDetails({
       <ModelNotes>
         {catalogText(neighborhood.summary)} {showGaia && t('details.gaiaSample')}
       </ModelNotes>
-      <DetailSources sources={showGaia ? [neighborhood.source, { label: 'ESA/Gaia/DPAC · Gaia DR3', href: 'https://gea.esac.esa.int/archive/' }] : [neighborhood.source]} />
+      <DetailSources sources={showGaia ? [neighborhood.source, neighborhood.gaiaSource] : [neighborhood.source]} />
     </section>
   );
 }
@@ -630,6 +630,11 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
 
 type ClusterLayer = import('@/constants/space').ClusterLayer;
 const clusterLayers = ['galaxies', 'gas', 'mass'] as const satisfies readonly ClusterLayer[];
+// 은하단 모형별 설명(bullet 은 층 전환 버튼과 함께 따로) — 모형을 추가하고 여기를 빠뜨리면 typecheck 가 잡는다.
+const clusterModelNote = { pandora: 'details.pandoraModel', 'macs-j0416': 'details.macsModel' } as const satisfies Record<
+  Exclude<Extract<DistantObject, { kind: 'galaxy-cluster' }>['clusterModel'], 'bullet'>,
+  MessageKey
+>;
 
 export function UniverseDetails({
   object,
@@ -705,8 +710,7 @@ export function UniverseDetails({
           {t('details.showCounterjet')}
         </label>
       )}
-      {object.kind === 'ring-galaxy' && <p>{t('details.webbRingGalaxyModel')}</p>}
-      {object.kind === 'galaxy-group' && <p>{t('details.quintetModel')}</p>}
+      {'observationModel' in object && object.observationModel.note && <p>{catalogText(object.observationModel.note)}</p>}
       {object.kind === 'galaxy-cluster' &&
         (object.clusterModel === 'bullet' ? (
           <>
@@ -720,13 +724,13 @@ export function UniverseDetails({
             </div>
           </>
         ) : (
-          <p>{t(object.clusterModel === 'macs-j0416' ? 'details.macsModel' : 'details.pandoraModel')}</p>
+          <p>{t(clusterModelNote[object.clusterModel])}</p>
         ))}
       <ModelNotes>
         {object.kind === 'quasar' ? t('details.accretionModel') : t('details.galaxyModel')} {object.kind === 'quasar' && <>{t('details.blackHoleLensing')} </>}
         {t(object.observationScale ? 'details.calibratedGalaxyScale' : 'details.cosmicModelScale')}
       </ModelNotes>
-      <DetailSources sources={[...object.sources, observableUniverse.sources[1]]} />
+      <DetailSources sources={[...object.sources, observableUniverse.cosmologySource]} />
     </section>
   );
 }

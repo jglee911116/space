@@ -1,6 +1,6 @@
 import { message, type CatalogText } from '@/i18n/messages';
 import type { Body, StarSystem } from '../../types';
-import { KM_PER_AU, SOLAR_LUMINOSITY_W, SOLAR_RADIUS_KM } from '../../units';
+import { KM_PER_AU, SOLAR_LUMINOSITY_W, SOLAR_RADIUS_KM, SOLAR_TEMPERATURE_K } from '../../units';
 
 const SOURCE = { label: message('catalog.m31-eclipsing-binary.source.source.vilardell-et-al-eclipsing-binary-observations-and'), href: 'https://doi.org/10.1051/0004-6361/200913299' };
 const PRIMARY_MASS = 21.7;
@@ -24,7 +24,7 @@ function component(id: string, name: CatalogText, mass: number, companionMass: n
       evolutionaryStage: message('catalog.m31-eclipsing-binary.evolutionaryStage'),
       spectralType: message('catalog.m31-eclipsing-binary.spectralType'),
       temperatureK,
-      luminosityWatts: radiusSolar ** 2 * (temperatureK / 5772) ** 4 * SOLAR_LUMINOSITY_W,
+      luminosityWatts: radiusSolar ** 2 * (temperatureK / SOLAR_TEMPERATURE_K) ** 4 * SOLAR_LUMINOSITY_W,
       emissionColor: hotter ? '#a8caff' : '#b9d0fc',
       glowStrength: hotter ? 1.12 : 0.84,
       photosphere: { seed: hotter ? 163 : 167, granuleScale: 0, activeRegions: 0 },

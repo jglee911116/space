@@ -3,7 +3,7 @@
 import { Message, useLanguage } from '@/i18n/language';
 import dynamic from 'next/dynamic';
 import { withLocale, withoutLocale } from '@/i18n/routing';
-import type { Locale } from '@/i18n/messages';
+import type { Locale, MessageKey } from '@/i18n/messages';
 import { CatalogSearch } from './catalog-search';
 import { LanguageSelect } from './language-select';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -57,65 +57,26 @@ import type { ClusterLayer } from '@/constants/space';
 import { featuredOverviewDistanceKpc, type ZoomHandoff, type ZoomScale } from './utils/zoom';
 import styles from './explore.module.scss';
 
-const SystemScene = memo(
-  dynamic(() => import('./scenes/system-scene'), {
-    ssr: false,
-    loading: () => (
-      <p className={styles.status} role="status">
-        <Message id={'canvas.loadingScene'} />
-      </p>
-    ),
-  }),
-);
-
-const GalaxyScene = memo(
-  dynamic(() => import('./scenes/galaxy-scene'), {
-    ssr: false,
-    loading: () => (
-      <p className={styles.status} role="status">
-        <Message id={'canvas.loadingMilkyWay'} />
-      </p>
-    ),
-  }),
-);
-
-const NeighborhoodScene = memo(
-  dynamic(() => import('./scenes/neighborhood-scene'), {
-    ssr: false,
-    loading: () => (
-      <p className={styles.status} role="status">
-        <Message id={'canvas.loadingDistanceMap'} />
-      </p>
-    ),
-  }),
-);
-
-const LocalGroupScene = dynamic(() => import('./scenes/local-group-scene'), {
-  ssr: false,
-  loading: () => (
+function SceneStatus({ id }: { id: MessageKey }) {
+  return (
     <p className={styles.status} role="status">
-      <Message id={'canvas.loadingGalaxy'} />
+      <Message id={id} />
     </p>
-  ),
-});
+  );
+}
 
-const FeaturedObjectScene = dynamic(() => import('./scenes/featured-object-scene'), {
-  ssr: false,
-  loading: () => (
-    <p className={styles.status} role="status">
-      <Message id={'canvas.loadingObject'} />
-    </p>
-  ),
-});
+// next/dynamic 이 ssr·loading 을 정적으로 읽으므로 옵션은 객체 리터럴 그대로 둔다.
+const SystemScene = memo(dynamic(() => import('./scenes/system-scene'), { ssr: false, loading: () => <SceneStatus id="canvas.loadingScene" /> }));
 
-const UniverseScene = dynamic(() => import('./scenes/universe-scene'), {
-  ssr: false,
-  loading: () => (
-    <p className={styles.status} role="status">
-      <Message id={'canvas.loadingUniverseMap'} />
-    </p>
-  ),
-});
+const GalaxyScene = memo(dynamic(() => import('./scenes/galaxy-scene'), { ssr: false, loading: () => <SceneStatus id="canvas.loadingMilkyWay" /> }));
+
+const NeighborhoodScene = memo(dynamic(() => import('./scenes/neighborhood-scene'), { ssr: false, loading: () => <SceneStatus id="canvas.loadingDistanceMap" /> }));
+
+const LocalGroupScene = dynamic(() => import('./scenes/local-group-scene'), { ssr: false, loading: () => <SceneStatus id="canvas.loadingGalaxy" /> });
+
+const FeaturedObjectScene = dynamic(() => import('./scenes/featured-object-scene'), { ssr: false, loading: () => <SceneStatus id="canvas.loadingObject" /> });
+
+const UniverseScene = dynamic(() => import('./scenes/universe-scene'), { ssr: false, loading: () => <SceneStatus id="canvas.loadingUniverseMap" /> });
 
 type ExplorerView = Overview | 'galaxy' | 'neighborhood';
 const DEFAULT_SYSTEM_ID = systems[0].id;
@@ -233,11 +194,10 @@ export function Explorer() {
     (wheelView ? wheelView.scene === 'galaxy' : viewParam === 'galaxy' || targetParam === milkyWay.center.id || (!!pathGalaxy && !systemParam && !targetParam && !viewParam));
   const focusGalacticCenter = galaxyView && targetParam === milkyWay.center.id;
   const focusBlackHole = focusGalacticCenter && (centerZoom?.close ?? true);
+  // 지도에서 초점을 둔 천체도 미리보기(FeaturedObjectPreview)가 강착 흐름을 재생하는 종류면 '고정 배치' 안내를 숨긴다.
+  const focusedMapKind = extraView ? galaxyObjects.find(({ id }) => id === focus)?.kind : undefined;
   const animatedAccretion =
-    distantObject?.kind === 'quasar' ||
-    featuredObject?.kind === 'black-hole' ||
-    featuredObject?.kind === 'x-ray-binary' ||
-    (extraView && galaxyObjects.find(({ id }) => id === focus)?.kind === 'black-hole');
+    distantObject?.kind === 'quasar' || featuredObject?.kind === 'black-hole' || featuredObject?.kind === 'x-ray-binary' || focusedMapKind === 'black-hole' || focusedMapKind === 'x-ray-binary';
   const featuredShape = featuredObject?.observationImage?.shape;
   const animatedFeaturedVolume = !!featuredObject?.stellarWind || (!!featuredShape && animatedVolumeShapes.has(featuredShape));
   const heading = region
@@ -507,7 +467,7 @@ export function Explorer() {
           />
         ) : featuredObject ? (
           <FeaturedObjectScene
-            key={featuredObject.id}
+            key={`${featuredObject.id}:${recenter}`}
             object={featuredObject}
             reportDistance={reportDistance}
             simulationDaysRef={simulationDaysRef}
@@ -530,6 +490,7 @@ export function Explorer() {
             systemMarkers={systemMarkers}
             objectMarkers={objectMarkers}
             accretionPlaybackTime={accretionPlaybackTime}
+            simulationDaysRef={simulationDaysRef}
             onSelectObject={selectFeaturedObject}
             focusId={focus ?? undefined}
             onSelectSystem={enterMarkedSystem}

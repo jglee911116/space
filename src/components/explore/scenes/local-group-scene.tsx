@@ -22,6 +22,7 @@ import { pointBudget, projectedDiameter, updatePointDetail } from '../three/maps
 import { GalacticLabelLayer, GalacticMarker } from '../three/maps/galactic-marker';
 import { DistanceRings } from '../three/maps/distance-rings';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
+import { equatorialPosition } from '../utils/nearby-positions';
 import {
   ACCRETION_MODEL_EINSTEIN_RADIUS,
   ACCRETION_MODEL_EXIT_DISTANCE,
@@ -38,6 +39,7 @@ type Props = {
   systemMarkers: readonly { id: string; name: CatalogText; position: readonly [number, number, number] }[];
   objectMarkers: readonly { object: FeaturedObject; position: readonly [number, number, number] }[];
   accretionPlaybackTime: RefObject<number>;
+  simulationDaysRef: RefObject<number>;
   onSelectObject: (id: string) => void;
   onSelectSystem: (id: string, entry?: ZoomHandoff) => void;
   focusId?: string;
@@ -51,11 +53,7 @@ type Props = {
   onExitGroup: (entry: ZoomHandoff) => void;
 };
 
-const positions = localGroup.galaxies.map((galaxy) => {
-  const ra = MathUtils.degToRad(galaxy.skyPosition?.rightAscension ?? 0);
-  const dec = MathUtils.degToRad(galaxy.skyPosition?.declination ?? 0);
-  return new Vector3(Math.cos(dec) * Math.cos(ra), Math.sin(dec), -Math.cos(dec) * Math.sin(ra)).multiplyScalar(galaxy.distanceKpc);
-});
+const positions = localGroup.galaxies.map((galaxy) => equatorialPosition(galaxy.skyPosition?.rightAscension ?? 0, galaxy.skyPosition?.declination ?? 0, galaxy.distanceKpc));
 const reference = positions.find((position) => position.length() > 500);
 if (reference) {
   const rotation = new Quaternion().setFromUnitVectors(reference.clone().normalize(), new Vector3(1, 0, 0));
@@ -141,6 +139,7 @@ function Scene({
   systemMarkers,
   objectMarkers,
   accretionPlaybackTime,
+  simulationDaysRef,
   onSelectObject,
   onSelectSystem,
   focusId,
@@ -266,7 +265,7 @@ function Scene({
           {objectMarkers.map(({ object, position }) => (
             <group key={object.id} position={[...position]}>
               {(object.extentLightYears > 0 || object.photosphere || object.id === focusId) && (
-                <FeaturedObjectPreview object={object} focused={object.id === focusId} playbackTime={object.kind === 'black-hole' ? accretionPlaybackTime : undefined} />
+                <FeaturedObjectPreview object={object} focused={object.id === focusId} playbackTime={accretionPlaybackTime} simulationDays={simulationDaysRef} />
               )}
               <GalacticMarker
                 name={object.name}

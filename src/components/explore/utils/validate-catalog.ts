@@ -4,9 +4,9 @@ import { Vector3 } from 'three';
 import { decodeGaiaSource, gaiaCatalogPath, gaiaRecordBytes, gaiaSampleRadiusLightYears, type GaiaSource } from './gaia-format';
 import { nearbyPositions } from './nearby-positions';
 import { gaiaSourcePath, readExplorerQuery } from './paths';
-import { createSearchCatalog } from './catalog-search';
+import { createSearchCatalog, searchCatalog } from './catalog-search';
 import { regionMarkers } from './cluster-markers';
-import { languages } from '@/i18n/messages';
+import { languages, translate, type Locale } from '@/i18n/messages';
 import { distantObjects, featuredObjects, gaiaCounterparts, galaxies, galaxyAssociations, localGroup, milkyWay, observableUniverse, superclusters, systems } from '@/constants/space';
 
 function requireValue(condition: unknown, message: string): asserts condition {
@@ -30,6 +30,9 @@ function checkRelationships() {
 
   for (const system of systems) {
     checkReference(`${system.id}.galaxyId`, system.galaxyId, galaxyIds);
+    // 우리은하 계는 이웃 지도(neighborhood, 기준 계는 예외)에, 다른 은하의 계는 은하 지도 마커(galaxyMarkerKpc)에 놓여야 찾아 들어갈 수 있다.
+    const external = (system.galaxyId ?? milkyWay.id) !== milkyWay.id;
+    requireValue(external ? system.galaxyMarkerKpc && !system.neighborhood : system.neighborhood || system.id === milkyWay.systemId, `${system.id}: not placed on any map`);
 
     // Orbit calculations visit bodies in catalog order and expect each parent to be available first.
     const seen = new Set<string>();
@@ -42,6 +45,8 @@ function checkRelationships() {
         requireValue(seen.has(body.parent), `${location}: parent ${body.parent} is missing or listed later`);
         requireValue(body.orbit, `${location}: missing orbit`);
       }
+      // 궤도 계산(orbit.ts)이 타원 궤도만 다룬다 — e ≥ 1 이면 NaN 위치가 된다.
+      if (body.orbit) requireValue(body.orbit.eccentricity >= 0 && body.orbit.eccentricity < 1 && body.orbit.axisAu > 0 && body.orbit.periodDays > 0, `${location}: invalid orbit elements`);
       seen.add(body.id);
     }
   }
@@ -159,6 +164,15 @@ export function validateCatalog() {
 
   const search = createSearchCatalog(systems);
   requireValue(new Set(search.map(({ path }) => path)).size === search.length, 'duplicate search destinations');
+  // 모든 항목은 두 언어 이름과 별칭으로 실제 검색 결과(상위 12개)에 나와야 한다. 자기 이름은 늘 정확 일치라, 걸리는 건 검색어가 안 되는 이름·별칭(기호뿐)과
+  // 13개 이상이 똑같이 쓰는 이름·별칭이다 — 몇 항목 사이의 이름 충돌이나 남의 검색을 가로채는 흔한 별칭은 막지 않는다.
+  for (const entry of search) {
+    for (const query of [...Object.keys(languages).map((locale) => translate(locale as Locale, entry.name)), ...entry.aliases])
+      requireValue(
+        searchCatalog(search, query).some(({ path }) => path === entry.path),
+        `search "${query}" misses ${entry.path}`,
+      );
+  }
   for (const { path } of search) {
     const url = new URL(path, 'https://catalog.invalid');
     const [, segment, id] = url.pathname.split('/');

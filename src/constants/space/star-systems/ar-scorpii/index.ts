@@ -15,12 +15,12 @@ export const arScorpii: StarSystem = {
   neighborhood: { distanceLightYears: 380, rightAscension: 245.447013, declination: -22.886218, source: observation },
   overviewDistance: 0.16,
   overviewLabel: message('navigation.viewBinary'),
-  summary: message('catalog.additions.arSco.summary'),
+  summary: message('catalog.ar-scorpii.ar-scorpii.summary'),
   sources,
   bodies: [
     {
       id: 'ar-scorpii-white-dwarf',
-      name: message('catalog.additions.arSco.whiteDwarf'),
+      name: message('catalog.ar-scorpii.ar-scorpii-white-dwarf.name'),
       kind: 'star',
       parent: null,
       displayRadius: 0.0045,
@@ -31,7 +31,7 @@ export const arScorpii: StarSystem = {
     },
     {
       id: 'ar-scorpii-red-dwarf',
-      name: message('catalog.additions.arSco.redDwarf'),
+      name: message('catalog.ar-scorpii.ar-scorpii-red-dwarf.name'),
       kind: 'star',
       parent: null,
       displayRadius: 0.014,

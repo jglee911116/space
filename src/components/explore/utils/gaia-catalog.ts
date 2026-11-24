@@ -46,7 +46,7 @@ export const gaiaNeighborRadii = [5, 10, 25] as const;
 export type GaiaNeighborRadius = (typeof gaiaNeighborRadii)[number];
 
 export function readGaiaNeighborRadius(value: string | null): GaiaNeighborRadius {
-  return value === '5' ? 5 : value === '25' ? 25 : 10;
+  return gaiaNeighborRadii.find((radius) => String(radius) === value) ?? 10;
 }
 const gaiaNeighborLimit = 20;
 

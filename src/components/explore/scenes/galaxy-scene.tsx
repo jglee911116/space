@@ -401,12 +401,7 @@ function GalacticMap({
         .map((object, index) => (
           <group key={object.id} position={featuredPosition(object, radius)}>
             {(object.extentLightYears > 0 || object.photosphere || object.id === focusedObjectId) && (
-              <FeaturedObjectPreview
-                object={object}
-                focused={object.id === focusedObjectId}
-                playbackTime={object.kind === 'x-ray-binary' ? accretionPlaybackTime : undefined}
-                simulationDays={simulationDaysRef}
-              />
+              <FeaturedObjectPreview object={object} focused={object.id === focusedObjectId} playbackTime={accretionPlaybackTime} simulationDays={simulationDaysRef} />
             )}
             <GalacticMarker
               name={object.name}

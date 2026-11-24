@@ -6,7 +6,7 @@ import { Line, OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } from 'react';
 import { AdditiveBlending, Box3, MathUtils, Vector3 } from 'three';
-import { observableUniverse, distantObjects, galaxies, milkyWay, type DistantObject, type GalaxyAssociation, superclusters, type Supercluster } from '@/constants/space';
+import { observableUniverse, distantObjects, galaxies, milkyWay, type DistantObject, type DistantVolumeModel, type GalaxyAssociation, superclusters, type Supercluster } from '@/constants/space';
 import { cosmologicalDistances } from '../utils/cosmology';
 import { regionMarkers } from '../utils/cluster-markers';
 import { KM_PER_AU, KM_PER_LIGHT_YEAR, KM_PER_KPC } from '@/constants/space/units';
@@ -24,6 +24,7 @@ import { LaniakeaVolume } from '../three/maps/laniakea-volume';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { GalacticLabelLayer, GalacticMarker } from '../three/maps/galactic-marker';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
+import { equatorialPosition } from '../utils/nearby-positions';
 import { LOCAL_GROUP_ENTRY_MILLION_LIGHT_YEARS, type ZoomHandoff } from '../utils/zoom';
 
 type Props = {
@@ -48,18 +49,15 @@ type Props = {
 
 const KM_PER_MAP_UNIT = 1e6 * KM_PER_LIGHT_YEAR;
 const DISTANT_VOLUME_RADIUS = 5.6;
+// 관측 볼륨 모형마다 영상과 맞는 카메라 구도(quintet-density 의 재투영 상수가 이 위치를 전제한다).
+const volumeCamera: Record<DistantVolumeModel['shape'], [number, number, number]> = { cartwheel: [1.7, 1.0, 14.6], quintet: [0.36, 0.46, 15.8], merger: [0.32, 0.36, 12.5] };
 const RADIUS = observableUniverse.radiusMillionLightYears;
 const VIEW = new Vector3(0.29, 0.39, 1).normalize();
 const ORIGIN = new Vector3();
-function positionAt(rightAscension: number, declination: number, distance: number) {
-  const ra = MathUtils.degToRad(rightAscension);
-  const dec = MathUtils.degToRad(declination);
-  return new Vector3(Math.cos(dec) * Math.cos(ra), Math.sin(dec), -Math.cos(dec) * Math.sin(ra)).multiplyScalar(distance);
-}
 
 const landmarks = distantObjects.map((object) => ({
   ...object,
-  position: positionAt(object.rightAscension, object.declination, cosmologicalDistances(object.redshift).comovingLightYears / 1e6),
+  position: equatorialPosition(object.rightAscension, object.declination, cosmologicalDistances(object.redshift).comovingLightYears / 1e6),
 }));
 
 function MapMarker({
@@ -136,7 +134,7 @@ function UniverseMap({
                 galaxyId: id,
                 galaxy,
                 clusterId: undefined,
-                position: positionAt(skyPosition.rightAscension, skyPosition.declination, distance + depth),
+                position: equatorialPosition(skyPosition.rightAscension, skyPosition.declination, distance + depth),
               },
             ]
           : [];
@@ -145,7 +143,7 @@ function UniverseMap({
     return (region ? regionMarkers(region) : []).map((item) => ({
       ...item,
       galaxy: undefined,
-      position: positionAt(item.rightAscension, item.declination, item.distanceMly),
+      position: equatorialPosition(item.rightAscension, item.declination, item.distanceMly),
     }));
   }, [association, region]);
   const flowAnchors = useMemo(() => {
@@ -300,8 +298,9 @@ function DistantGalaxyModel({
 }) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const initialDistance = useRef(0);
-  const volumeShape = object.kind === 'ring-galaxy' ? 'cartwheel' : object.kind === 'galaxy-group' ? 'quintet' : object.kind === 'galaxy-merger' ? 'merger' : undefined;
-  const texture = useSurfaceMap('observationImage' in object ? object.observationImage : undefined);
+  const volume = 'observationModel' in object ? object.observationModel : undefined;
+  const volumeShape = volume?.shape;
+  const texture = useSurfaceMap(volume?.file);
   useFrame(({ camera, size }) => {
     const scale = object.observationScale;
     const distance = controls.current?.getDistance();
@@ -361,17 +360,15 @@ export default function UniverseScene(props: Props) {
     if (object) onExitDistantObject(object.id);
   };
   const position: [number, number, number] =
-    object?.kind === 'ring-galaxy'
-      ? [1.7, 1.0, 14.6]
-      : object?.kind === 'galaxy-cluster' && object.clusterModel !== 'pandora'
-        ? [0, 0, 9.1]
-        : object?.kind === 'galaxy-merger'
-          ? [0.32, 0.36, 12.5]
-          : object?.kind === 'galaxy-group' || object?.kind === 'galaxy-cluster'
-            ? [0.36, 0.46, 15.8]
-            : object
-              ? [5, 5.6, 13]
-              : [0, 0, RADIUS * 2.65];
+    object && 'observationModel' in object
+      ? volumeCamera[object.observationModel.shape]
+      : object?.kind === 'galaxy-cluster'
+        ? object.clusterModel === 'pandora'
+          ? [0.36, 0.46, 15.8]
+          : [0, 0, 9.1]
+        : object
+          ? [5, 5.6, 13]
+          : [0, 0, RADIUS * 2.65];
   return (
     <CanvasBoundary>
       <Canvas

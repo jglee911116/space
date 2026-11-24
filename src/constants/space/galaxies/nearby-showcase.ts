@@ -42,7 +42,7 @@ export const nearbyShowcase = [
     id: 'm94',
     name: 'M94 · NGC 4736',
     aliases: ['M 94', 'Messier 94', 'NGC 4736'],
-    summary: message('catalog.next.m94.summary'),
+    summary: message('catalog.nearby-showcase.m94.summary'),
     superclusterId: 'virgo',
     distanceKpc: 16 * KPC_PER_MLY,
     skyPosition: { rightAscension: 192.721, declination: 41.121 },
@@ -57,7 +57,7 @@ export const nearbyShowcase = [
   {
     id: 'ngc-1512',
     name: 'NGC 1512',
-    summary: message('catalog.additions.ngc1512.summary'),
+    summary: message('catalog.nearby-showcase.ngc-1512.summary'),
     superclusterId: 'virgo',
     distanceKpc: 30 * KPC_PER_MLY,
     skyPosition: { rightAscension: 60.97617, declination: -43.34886 },

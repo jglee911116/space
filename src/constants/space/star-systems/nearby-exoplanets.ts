@@ -1,9 +1,8 @@
 import { message } from '@/i18n/messages';
 import type { Body, Source, StarSystem } from '../types';
-import { LIGHT_YEARS_PER_KPC, SOLAR_LUMINOSITY_W, SOLAR_RADIUS_KM } from '../units';
+import { EARTH_RADIUS_KM, LIGHT_YEARS_PER_KPC, SOLAR_LUMINOSITY_W, SOLAR_RADIUS_KM, SOLAR_TEMPERATURE_K } from '../units';
 
 const lightYearsPerParsec = LIGHT_YEARS_PER_KPC / 1000;
-const earthMeanRadiusKm = 6371;
 const lhsSource = { label: 'NASA Exoplanet Archive · LHS 1140', href: 'https://exoplanetarchive.ipac.caltech.edu/overview/GJ%203053' };
 const glieseSource = { label: 'NASA Exoplanet Archive · Gliese 12', href: 'https://exoplanetarchive.ipac.caltech.edu/overview/Gliese%2012%20b' };
 const glieseDiscovery = { label: 'Kuzuhara et al. · Gliese 12 b', href: 'https://ntrs.nasa.gov/citations/20250005678' };
@@ -25,7 +24,7 @@ function redDwarf(id: string, name: string, radiusSolar: number, temperatureK: n
       evolutionaryStage: message('catalog.stellar-stage.mainSequence'),
       spectralType,
       temperatureK,
-      luminosityWatts: SOLAR_LUMINOSITY_W * radiusSolar ** 2 * (temperatureK / 5772) ** 4,
+      luminosityWatts: SOLAR_LUMINOSITY_W * radiusSolar ** 2 * (temperatureK / SOLAR_TEMPERATURE_K) ** 4,
       emissionColor: '#ff9b6c',
       photosphere,
     },
@@ -39,7 +38,7 @@ function transitPlanet(id: string, name: string, parent: string, radiusEarth: nu
     name,
     kind: 'planet',
     parent,
-    radiusKm: Math.round(radiusEarth * earthMeanRadiusKm),
+    radiusKm: Math.round(radiusEarth * EARTH_RADIUS_KM),
     displayRadius: 0.024,
     tilt: 0,
     appearance: 'rock',

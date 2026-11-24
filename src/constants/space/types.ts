@@ -173,7 +173,7 @@ export type HostGalaxy = Galaxy & {
   /** 은하 공전 기준 항성계(줌인 대상). */
   systemId: string;
   /** 기준 항성계 주변 거리 지도. 계에 `neighborhood` 가 있으면 포함된다. */
-  neighborhood: { name: CatalogText; summary: CatalogText; source: Source };
+  neighborhood: { name: CatalogText; summary: CatalogText; source: Source; /** Gaia DR3 표본(public/catalog/gaia-dr3-nearby)의 출처. */ gaiaSource: Source };
   /** 은하 장면 상세 패널에서 summary 앞에 놓는 문단. */
   notes: readonly CatalogText[];
   demoYearsPerSecond: number;
@@ -329,7 +329,16 @@ export type Supercluster = {
   sources: readonly Source[];
 };
 
-export type ObservableUniverse = { name: CatalogText; radiusMillionLightYears: number; sources: readonly Source[] };
+export type ObservableUniverse = {
+  name: CatalogText;
+  radiusMillionLightYears: number;
+  sources: readonly Source[];
+  /** 적색편이 → 거리 계산(utils/cosmology.ts)의 우주론 매개변수 출처. */
+  cosmologySource: Source;
+};
+
+/** 원거리 은하의 관측 영상 기반 3D 볼륨 — shape 가 밀도 모형과 카메라 구도를, note 가 정보 패널 설명을 정한다. */
+export type DistantVolumeModel = { file: string; shape: 'cartwheel' | 'quintet' | 'merger'; note?: CatalogText };
 
 type DistantObjectFields = {
   id: string;
@@ -349,8 +358,8 @@ export type DistantObject = DistantObjectFields &
   (
     | { kind: 'quasar'; visibleJet: boolean; blackHoleMassSolar?: number; accretionDisk: AccretionDisk }
     | { kind: 'early-galaxy'; ultravioletHalfLightRadiusParsecs: number }
-    | { kind: 'ring-galaxy'; observationImage: string }
-    | { kind: 'galaxy-group'; observationImage: string }
+    | { kind: 'ring-galaxy'; observationModel: DistantVolumeModel }
+    | { kind: 'galaxy-group'; observationModel: DistantVolumeModel }
     | { kind: 'galaxy-cluster'; clusterModel: 'pandora' | 'bullet' | 'macs-j0416' }
-    | { kind: 'galaxy-merger'; observationImage: string }
+    | { kind: 'galaxy-merger'; observationModel: DistantVolumeModel }
   );
