@@ -32,3 +32,27 @@ pnpm build
   - `three/` — 장면들이 공유하는 three 부품. `utils/` — 궤도·줌·거리 축척·좌표·우주론 거리·포맷·경로·seeded 난수(`random.ts`)·카탈로그 검증.
 - 스타일은 `*.module.scss`, 공용 토큰은 `src/styles/_variables.scss`(모든 scss 에 자동 @use).
 - 포맷은 Prettier(`printWidth 200`, singleQuote).
+
+## 작업 체크리스트
+
+### 천체 추가
+- [ ] 종류에 맞는 `src/constants/space/` 파일에 등록하고, 경로 id 가 기존 값과 겹치지 않는지 확인
+- [ ] 좌표·거리·적색편이·출처 URL 은 원문(SIMBAD·NASA·논문)에서 직접 확인(그럴듯한 오값이 섞인다)
+- [ ] 약 163광년 이내 항성계면 `gaia-counterparts.ts` 에 Gaia DR3 source_id 연결(SIMBAD 에서 확인)
+- [ ] `ko.json`·`en.json` 에 같은 키로 이름·설명, 통용 별칭은 `aliases`
+- [ ] 은하군·은하단 구성이면 `galaxy-associations.ts`, 은하 속 하위 천체면 `galaxyId`·`parentObjectId`
+- [ ] 텍스처는 WebP(`cwebp -q 82` 항성계, `-q 85` 관측 이미지)로 정해진 폴더에, 원본보다 작은지 확인
+- [ ] 대상 전용 모양·문구는 데이터 필드로 — 렌더러에서 id 로 분기하지 않는다
+
+### 기능 추가
+- [ ] 경로 문자열은 `utils/paths.ts` 로만, 화면 문구는 ko/en 양쪽
+- [ ] WebGL 장면은 `ssr:false` 로만 로드, 서버 코드(page·layout·validate-catalog)는 훅 있는 모듈을 import 하지 않는다
+- [ ] 새 데이터 필드에 참조·형식 규칙이 있으면 `validate-catalog.ts` 에 검사 추가
+- [ ] 브라우저에서 확인: 콘솔 WebGL 오류, 모바일(560px 이하), `prefers-reduced-motion`
+- [ ] 새 필드·파일·규칙은 이 문서의 구조 설명에도 반영
+
+### 마무리
+- [ ] `pnpm lint && pnpm typecheck && pnpm format:check && pnpm build`(빌드가 카탈로그를 검증)
+- [ ] 새 천체·기능마다 e2e 하나 추가(검색 → 열기 → 텍스처 로드 → WebGL 오류 없음)
+- [ ] `PLAYWRIGHT_CHANNEL=chrome pnpm test:e2e` — CI 는 e2e 를 돌리지 않으므로 푸시 전 로컬에서
+- [ ] 데이터 추가와 렌더링 변경은 커밋을 나누고, 푸시 후 GitHub Actions CI 결과 확인
