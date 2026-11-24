@@ -22,7 +22,6 @@ import { NebulaVolume } from '../three/nebulae/nebula-volume';
 import { STELLAR_WIND_RADIUS } from '../three/stellar/stellar-wind-density';
 import { StellarGlow } from '../three/stellar/stellar-glow';
 import { useSurfaceMap } from '../three/shared/use-surface-map';
-import { useCursorZoom } from '../three/shared/use-cursor-zoom';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { systemHandoffDistanceAu, oortRadius, zoomLayers, type ZoomHandoff, type ZoomScale } from '../utils/zoom';
 
@@ -236,7 +235,6 @@ function Scene({
   const satelliteParent = targetBody && satellites.has(targetBody.id) ? targetBody.parent : target;
 
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
-  const cursorZoomRef = useCursorZoom();
   const bodies = useRef<Record<string, Group | undefined>>({});
   const labelBounds = useRef(new Map<string, LabelBounds>());
   const distanceSample = useRef<{ origin: string; body: string; next: number } | null>(null);
@@ -255,7 +253,7 @@ function Scene({
   const distanceAtStart = useRef(0);
   const [initialRequest] = useState(() => ({ target, overview, recenter }));
   const [initialTarget] = useState(() => (!entry && target ? setWorldPosition(system, motions, target, new Vector3(), 0) : new Vector3()));
-  const [scratch] = useState(() => ({ offset: new Vector3(), focus: new Vector3(), previousBodyPosition: new Vector3(), translation: new Vector3() }));
+  const [scratch] = useState(() => ({ offset: new Vector3(), focus: new Vector3() }));
   const [distanceScratch] = useState(() => ({ origin: new Vector3(), body: new Vector3(), local: new Vector3() }));
   const [labelPoint] = useState(() => new Vector3());
   const [surfacePoint] = useState(() => new Vector3());
@@ -268,10 +266,9 @@ function Scene({
 
   useEffect(() => {
     if (entry && target === initialRequest.target && overview === initialRequest.overview && recenter === initialRequest.recenter) return;
-    cursorZoomRef.current = false;
     destination.current = distance;
     revealRedSpot.current = targetBody?.surfaceEffect === 'red-spot';
-  }, [target, targetBody, overview, distance, recenter, entry, initialRequest, cursorZoomRef]);
+  }, [target, targetBody, overview, distance, recenter, entry, initialRequest]);
 
   useFrame(({ camera }, delta) => {
     if (!controls.current) return;
@@ -326,10 +323,7 @@ function Scene({
     const layers = zoomLayers(system, radius, farOverview);
     const bodyPosition = trackedBody?.position ?? ORIGIN;
     const focus = scratch.focus.copy(bodyPosition).multiplyScalar(layers.systemOpacity);
-    if (goal === null && cursorZoomRef.current) {
-      // Follow the selected body's motion without discarding the cursor's offset from it.
-      orbitControls.target.add(scratch.translation.subVectors(bodyPosition, scratch.previousBodyPosition));
-    } else if (goal === null) {
+    if (goal === null) {
       focus.lerp(ORIGIN, MathUtils.smoothstep(radius, farOverview, farOverview * 2.8));
       orbitControls.target.copy(focus);
     } else {
@@ -339,7 +333,6 @@ function Scene({
         destination.current = null;
       }
     }
-    scratch.previousBodyPosition.copy(bodyPosition);
     camera.position.copy(orbitControls.target).add(scratch.offset.setLength(goal !== null && destination.current === null ? goal : radius));
     orbitControls.update();
     reportDistance(kmPerPixel(camera, height, orbitControls.getDistance(), KM_PER_AU / UNITS_PER_AU));
@@ -706,7 +699,7 @@ export default function SystemScene(props: SceneProps) {
   return (
     <CanvasBoundary>
       <div className={styles.systemCanvas} role="group" aria-label={t('canvas.interactiveModel', [catalogText(props.system.name)])}>
-        <Canvas camera={initialCamera} dpr={[1, 1.5]} fallback={<span aria-hidden="true">{t('canvas.systemModel', [catalogText(props.system.name)])}</span>}>
+        <Canvas camera={initialCamera} dpr={[1, 1.5]}>
           <Scene {...props} farOverview={farOverview} showHiddenSurface={showHiddenSurface} labels={labels} />
         </Canvas>
         {props.system.home && props.target && (

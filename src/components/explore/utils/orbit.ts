@@ -3,6 +3,9 @@ import type { Body, StarSystem } from '@/constants/space';
 
 export const REALTIME_DAYS_PER_SECOND = 1 / 86_400;
 
+/** 재생 시간에 맞춰 움직이는 관측 볼륨 형태 — NebulaVolume 애니메이션과 재생 패널 안내가 함께 쓴다. */
+export const animatedVolumeShapes: ReadonlySet<string> = new Set(['bipolar-jet', 'shocked-shell', 'dust-spiral', 'edge-on-disk', 'light-echo', 'vela-wind', 'symbiotic-outflow', 'protostar-bows']);
+
 export function elapsedSimulationDays(delta: number, daysPerSecond: number) {
   return (daysPerSecond === REALTIME_DAYS_PER_SECOND ? delta : Math.min(delta, 0.1)) * daysPerSecond;
 }

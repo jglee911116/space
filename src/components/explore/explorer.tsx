@@ -50,7 +50,7 @@ import {
   systemPath,
   UNIVERSE_PATH,
 } from './utils/paths';
-import { elapsedSimulationDays, REALTIME_DAYS_PER_SECOND } from './utils/orbit';
+import { animatedVolumeShapes, elapsedSimulationDays, REALTIME_DAYS_PER_SECOND } from './utils/orbit';
 import type { Overview, Target } from './scenes/system-scene';
 import { AU_PER_KPC } from '@/constants/space/units';
 import type { ClusterLayer } from '@/constants/space';
@@ -124,10 +124,13 @@ const gaiaSystemCenters = new Map(
 );
 type HoveredBody = { id: string; x: number; y: number };
 
-function recordView(locale: Locale, target: Target, overview: ExplorerView, systemId: string, defaultSystemId: string, galaxyId: string) {
+// 항성계 화면 주소는 systemPath 와 같은 꼴(?system=…)로 남겨 같은 화면에 주소가 둘 생기지 않게 한다.
+function recordView(locale: Locale, target: Target, overview: ExplorerView, systemId: string, galaxyId: string) {
   const url = new URL(window.location.href);
   const path = withLocale(overview === 'neighborhood' ? HOME_PATH : galaxyPath(galaxyId), locale);
-  const systemParam = overview === 'neighborhood' || (systemId === defaultSystemId && (overview || target)) ? null : systemId;
+  const systemParam = overview === 'neighborhood' ? null : systemId;
+  // 예전에 만든 주소(기본 계는 ?target=earth 처럼 system 생략)도 같은 화면으로 비교한다.
+  if (systemParam && url.pathname === path && !url.searchParams.has('system') && (url.searchParams.has('target') || url.searchParams.has('view'))) url.searchParams.set('system', DEFAULT_SYSTEM_ID);
   if (!updateSystemLocation(url, path, systemParam, target, overview)) return false;
 
   window.history.pushState(null, '', url);
@@ -236,13 +239,7 @@ export function Explorer() {
     featuredObject?.kind === 'x-ray-binary' ||
     (extraView && galaxyObjects.find(({ id }) => id === focus)?.kind === 'black-hole');
   const featuredShape = featuredObject?.observationImage?.shape;
-  const animatedFeaturedVolume =
-    !!featuredObject?.stellarWind ||
-    featuredShape === 'bipolar-jet' ||
-    featuredShape === 'shocked-shell' ||
-    featuredShape === 'dust-spiral' ||
-    featuredShape === 'edge-on-disk' ||
-    featuredShape === 'light-echo';
+  const animatedFeaturedVolume = !!featuredObject?.stellarWind || (!!featuredShape && animatedVolumeShapes.has(featuredShape));
   const heading = region
     ? association
       ? association.name
@@ -265,6 +262,9 @@ export function Explorer() {
   }, [catalogText, heading, t]);
   const body = system.bodies.find((other) => other.id === targetParam && (!galaxyView || other === root));
   const target: Target = wheelView?.scene === 'system' ? null : (body?.id ?? null);
+  // 머리글(aria-live)과 최근 방문이 같은 위치 이름을 쓴다.
+  const locationSubject = focusBlackHole ? catalogText(milkyWay.center.name) : body && (galaxyView || target !== null) ? catalogText(body.name) : aroundName;
+  const locationLabel = locationSubject ? `${catalogText(heading)} · ${locationSubject}` : catalogText(heading);
   const [scale, setScale] = useState<ZoomScale>(target === null ? (overview ?? 'system') : 'system');
   const oortView = !galaxyView && !!cloud && scale === 'oort';
   const outerBodies = system.bodies.filter((other) => other.region === 'outer');
@@ -343,7 +343,7 @@ export function Explorer() {
       setHovered(null);
       setComparison(null);
       setWheelView({ scene: 'galaxy', entry });
-      recordView(locale, null, 'galaxy', systemId, DEFAULT_SYSTEM_ID, milkyWay.id);
+      recordView(locale, null, 'galaxy', systemId, milkyWay.id);
     },
     [locale, systemId, setHovered, setComparison],
   );
@@ -352,7 +352,7 @@ export function Explorer() {
       setHovered(null);
       const next = systemId === DEFAULT_SYSTEM_ID ? 'neighborhood' : null;
       setWheelView(next ? null : { scene: 'system', entry });
-      recordView(locale, null, next, systemId, DEFAULT_SYSTEM_ID, milkyWay.id);
+      recordView(locale, null, next, systemId, milkyWay.id);
     },
     [locale, systemId, setHovered],
   );
@@ -364,7 +364,7 @@ export function Explorer() {
       setWheelView(null);
       setCenterZoom(null);
       setSpaceEntry(undefined);
-      if (!recordView(locale, next, nextOverview, nextSystem, DEFAULT_SYSTEM_ID, systems.find((item) => item.id === nextSystem)?.galaxyId ?? milkyWay.id)) setRecenter((revision) => revision + 1);
+      if (!recordView(locale, next, nextOverview, nextSystem, systems.find((item) => item.id === nextSystem)?.galaxyId ?? milkyWay.id)) setRecenter((revision) => revision + 1);
     },
     [locale, systemId, setHovered, setComparison],
   );
@@ -605,8 +605,7 @@ export function Explorer() {
         <div className={styles.brand}>
           <h1>{t(SITE_NAME_KEY)}</h1>
           <p className={styles.currentLocation} aria-live="polite" aria-atomic="true">
-            {catalogText(heading)}
-            {focusBlackHole ? ` · ${catalogText(milkyWay.center.name)}` : body && (galaxyView || target !== null) ? ` · ${catalogText(body.name)}` : ''}
+            {locationLabel}
           </p>
         </div>
         <div className={styles.headerActions}>
@@ -614,9 +613,7 @@ export function Explorer() {
             systems={systems}
             onSelect={navigateSpace}
             currentPath={searchParams.size ? `${pathname}?${searchParams}` : pathname}
-            currentName={
-              body && (galaxyView || target !== null) ? `${catalogText(heading)} · ${catalogText(body.name)}` : aroundName ? `${catalogText(heading)} · ${aroundName}` : catalogText(heading)
-            }
+            currentName={locationLabel}
             quickLinks={[
               ...(!cosmicView && !groupView && !externalGalaxy && !neighborhoodView ? [{ label: catalogText(milkyWay.neighborhood.name), onSelect: () => navigateTo(null, 'neighborhood') }] : []),
               ...(!cosmicView && !groupView && !externalGalaxy && (galaxyView || neighborhoodView || system.id !== DEFAULT_SYSTEM_ID || target !== null)
@@ -784,7 +781,7 @@ export function Explorer() {
               <button type="button" aria-pressed={galacticDemo} onClick={() => setGalacticDemo((playing) => !playing)}>
                 {galacticDemo ? t('playback.stopGalacticDemo') : t('playback.startGalacticDemo')}
               </button>
-              {galacticDemo && <p className={styles.hint}>{t('playback.galacticDemoSpeed', [measurement(milkyWay.demoYearsPerSecond, 1e4, 0)])}</p>}
+              {galacticDemo && <p className={styles.hint}>{t('playback.galacticDemoSpeed', [measurement(milkyWay.demoYearsPerSecond)])}</p>}
             </>
           )}
           {!animatedAccretion &&

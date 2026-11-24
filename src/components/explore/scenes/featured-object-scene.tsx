@@ -474,6 +474,7 @@ export default function FeaturedObjectScene(props: Props) {
         }}
         // 관측 성운은 화면 전체를 픽셀마다 44~64스텝 raymarch 하므로 레티나에서도 1배로 그린다(부드러운 가스라 차이가 거의 없다).
         dpr={object.observationImage ? 1 : [1, 1.5]}
+        role="group"
         aria-label={t('canvas.namedObjectModel', [catalogText(object.name)])}
       >
         {blackHole ? (

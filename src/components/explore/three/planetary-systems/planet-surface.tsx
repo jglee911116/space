@@ -7,7 +7,7 @@ import { useSurfaceMap } from '../shared/use-surface-map';
 
 const shaderStyle: Record<Exclude<Appearance, 'craters'>, number> = { clouds: 0, earth: 1, rock: 2, bands: 3, ice: 4, pluto: 5 };
 
-const surfaceFeatureStyle: Record<NonNullable<Body['surfaceFeatures']>, number> = { jupiter: 1, saturn: 2, mars: 3, neptune: 4, io: 5, europa: 6 };
+const surfaceFeatureStyle: Record<NonNullable<Body['surfaceFeatures']>, number> = { saturn: 2, mars: 3, neptune: 4, io: 5, europa: 6 };
 
 export function PlanetMaterial({ body, lightOffset, loadSurfaceMap, showSurfaceMap = true }: { body: Body; lightOffset: Vector3; loadSurfaceMap: boolean; showSurfaceMap?: boolean }) {
   const { appearance = 'rock', colors, surfaceMap, surfaceFeatures, polarCaps = false, radiusKm, cloudBands } = body;

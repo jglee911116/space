@@ -8,7 +8,6 @@ import { useLayoutEffect, useMemo, useRef, type ComponentRef, type RefObject } f
 import { AdditiveBlending, Box3, MathUtils, NormalBlending, Quaternion, Vector3, type Group, type Points, type PointsMaterial } from 'three';
 import { localGroup, type FeaturedObject, type Galaxy } from '@/constants/space';
 import { AU_PER_KPC, KM_PER_KPC, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
-import { useCursorZoom } from '../three/shared/use-cursor-zoom';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { GalaxyObservationDisk } from '../three/galaxies/galaxy-observation-disk';
 import { galaxyObservationPoints } from '../three/galaxies/galaxy-observation-points';
@@ -147,7 +146,6 @@ function Scene({
   focusId,
 }: Props) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
-  const cursorZoomRef = useCursorZoom();
   const background = useRef<Group>(null);
   const start = useRef(0);
   const camera = useThree((state) => state.camera);
@@ -174,7 +172,6 @@ function Scene({
     const { width, height } = getState().size;
     const defaultRadius = defaultRadiusFor(overview, galaxy, width, height);
     const groupExit = groupExitFor(defaultRadius);
-    cursorZoomRef.current = false;
     const returnFromSystem = entry && !overview && focusId && focusPosition;
     const entryLimit = overview ? groupExit * 0.95 : defaultRadius;
     const distance = focusedObject
@@ -192,19 +189,19 @@ function Scene({
     const direction = entry ? scratch.offset.set(...entry.direction) : VIEW;
     camera.position.copy(orbit.target).addScaledVector(direction, distance);
     orbit.update();
-  }, [camera, cursorZoomRef, entry, focusId, focusPosition, focusedObject, galaxy, getState, objectDistance, overview, overviewTarget, scratch]);
+  }, [camera, entry, focusId, focusPosition, focusedObject, galaxy, getState, objectDistance, overview, overviewTarget, scratch]);
 
   useFrame(({ camera }) => {
     const orbit = controls.current;
     if (!orbit) return;
     const radius = orbit.getDistance();
-    if (!cursorZoomRef.current && overview && !centerOnGalaxy) {
+    if (overview && !centerOnGalaxy) {
       const weight = MathUtils.smoothstep(radius, exitDistance, 650);
       const center = scratch.aim.copy(galaxyPosition).lerp(GROUP_CENTER, weight);
       camera.position.add(scratch.offset.subVectors(center, orbit.target));
       orbit.target.copy(center);
       orbit.update();
-    } else if (!cursorZoomRef.current && focusPosition) {
+    } else if (focusPosition) {
       const weight = MathUtils.smoothstep(radius, EXTERNAL_SYSTEM_RETURN_KPC, Math.max(4, galaxy.modelRadiusKpc * 0.72));
       const center = scratch.aim.set(...focusPosition).multiplyScalar(1 - weight);
       camera.position.add(scratch.offset.subVectors(center, orbit.target));
@@ -319,7 +316,7 @@ export default function LocalGroupScene(props: Props) {
   const label = props.overview ? localGroup.name : props.galaxy.name;
   return (
     <CanvasBoundary>
-      <Canvas camera={CAMERA} dpr={[1, 1.5]} aria-label={t('canvas.namedModel', [catalogText(label)])}>
+      <Canvas camera={CAMERA} dpr={[1, 1.5]} role="group" aria-label={t('canvas.namedModel', [catalogText(label)])}>
         <GalacticLabelLayer>
           <Scene {...props} />
         </GalacticLabelLayer>

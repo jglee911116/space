@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef, type RefObject } from 'react';
 import { BackSide, MathUtils, Vector3, type Mesh, type ShaderMaterial, type Texture } from 'three';
 import { previewVisibility } from '../maps/map-detail';
-import { REALTIME_DAYS_PER_SECOND } from '../../utils/orbit';
+import { animatedVolumeShapes, REALTIME_DAYS_PER_SECOND } from '../../utils/orbit';
 import { apepDustDensity, bipolarJetDensity, cartwheelDensity, edgeOnDiskDensity, hourglassDensity, shockedShellDensity, southernRingDensity } from './webb-nebula-density';
 import { catsEyeDensity, homunculusDensity, lightEchoDensity } from './hubble-nebula-density';
 import { butterflyDensity, debrisDiskDensity, velaWindDensity } from './observed-structure-density';
@@ -313,17 +313,7 @@ export function NebulaVolume({
       mesh.current.visible = visibility > 0;
       material.current.uniforms.visibility.value = visibility;
       material.current.uniforms.motion.value = motion.current;
-    } else if (
-      !preview &&
-      (shape === 'bipolar-jet' ||
-        shape === 'shocked-shell' ||
-        shape === 'dust-spiral' ||
-        shape === 'edge-on-disk' ||
-        shape === 'light-echo' ||
-        shape === 'vela-wind' ||
-        shape === 'symbiotic-outflow' ||
-        shape === 'protostar-bows')
-    ) {
+    } else if (!preview && animatedVolumeShapes.has(shape)) {
       if (!paused) {
         const elapsed = motion.current + Math.min(delta, 0.1) * rate;
         if (shape === 'shocked-shell') motion.current = Math.min(elapsed, 18);

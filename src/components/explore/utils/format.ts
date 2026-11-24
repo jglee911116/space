@@ -1,8 +1,21 @@
-import type { Body } from '@/constants/space';
-import type { CatalogText, FormatNumber, Translator } from '@/i18n/messages';
+import type { Body, DistantObject } from '@/constants/space';
+import type { CatalogText, FormatNumber, MessageKey, Translator } from '@/i18n/messages';
 import { DAYS_PER_YEAR, KM_PER_AU } from '@/constants/space/units';
 
-export const kindLabel = { star: 'body.star', planet: 'body.planet', 'dwarf-planet': 'body.dwarfPlanet', 'small-body': 'body.smallBody', moon: 'body.moon' } as const;
+// 종류 → 문구 표. 종류를 추가하고 여기를 빠뜨리면 typecheck 가 잡는다(정보 패널과 검색이 함께 쓴다).
+export const kindLabel = { star: 'body.star', planet: 'body.planet', 'dwarf-planet': 'body.dwarfPlanet', 'small-body': 'body.smallBody', moon: 'body.moon' } as const satisfies Record<
+  Body['kind'],
+  MessageKey
+>;
+
+export const distantKindLabel = {
+  quasar: 'details.quasar',
+  'early-galaxy': 'details.earlyGalaxy',
+  'ring-galaxy': 'details.ringGalaxy',
+  'galaxy-group': 'details.galaxyGroup',
+  'galaxy-cluster': 'details.galaxyCluster',
+  'galaxy-merger': 'details.galaxyMerger',
+} as const satisfies Record<DistantObject['kind'], MessageKey>;
 
 export function bodySize(body: Body, t: Translator, number: FormatNumber) {
   const value = body.lengthKm ?? body.radiusKm;

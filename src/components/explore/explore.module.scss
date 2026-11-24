@@ -221,25 +221,6 @@
   outline-offset: 2px;
 }
 
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
-  margin: 0.5rem 0;
-  padding: 0;
-  list-style: none;
-}
-
-.legend li::before {
-  content: '';
-  display: inline-block;
-  width: 0.9rem;
-  height: 2px;
-  margin-right: 0.35rem;
-  vertical-align: middle;
-  background: var(--swatch);
-}
-
 .details {
   box-sizing: border-box;
   width: min(100%, 18.25rem);
@@ -335,9 +316,6 @@
   .details h2,
   .details dl {
     margin-bottom: 0.35rem;
-  }
-  .viewport {
-    bottom: 8rem;
   }
 }
 

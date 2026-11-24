@@ -56,7 +56,7 @@ export type Body = {
   shapeModel?: string;
   /** hidden 은 대기에 가려진 지도라 초점일 때 버튼으로만 켠다. */
   surfaceMap?: { file: string; longitudeOffset?: number; fillMissing?: boolean; hidden?: boolean };
-  surfaceFeatures?: 'jupiter' | 'saturn' | 'mars' | 'neptune' | 'io' | 'europa';
+  surfaceFeatures?: 'saturn' | 'mars' | 'neptune' | 'io' | 'europa';
   polarCaps?: boolean;
   /** 초점 시 연출. red-spot 은 대적점 쪽으로 카메라를 돌리고, ice-plumes 는 얼음 분출을 그린다. */
   surfaceEffect?: 'red-spot' | 'ice-plumes';
@@ -228,7 +228,7 @@ export type FeaturedObject = {
     | 'supergiant';
   galaxyId?: string;
   parentObjectId?: string;
-  observationStatus?: ObservationStatus;
+  observationStatus: ObservationStatus;
   radiusSolar?: number;
   radiusUncertaintySolar?: number;
   radiusBasis?: 'estimate' | 'model-assumption';
@@ -336,7 +336,7 @@ type DistantObjectFields = {
   observationScale?: { lightYears: number; spanInModelRadii: number; reference: 'field' | 'ring' };
   aliases?: readonly string[];
   name: CatalogText;
-  observationStatus?: ObservationStatus;
+  observationStatus: ObservationStatus;
   redshift: number;
   rightAscension: number;
   declination: number;

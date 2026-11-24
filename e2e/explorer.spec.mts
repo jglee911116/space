@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { PerspectiveCamera, Vector3 } from 'three';
 
 const milkyWay = '/ko/galaxies/milky-way';
@@ -18,11 +19,6 @@ async function waitForRenderedMap(page: Page) {
 
 test('물병자리 R, HH 46/47, M94, IC 1623 및 MACS J0416을 탐색한다', async ({ page }) => {
   test.setTimeout(90_000);
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
-  });
   await page.goto(milkyWay);
   const objects = [
     { query: 'R Aquarii', name: '물병자리 R', url: `${milkyWay}?view=object&target=r-aquarii`, image: '/r-aquarii/hubble.webp' },
@@ -40,16 +36,10 @@ test('물병자리 R, HH 46/47, M94, IC 1623 및 MACS J0416을 탐색한다', as
     await expect(page.locator('main canvas')).toBeVisible();
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   }
-  expect(errors).toEqual([]);
 });
 
 test('거품 성운, NGC 1512, AR Scorpii, G292 및 총알 은하단을 탐색한다', async ({ page }) => {
   test.setTimeout(90_000);
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
-  });
   await page.goto(milkyWay);
   const objects = [
     { query: 'NGC7635', result: /거품 성운/, name: '거품 성운', image: '/ngc-7635/hubble.webp' },
@@ -72,7 +62,6 @@ test('거품 성운, NGC 1512, AR Scorpii, G292 및 총알 은하단을 탐색�
     await expect(button).toHaveAttribute('aria-pressed', 'true');
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   }
-  expect(errors).toEqual([]);
 });
 
 test('검색어 지우기 버튼은 팝업을 유지하고 검색창에 포커스를 돌려준다', async ({ page }) => {
@@ -227,11 +216,6 @@ test('국부 은하군의 왜소은하와 두 위성은하 계열을 검색한�
 });
 
 test('라니아케아에서 노르마 은하단 마커와 분광 관측 은하를 연다', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
-  });
   await page.goto('/ko/superclusters/laniakea');
   await waitForRenderedMap(page);
   await expect(details(page)).toContainText('5.2억 광년');
@@ -258,7 +242,6 @@ test('라니아케아에서 노르마 은하단 마커와 분광 관측 은하�
   await expect(page).toHaveURL('/ko/galaxies/wkk-5916');
   await expect(details(page).getByRole('heading', { name: 'WKK 5916', exact: true })).toBeVisible();
   await waitForRenderedMap(page);
-  expect(errors).toEqual([]);
 });
 
 test('오중주와 수레바퀴 은하 상세의 관측 기준과 광년 축척이 표시된다', async ({ page }) => {
@@ -275,13 +258,6 @@ test('오중주와 수레바퀴 은하 상세의 관측 기준과 광년 축척�
 });
 
 test('목성과 토성의 대기 특징을 표시하고 행성 셰이더를 컴파일한다', async ({ page }) => {
-  const shaderErrors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) {
-      shaderErrors.push(message.text());
-    }
-  });
-
   const saturnRings = page.waitForResponse((response) => response.url().endsWith('/saturn/rings-sss.png') && response.ok());
   const jupiterMap = page.waitForResponse(
     (response) => response.url().endsWith('/textures/star-systems/solar/planets/jupiter/jupiter-cassini-pia07782.webp') && (response.ok() || response.status() === 304),
@@ -295,17 +271,9 @@ test('목성과 토성의 대기 특징을 표시하고 행성 셰이더를 컴�
   await expect(details(page)).toContainText('육각형 제트류');
   await waitForRenderedMap(page);
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-  expect(shaderErrors).toEqual([]);
 });
 
 test('태양 코로나와 새 행성·위성 표면의 설명을 열고 WebGL 오류를 확인한다', async ({ page }) => {
-  const shaderErrors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) {
-      shaderErrors.push(message.text());
-    }
-  });
-
   for (const [target, description, directory, asset] of [
     ['sun', '아치형 홍염', 'stars', 'sun-sss.webp'],
     ['mars', '올림푸스산', 'planets', 'mars-sss.webp'],
@@ -320,18 +288,9 @@ test('태양 코로나와 새 행성·위성 표면의 설명을 열고 WebGL �
     await waitForRenderedMap(page);
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   }
-
-  expect(shaderErrors).toEqual([]);
 });
 
 test('태양계 밖 성운의 관측 텍스처를 로드한다', async ({ page }) => {
-  const shaderErrors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) {
-      shaderErrors.push(message.text());
-    }
-  });
-
   for (const [target, category] of [
     ['m57', 'planetary'],
     ['pillars-of-creation', 'star-forming'],
@@ -344,8 +303,6 @@ test('태양계 밖 성운의 관측 텍스처를 로드한다', async ({ page }
     await waitForRenderedMap(page);
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   }
-
-  expect(shaderErrors).toEqual([]);
 });
 
 test('세레스를 검색하고 Dawn 지도를 로드한다', async ({ page }) => {
@@ -359,10 +316,6 @@ test('세레스를 검색하고 Dawn 지도를 로드한다', async ({ page }) =
 });
 
 test('새 Webb 천체 네 개를 검색하고 관측 텍스처와 3D 모형을 로드한다', async ({ page }) => {
-  const shaderErrors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) shaderErrors.push(message.text());
-  });
   await page.goto(milkyWay);
   for (const [id, query, name, category] of [
     ['l1527-irs', 'LDN 1527', '원시별 L1527 IRS', 'star-forming'],
@@ -377,15 +330,9 @@ test('새 Webb 천체 네 개를 검색하고 관측 텍스처와 3D 모형을 �
     await expect(details(page).getByRole('heading', { name, exact: true })).toBeVisible();
     await waitForRenderedMap(page);
   }
-  expect(shaderErrors).toEqual([]);
 });
 
 test('아펩, HH 30, 수레바퀴 은하를 검색해 각자의 Webb 3D 장면을 연다', async ({ page }) => {
-  const shaderErrors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) shaderErrors.push(message.text());
-  });
-
   await page.goto(milkyWay);
   for (const [id, query, name] of [
     ['apep', 'Apep', '아펩'],
@@ -401,15 +348,9 @@ test('아펩, HH 30, 수레바퀴 은하를 검색해 각자의 Webb 3D 장면�
     await expect(page.locator('main canvas')).toBeVisible();
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   }
-  expect(shaderErrors).toEqual([]);
 });
 
 test('새 천체 다섯 개를 검색해 관측 자료와 3D 장면을 연다', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
-  });
   await page.goto(milkyWay);
   const objects = [
     { id: 'beta-pictoris', name: '베타 픽토리스', file: 'webb.webp' },
@@ -428,15 +369,9 @@ test('새 천체 다섯 개를 검색해 관측 자료와 3D 장면을 연다', 
     await expect(page.locator('main canvas')).toBeVisible();
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   }
-  expect(errors).toEqual([]);
 });
 
 test('말머리 성운, WR 124, 티코 잔해의 관측 텍스처와 3D 모형을 연다', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
-  });
   await page.goto(milkyWay);
   for (const [id, query, name, image] of [
     ['horsehead-nebula', 'Barnard 33', '말머리 성운', 'eso.webp'],
@@ -451,15 +386,9 @@ test('말머리 성운, WR 124, 티코 잔해의 관측 텍스처와 3D 모형�
     await expect(page.locator('main canvas')).toBeVisible();
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   }
-  expect(errors).toEqual([]);
 });
 
 test('나선 성운, SN 1006, 오메가 센타우리의 3D 장면을 연다', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
-  });
   await page.goto(milkyWay);
   for (const { id, query, name, image } of [
     { id: 'ngc-7293', query: 'Caldwell 63', name: '나선 성운', image: 'hubble.webp' },
@@ -474,15 +403,9 @@ test('나선 성운, SN 1006, 오메가 센타우리의 3D 장면을 연다', as
     await expect(page.locator('main canvas')).toBeVisible();
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   }
-  expect(errors).toEqual([]);
 });
 
 test('보석벌레 성운과 판도라 은하단을 포함한 새 천체 다섯 개를 연다', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
-  });
   await page.goto(milkyWay);
   for (const { query, name, path, texture } of [
     { query: 'NGC 7027', name: '보석벌레 성운', path: `${milkyWay}?view=object&target=ngc-7027`, texture: '/ngc-7027/hubble.webp' },
@@ -500,15 +423,9 @@ test('보석벌레 성운과 판도라 은하단을 포함한 새 천체 다섯 
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   }
   await expect(details(page)).toContainText('은하 152개');
-  expect(errors).toEqual([]);
 });
 
 test('NGC 346을 검색하고 소마젤란은하 지도와 3D 장면을 오간다', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
-  });
   await page.goto(milkyWay);
   const image = page.waitForResponse((response) => response.url().endsWith('/ngc-346/webb.webp') && response.ok());
   await search(page, 'NGC346', /NGC 346/);
@@ -536,7 +453,6 @@ test('NGC 346을 검색하고 소마젤란은하 지도와 3D 장면을 오간�
       { intervals: [130], timeout: 12_000 },
     )
     .toBe('?view=object&target=ngc-346');
-  expect(errors).toEqual([]);
 });
 
 test('선택한 태양계 천체에서 다른 천체의 라벨과 실제 중심 간 거리를 표시한다', async ({ page }) => {
@@ -626,13 +542,6 @@ test('타이탄의 대기와 관측 지표를 전환한다', async ({ page }) =>
 });
 
 test('궁수자리 A*에서 EHT 기본 영상과 편광 영상을 전환한다', async ({ page }) => {
-  const shaderErrors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) {
-      shaderErrors.push(message.text());
-    }
-  });
-
   const intensity = page.waitForResponse((response) => response.url().endsWith('/sgr-a/eht-2022.webp') && response.ok());
   await page.goto(`${milkyWay}?target=sgr-a`);
   await intensity;
@@ -647,7 +556,6 @@ test('궁수자리 A*에서 EHT 기본 영상과 편광 영상을 전환한다',
   await toggle.uncheck();
   await expect(details(page)).toContainText('2017년 전파 관측');
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-  expect(shaderErrors).toEqual([]);
 });
 
 test('궁수자리 A* 편광 영상 로드 실패 후 다시 켜면 재시도한다', async ({ page }) => {
@@ -667,20 +575,12 @@ test('궁수자리 A* 편광 영상 로드 실패 후 다시 켜면 재시도한
 });
 
 test('M87*와 퀘이사의 중력렌즈 장면을 렌더링한다', async ({ page }) => {
-  const shaderErrors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /THREE\.WebGLProgram|VALIDATE_STATUS/.test(message.text())) {
-      shaderErrors.push(message.text());
-    }
-  });
-
   for (const path of ['/ko/galaxies/m87?view=object&target=m87-star', '/ko/universe?target=3c-273']) {
     await page.goto(path);
     await expect(details(page)).toContainText('중력렌즈');
     await expect(page.locator('main canvas')).toBeVisible();
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   }
-  expect(shaderErrors).toEqual([]);
 });
 
 test('궁수자리 A* 강착 흐름을 일시정지하고 다시 재생한다', async ({ page }) => {
@@ -805,11 +705,6 @@ test('성운과 외부 은하의 블랙홀을 축소해도 은하 지도에서 �
 });
 
 test('헤라클레스 성단과 백조자리 X-1의 축소 모형을 지도에서 열고 다시 확대한다', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error' && /WebGLProgram|VALIDATE_STATUS/.test(message.text())) errors.push(message.text());
-  });
   for (const id of ['m13', 'cygnus-x-1']) {
     await page.goto(`${milkyWay}?view=object&target=${id}`);
     await expect(page.locator('main canvas')).toBeVisible();
@@ -834,7 +729,6 @@ test('헤라클레스 성단과 백조자리 X-1의 축소 모형을 지도에�
       )
       .toBe(`?view=object&target=${id}`);
   }
-  expect(errors).toEqual([]);
 });
 
 test('모바일에서 정보 버튼으로 천체와 우주 지도 패널을 열고 닫는다', async ({ page }) => {
@@ -913,7 +807,7 @@ test('모바일 핀치로 태양계에서 우주까지 이동하고 뒤로 돌�
     await expect(details(page).getByRole('heading', { name: '지구', exact: true })).toBeVisible();
     await page.getByRole('button', { name: '정보 닫기', exact: true }).tap();
 
-    await pinchTo(/\/milky-way\?view=galaxy$/);
+    await pinchTo(/\/milky-way\?system=solar&view=galaxy$/);
     await pinchTo(/\/local-group\?galaxy=milky-way$/);
     await pinchTo(/\/superclusters\/virgo$/);
     await pinchTo(/\/superclusters\/laniakea$/);
@@ -922,7 +816,7 @@ test('모바일 핀치로 태양계에서 우주까지 이동하고 뒤로 돌�
     await page.goBack();
     await expect(page).toHaveURL('/ko/universe');
     await expect(details(page)).toBeHidden();
-    for (const path of [/\/superclusters\/laniakea$/, /\/superclusters\/virgo$/, /\/local-group\?galaxy=milky-way$/, /\/milky-way\?view=galaxy$/, /target=earth$/]) {
+    for (const path of [/\/superclusters\/laniakea$/, /\/superclusters\/virgo$/, /\/local-group\?galaxy=milky-way$/, /\/milky-way\?system=solar&view=galaxy$/, /target=earth$/]) {
       await page.goBack();
       await expect(page).toHaveURL(path);
     }
@@ -1246,4 +1140,43 @@ test('없는 주소는 두 언어 404 화면과 돌아갈 링크를 보여 준�
   await expect(page.getByRole('heading', { name: '404' })).toBeVisible();
   await page.getByRole('link', { name: /처음 화면/ }).click();
   await expect(page).toHaveURL('/ko');
+});
+
+test('움직이는 관측 볼륨에는 고정 배치 안내를 표시하지 않는다', async ({ page }) => {
+  const fixedLayout = page.getByText('이 화면은 고정된 관측 배치를 표시합니다.');
+  for (const id of ['r-aquarii', 'hh-46-47']) {
+    await page.goto(`${milkyWay}?view=object&target=${id}`);
+    await expect(page.locator('main canvas')).toBeVisible();
+    await expect(fixedLayout).toBeHidden();
+  }
+  await page.goto(`${milkyWay}?view=object&target=orion-nebula`);
+  await expect(fixedLayout).toBeVisible();
+});
+
+test('같은 천체를 다시 고르면 기록을 늘리지 않고 최근 방문은 위치마다 이름이 다르다', async ({ page }) => {
+  await page.goto(`${milkyWay}?target=sgr-a`);
+  await expect(page.getByRole('group', { name: '우리은하와 은하 중심 블랙홀 3D 장면' })).toBeVisible();
+  // 검색이 만드는 주소와 예전에 만들던 주소(기본 계 system 생략) 모두 같은 화면으로 본다.
+  for (const url of [`${milkyWay}?system=solar&target=earth`, `${milkyWay}?target=earth`]) {
+    await page.goto(url);
+    const earth = page.getByLabel('회전하고 확대할 수 있는 태양계 3D 모델').getByRole('button', { name: '지구', exact: true });
+    await expect(earth).toHaveAttribute('aria-current', 'true');
+    const entries = await page.evaluate(() => history.length);
+    await earth.click();
+    await expect(page).toHaveURL(url);
+    expect(await page.evaluate(() => history.length)).toBe(entries);
+  }
+
+  await page.getByRole('button', { name: '천체·영역 찾기' }).click();
+  const recent = page.getByRole('region', { name: '천체·영역 찾기' }).getByRole('group', { name: '최근 방문' });
+  await expect(recent.getByRole('button', { name: '우리은하 · 궁수자리 A*', exact: true })).toBeVisible();
+});
+
+test('큰 수는 언어마다 알맞은 단위로 표시한다', async ({ page }) => {
+  await page.goto(`${milkyWay}?system=solar&target=sun`);
+  await expect(details(page)).toContainText('약 2.3억 년');
+  await page.goto(`${milkyWay}?target=sgr-a`);
+  await expect(page.getByText('태양 약 400만 배', { exact: true })).toBeVisible();
+  await page.goto('/en/galaxies/milky-way?target=sgr-a');
+  await expect(page.getByText('About 4 million solar masses', { exact: true })).toBeVisible();
 });

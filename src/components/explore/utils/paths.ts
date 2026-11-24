@@ -36,8 +36,10 @@ export function updateSystemLocation(url: URL, pathname: string, system: string 
   if (url.pathname === pathname && current.system === system && current.target === target && current.view === view && current.gaia === null && current.around === null && current.radius === null)
     return false;
 
+  // 직전 주소의 파라미터 순서를 이어받지 않도록 새로 쓴다 — systemPath 와 같은 순서(system, target, view).
   url.pathname = pathname;
-  setExplorerQuery(url.searchParams, { focus: null, gaia: null, around: null, radius: null, system, target, view });
+  url.search = '';
+  setExplorerQuery(url.searchParams, { system, target, view });
   return true;
 }
 

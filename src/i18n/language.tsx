@@ -14,8 +14,9 @@ function createLanguage(locale: Locale) {
     }
     return format.format(value);
   };
-  const compact = new Intl.NumberFormat(intl, { notation: 'compact', compactDisplay: 'long', maximumFractionDigits: 1 });
-  const measurement = (value: number, koreanDivisor: number, koreanDigits = 1) => (locale === 'ko' ? number(value / koreanDivisor, koreanDigits) : compact.format(value));
+  // 큰 수는 언어별 단위(억·만 / million·billion)를 Intl 이 고른다 — 문구에 단위를 박지 않는다.
+  const compact = new Intl.NumberFormat(intl, { notation: 'compact', compactDisplay: 'long', maximumFractionDigits: 1, useGrouping: true });
+  const measurement = (value: number) => compact.format(value);
   return {
     locale,
     number,

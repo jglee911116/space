@@ -15,7 +15,6 @@ import { galaxyObservationPoints } from '../three/galaxies/galaxy-observation-po
 import { useSurfaceMap } from '../three/shared/use-surface-map';
 import { updatePointDetail } from '../three/maps/map-detail';
 import { GalacticLabelLayer, GalacticMarker } from '../three/maps/galactic-marker';
-import { useCursorZoom } from '../three/shared/use-cursor-zoom';
 import { CanvasBoundary } from '../three/shared/canvas-boundary';
 import { OortCloudModel } from '../three/planetary-systems/oort-cloud';
 import { AU_PER_KPC, DAYS_PER_YEAR, KM_PER_KPC, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
@@ -478,7 +477,6 @@ function Scene({
   // 카메라 초기 위치는 그 시점 화면 비율로만 정한다 — 창 크기가 바뀌어도 사용자가 돌려 둔 시점을 되돌리지 않는다.
   const getState = useThree((state) => state.get);
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
-  const cursorZoomRef = useCursorZoom();
   const sun = useRef<Group>(null);
   const backdrop = useRef<Group>(null);
   const demoYears = useRef(0);
@@ -509,7 +507,6 @@ function Scene({
     const orbit = controls.current;
     if (!orbit) return;
     const { width, height } = getState().size;
-    cursorZoomRef.current = false;
     if (centerFocused && centerEntry) {
       orbit.target.set(0, 0, 0);
       const distance = close
@@ -540,7 +537,6 @@ function Scene({
     centerEntry,
     centerFocused,
     close,
-    cursorZoomRef,
     entry,
     focusLocal,
     focusedDistance,
@@ -573,7 +569,7 @@ function Scene({
       // Cross the sparsely populated range quickly without changing the controls near either end.
       const faster = MathUtils.smoothstep(logDistance, Math.log(0.008), Math.log(0.08)) * (1 - MathUtils.smoothstep(logDistance, Math.log(8), Math.log(30)));
       orbit.zoomSpeed = 2.25 + 2.15 * faster;
-      if (!cursorZoomRef.current && !focusedPosition) {
+      if (!focusedPosition) {
         const centerBlend = MathUtils.smoothstep(logDistance, Math.log(0.018), Math.log(38));
         const center = scratch.center.copy(scratch.sun).add(localCenter);
         const focusBlend = demoYears.current !== 0 ? 1 : 1 - MathUtils.smoothstep(radius, handoffRadius, LOCAL_RADIUS);
@@ -684,7 +680,7 @@ export default function GalaxyScene(props: GalaxySceneProps) {
   const { t } = useLanguage();
   return (
     <CanvasBoundary>
-      <Canvas camera={CAMERA_OPTIONS} dpr={[1, 1.5]} fallback={<span aria-hidden="true">{t('canvas.milkyWayModel')}</span>} aria-label={t('canvas.milkyWayBlackHole')}>
+      <Canvas camera={CAMERA_OPTIONS} dpr={[1, 1.5]} role="group" aria-label={t('canvas.milkyWayBlackHole')}>
         <GalacticLabelLayer>
           <Scene {...props} />
         </GalacticLabelLayer>

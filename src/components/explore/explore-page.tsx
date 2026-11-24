@@ -2,7 +2,6 @@
 
 import { Message } from '@/i18n/language';
 import dynamic from 'next/dynamic';
-import { Suspense } from 'react';
 import styles from './explore.module.scss';
 
 const Explorer = dynamic(
@@ -11,21 +10,21 @@ const Explorer = dynamic(
     if (/^\/[a-z]{2}\/?$/.test(window.location.pathname) && !window.location.search) void import('./scenes/neighborhood-scene');
     return import('./explorer').then(({ Explorer }) => Explorer);
   },
-  { ssr: false },
+  {
+    ssr: false,
+    // ssr:false 의 dynamic 은 자체 Suspense 경계를 두므로 바깥 Suspense fallback 은 보이지 않는다 — 안내는 loading 으로.
+    loading: () => (
+      <p className={styles.status} role="status">
+        <Message id="canvas.loadingViewer" />
+      </p>
+    ),
+  },
 );
 
 export function ExplorePage() {
   return (
     <main className={styles.explore}>
-      <Suspense
-        fallback={
-          <p role="status">
-            <Message id="canvas.loadingViewer" />
-          </p>
-        }
-      >
-        <Explorer />
-      </Suspense>
+      <Explorer />
     </main>
   );
 }

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Vector3 } from 'three';
 import { decodeGaiaSource, gaiaCatalogPath, gaiaRecordBytes, gaiaSampleRadiusLightYears, type GaiaSource } from './gaia-format';
@@ -66,6 +66,10 @@ function checkCoordinates(name: string, rightAscension: number, declination: num
 }
 
 function checkText(value: unknown, location: string) {
+  // 텍스처 경로 오타는 런타임에 조용히 절차적 모양으로 대체되고, 모델 경로 오타는 장면 전체를 오류 화면으로 바꾸므로 빌드에서 막는다.
+  // turbopackIgnore: 빌드 시 검사일 뿐이라 public/ 전체를 서버 트레이스에 넣지 않는다.
+  if (typeof value === 'string' && /^\/(textures|models)\//.test(value))
+    requireValue(existsSync(join(/* turbopackIgnore: true */ process.cwd(), 'public', value)), `${location}: missing file ${value}`);
   if (typeof value !== 'object' || value === null) return;
   if ('key' in value && 'values' in value && typeof value.key === 'string' && Array.isArray(value.values)) {
     const args = value.values;
@@ -108,7 +112,7 @@ export function validateCatalog() {
   }
   for (const object of [...featuredObjects, ...distantObjects]) {
     checkCoordinates(object.id, object.rightAscension, object.declination);
-    requireValue(object.observationStatus && object.sources.length > 0, `${object.id}: missing observation status or sources`);
+    requireValue(object.sources.length > 0, `${object.id}: missing sources`);
     requireValue(
       'distanceLightYears' in object ? Number.isFinite(object.distanceLightYears) && object.distanceLightYears > 0 : Number.isFinite(object.redshift) && object.redshift > 0,
       `${object.id}: missing positive distance or redshift`,

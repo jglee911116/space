@@ -377,6 +377,7 @@ export default function UniverseScene(props: Props) {
       <Canvas
         camera={{ position, fov: 45, near: object ? 0.04 : 0.006, far: object ? 160 : RADIUS * 10 }}
         dpr={[1, 1.5]}
+        role="group"
         aria-label={object ? t('canvas.namedObjectModel', [catalogText(object.name)]) : t('canvas.namedMap', [catalogText(props.association?.name ?? props.region?.name ?? observableUniverse.name)])}
       >
         {object?.kind === 'quasar' ? (

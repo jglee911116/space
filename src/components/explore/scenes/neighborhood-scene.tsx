@@ -342,7 +342,7 @@ export default function NeighborhoodScene({
   return (
     <>
       <CanvasBoundary>
-        <Canvas dpr={[1, 1.5]} aria-label={t('canvas.solarNeighborhood')} onPointerMissed={() => setSource(null)}>
+        <Canvas dpr={[1, 1.5]} role="group" aria-label={t('canvas.solarNeighborhood')} onPointerMissed={() => setSource(null)}>
           <Map
             key={aroundPosition ? 'around' : (focusedSource?.id ?? 'overview')}
             focusedSource={focusedSource}

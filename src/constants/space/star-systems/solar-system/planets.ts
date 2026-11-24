@@ -82,7 +82,6 @@ export const planets: Body[] = [
     appearance: 'bands',
     orbit: { axisAu: 5.202887, eccentricity: 0.04838624, inclination: 1.30439695, meanLongitude: 34.39644051, perihelionLongitude: 14.72847983, ascendingNode: 100.47390909, periodDays: 4331 },
     rings: [{ inner: 1.68, outer: 1.7, color: '#b29b88', opacity: 0.22 }],
-    surfaceFeatures: 'jupiter',
     surfaceEffect: 'red-spot',
     // 사진 속 대적점(u ≈ 0.364)이 +Z(구 u = 0.25)를 향하게 맞춘다.
     surfaceMap: { file: '/textures/star-systems/solar/planets/jupiter/jupiter-cassini-pia07782.webp', longitudeOffset: 0.114 },

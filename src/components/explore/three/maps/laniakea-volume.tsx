@@ -1,6 +1,7 @@
 import { Line } from '@react-three/drei';
 import { useMemo } from 'react';
 import { AdditiveBlending, BackSide, CatmullRomCurve3, Color, Quaternion, SphereGeometry, Vector3 } from 'three';
+import { seededRandom } from '../../utils/random';
 
 const boundaryVertex = /* glsl */ `
   varying vec3 viewNormal;
@@ -87,11 +88,7 @@ function buildFlowModel(span: number, anchors: Anchors) {
     [locate(0.46, 0.29, -0.26), locate(0.27, 0.2, -0.31), locate(0.16, 0.07, -0.12), convergence],
   ].map((points) => new CatmullRomCurve3(points));
 
-  let seed = 1219;
-  const random = () => {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 4294967296;
-  };
+  const random = seededRandom(1219);
   const positions: number[] = [],
     colors: number[] = [],
     strengths: number[] = [];

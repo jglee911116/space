@@ -23,7 +23,7 @@ const emptyDistanceStore = createDistanceStore();
 import type { CSSProperties, ReactNode } from 'react';
 import { KM_PER_AU, SOLAR_RADIUS_KM, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 import { formatLightYearDistance } from './utils/distance-scale';
-import { bodySize, formatAxis, formatPeriod, formatSpin, kindLabel } from './utils/format';
+import { bodySize, distantKindLabel, formatAxis, formatPeriod, formatSpin, kindLabel } from './utils/format';
 import type { Target } from './scenes/system-scene';
 import { gaiaCounterpartsBySource, type gaiaCounterpartsForSystem } from './utils/gaia-counterparts';
 import { gaiaNeighborRadii, type GaiaNeighborRadius, type useGaiaNeighbors } from './utils/gaia-catalog';
@@ -53,9 +53,8 @@ function DataRow({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function ObservationRow({ status }: { status?: ObservationStatus }) {
+function ObservationRow({ status }: { status: ObservationStatus }) {
   const { t } = useLanguage();
-  if (!status) return null;
   return <DataRow label={t('details.observationStatus')}>{t(status === 'observed' ? 'details.observed' : 'details.candidate')}</DataRow>;
 }
 
@@ -229,7 +228,7 @@ export function BodyDetails({
         {body.galacticOrbit && (
           <div>
             <dt>{t('details.galacticOrbitalPeriod')}</dt>
-            <dd>{t('units.approxYears', [measurement(body.galacticOrbit.periodYears, 1e8)])}</dd>
+            <dd>{t('units.approxYears', [measurement(body.galacticOrbit.periodYears)])}</dd>
           </div>
         )}
       </dl>
@@ -288,7 +287,7 @@ export function BlackHoleDetails({ showPolarization, onPolarizationChange, onClo
         </div>
         <div>
           <dt>{t('details.mass')}</dt>
-          <dd>{t('details.solarMassTenThousands', [measurement(center.massSolar, 1e4, 0)])}</dd>
+          <dd>{t('details.solarMasses', [measurement(center.massSolar)])}</dd>
         </div>
         <div>
           <dt>{t('details.emissionRingDiameter')}</dt>
@@ -568,7 +567,7 @@ export function FeaturedObjectDetails({ object }: { object: FeaturedObject }) {
         )}
         {object.blackHoleMassSolar !== undefined && (
           <DataRow label={t('details.estimatedBlackHoleMass')}>
-            {object.kind === 'x-ray-binary' ? `${number(object.blackHoleMassSolar, 1)} M☉` : t('details.solarMassHundredMillions', [measurement(object.blackHoleMassSolar, 1e8)])}
+            {object.kind === 'x-ray-binary' ? `${number(object.blackHoleMassSolar, 1)} M☉` : t('details.solarMasses', [measurement(object.blackHoleMassSolar)])}
           </DataRow>
         )}
       </dl>
@@ -666,21 +665,7 @@ export function UniverseDetails({
         <ObservationRow status={object.observationStatus} />
         <div>
           <dt>{t('details.type')}</dt>
-          <dd>
-            {t(
-              object.kind === 'quasar'
-                ? 'details.quasar'
-                : object.kind === 'ring-galaxy'
-                  ? 'details.ringGalaxy'
-                  : object.kind === 'galaxy-cluster'
-                    ? 'details.galaxyCluster'
-                    : object.kind === 'galaxy-group'
-                      ? 'details.galaxyGroup'
-                      : object.kind === 'galaxy-merger'
-                        ? 'details.galaxyMerger'
-                        : 'details.earlyGalaxy',
-            )}
-          </dd>
+          <dd>{t(distantKindLabel[object.kind])}</dd>
         </div>
         <div>
           <dt>{t('details.redshift')}</dt>
@@ -688,16 +673,16 @@ export function UniverseDetails({
         </div>
         <div>
           <dt>{t('details.lightTravelTime')}</dt>
-          <dd>{t('units.approxYears', [measurement(lookbackYears, 1e8)])}</dd>
+          <dd>{t('units.approxYears', [measurement(lookbackYears)])}</dd>
         </div>
         <div>
           <dt>{t('details.comovingDistance')}</dt>
-          <dd>{t('units.approxComovingDistance', [measurement(comovingLightYears, 1e8)])}</dd>
+          <dd>{t('units.approxComovingDistance', [measurement(comovingLightYears)])}</dd>
         </div>
         {object.kind === 'quasar' && object.blackHoleMassSolar !== undefined && (
           <div>
             <dt>{t('details.estimatedBlackHoleMass')}</dt>
-            <dd>{t('details.solarMassHundredMillions', [measurement(object.blackHoleMassSolar, 1e8, 0)])}</dd>
+            <dd>{t('details.solarMasses', [measurement(object.blackHoleMassSolar)])}</dd>
           </div>
         )}
         {object.kind === 'early-galaxy' && (
@@ -795,7 +780,7 @@ export function SuperclusterDetails({
   return (
     <section className={styles.details} aria-labelledby="body-name">
       <h2 id="body-name">{catalogText(region.name)}</h2>
-      <p>{t('details.superclusterSpan', [measurement(region.spanMly * 1e6, 1e8)])}</p>
+      <p>{t('details.superclusterSpan', [measurement(region.spanMly * 1e6)])}</p>
       <p>{catalogText(region.summary)}</p>
       {region.flowModel && (
         <label className={styles.counterjetToggle}>

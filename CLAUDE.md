@@ -19,10 +19,10 @@ pnpm build
 - 다국어는 `src/i18n/` — `ko.json`·`en.json` 키를 같게 유지. 데이터 문구는 `message(key)`(CatalogText), 화면은 `useLanguage()` 의 `t`·`catalogText`.
 - 천체 데이터 단일 소스: `src/constants/space/` — 순수 값만(three 등 렌더링 의존성·계산 함수 금지, 계산은 `components/explore/utils/`). 포함 관계: **항성계·은하 속 천체 ⊂ 은하 ⊂ 국부은하군·은하군 ⊂ 초은하단 ⊂ 관측 가능한 우주**.
   - `types.ts` — 모든 데이터 타입. `units.ts` — 단위 상수·환산(`KM_PER_KPC`, `LIGHT_YEARS_PER_KPC`, `KPC_PER_MLY` 등, 파일마다 다시 정의하지 않는다).
-  - `star-systems/<계>/` — `star-systems/index.ts` 의 `systems` 에 등록, **첫 항목이 기본 계**. `bodies` 는 **부모가 자식보다 먼저**, `validate` 가 순서·parent·orbit 누락을 검사. 다른 은하의 계는 `galaxyId`.
+  - `star-systems/<계>/` — `star-systems/index.ts` 의 `systems` 에 등록, **첫 항목이 기본 계**. 통과 관측 모형만 있는 적색왜성 계(LHS 1140·Gliese 12)는 `star-systems/nearby-exoplanets.ts` 에서 `redDwarf`·`transitPlanet` 헬퍼로 함께 정의한다. `bodies` 는 **부모가 자식보다 먼저**, `validate` 가 순서·parent·orbit 누락을 검사. 다른 은하의 계는 `galaxyId`.
   - `featured-objects/` — 종류별 파일(nebulae·stellar-outflows·stars·star-clusters·compact-objects), 순서는 `index.ts`. 은하 속 성운·잔해·블랙홀(`galaxyId` 없으면 우리은하, 확대해 들어가는 하위 천체는 `parentObjectId`).
-  - `galaxies/` — 은하마다 파일, 은하 경로 전체 목록 `galaxies` 는 `index.ts` 가 국부은하군·`nearbyShowcase`·은하군 구성원을 합쳐 만든다. `milky-way.ts` 만 `HostGalaxy`(기준 항성계 `systemId`, 이웃 지도, 은하 중심).
-  - `local-group.ts` — 국부은하군 소속 은하(첫 항목이 기준 은하, `dwarfs` 는 왜소은하). `galaxy-associations.ts` — 초은하단 지도 위 은하군·은하단(`mapRegionId`). `superclusters.ts` — **안쪽 → 바깥 순서**(줌 전환이 배열 위치를 따른다, id 로 분기하지 않는다). `observable-universe.ts` — 원거리 천체. 은하단 관측 표본은 소유 천체 옆 `*-survey.ts`(pandora·bullet·macs-j0416)·`bullet-webb-sources.ts`.
+  - `galaxies/` — 은하 정의 파일(한 파일에 여러 은하도 둔다, 등록용 index 없음). `/galaxies/[id]` 경로가 열리는 전체 목록 `galaxies` 는 `constants/space/index.ts` 가 `local-group.ts`·`nearbyShowcase`·`galaxy-associations.ts` 구성원을 합쳐 만든다 — **새 은하는 이 셋 중 하나에 넣어야 경로·마커가 생긴다**. `milky-way.ts` 만 `HostGalaxy`(기준 항성계 `systemId`, 이웃 지도, 은하 중심).
+  - `local-group.ts` — 국부은하군 소속 은하(첫 항목이 기준 은하, `dwarfs` 는 왜소은하). `galaxy-associations.ts` — 초은하단 지도 위 은하군·은하단(`mapRegionId`). `superclusters.ts` — **안쪽 → 바깥 순서**(줌 전환이 배열 위치를 따른다, id 로 분기하지 않는다). `observable-universe.ts` — 원거리 천체. 은하단 관측 표본은 `constants/space/` 의 `*-survey.ts`(pandora·bullet·macs-j0416)·`bullet-webb-sources.ts`, 노르마 은하단 표본은 `galaxies/norma-survey.ts`.
   - `gaia-counterparts.ts` — 항성계 별 ↔ Gaia DR3 source_id. Gaia 표본 자체는 `public/catalog/gaia-dr3-nearby/`(`scripts/build-gaia-preview.py` 가 생성, README 의 쿼리), 읽기는 `utils/gaia-catalog.ts`. 검증기가 각 대응 ID 가 실제로 그 항성계 위치(1광년 이내)에 있는지와 표본 반경을 검사한다.
   - 바깥에서는 `index.ts` 로만 가져온다(`units` 제외). 계층 간 id 참조·중복 id·문구 키·검색 경로는 `components/explore/utils/validate-catalog.ts` 가 빌드 시(`[locale]/layout.tsx` 의 generateStaticParams) 검사한다 — 데이터 폴더는 components 를 import 하지 않는다.
   - 대상마다 다른 UI 문구·형태는 데이터에 둔다(`overviewLabel`, `wideOverview.label`, `outerRegion`, `summary`, `title`, `notes`, `diskTilt`, `embeddedCluster` 등). 모델 형태도 필드로: 은하 `structure`·`ramPressureTail`·`diskObservation.blendProcedural`, 은하 속 천체 `clusterModel`·`stellarWind`·`thermalSurface`·`accretionDisk`·`modelCameraDistance`, 천체 `stellar.prominences`·`surfaceEffect`·`surfaceMap.hidden`·`silhouette`·`rockySurface`, 항성계 `home`, 초은하단 `flowModel`·`flowAnchors`.
@@ -40,8 +40,8 @@ pnpm build
 - [ ] 좌표·거리·적색편이·출처 URL 은 원문(SIMBAD·NASA·논문)에서 직접 확인(그럴듯한 오값이 섞인다)
 - [ ] 약 163광년 이내 항성계면 `gaia-counterparts.ts` 에 Gaia DR3 source_id 연결(SIMBAD 에서 확인)
 - [ ] `ko.json`·`en.json` 에 같은 키로 이름·설명, 통용 별칭은 `aliases`
-- [ ] 은하군·은하단 구성이면 `galaxy-associations.ts`, 은하 속 하위 천체면 `galaxyId`·`parentObjectId`
-- [ ] 텍스처는 WebP(`cwebp -q 82` 항성계, `-q 85` 관측 이미지)로 정해진 폴더에, 원본보다 작은지 확인
+- [ ] 새 은하는 `local-group.ts`·`nearbyShowcase`·`galaxy-associations.ts`(은하군·은하단) 중 하나에 넣어야 경로가 생긴다. 은하 속 하위 천체면 `galaxyId`·`parentObjectId`
+- [ ] 텍스처는 WebP(`cwebp -q 82` 항성계, `-q 85` 관측 이미지)로 정해진 폴더에, 원본보다 작은지 확인(데이터의 `/textures`·`/models` 경로는 빌드가 실제 파일과 대조)
 - [ ] 대상 전용 모양·문구는 데이터 필드로 — 렌더러에서 id 로 분기하지 않는다
 
 ### 기능 추가
@@ -53,6 +53,6 @@ pnpm build
 
 ### 마무리
 - [ ] `pnpm lint && pnpm typecheck && pnpm format:check && pnpm build`(빌드가 카탈로그를 검증)
-- [ ] 새 천체·기능마다 e2e 하나 추가(검색 → 열기 → 텍스처 로드 → WebGL 오류 없음)
+- [ ] 새 천체·기능마다 e2e 하나 추가(검색 → 열기 → 텍스처 로드). `e2e/fixtures.ts` 의 `test` 가 페이지 예외·WebGL 셰이더 오류를 자동으로 실패 처리한다
 - [ ] `PLAYWRIGHT_CHANNEL=chrome pnpm test:e2e` — CI 는 e2e 를 돌리지 않으므로 푸시 전 로컬에서
 - [ ] 데이터 추가와 렌더링 변경은 커밋을 나누고, 푸시 후 GitHub Actions CI 결과 확인

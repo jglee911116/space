@@ -1,6 +1,7 @@
 import { distantObjects, featuredObjects, galaxies, galaxyAssociations, localGroup, milkyWay, observableUniverse, superclusters, type StarSystem } from '@/constants/space';
 import { translate, type CatalogText, type MessageKey } from '@/i18n/messages';
 import { localeCodes } from '@/i18n/routing';
+import { distantKindLabel, kindLabel } from './format';
 import { associationPath, distantObjectPath, featuredObjectPath, gaiaSourcePath, galaxyPath, LOCAL_GROUP_PATH, superclusterPath, systemPath, UNIVERSE_PATH } from './paths';
 
 type Entry = {
@@ -112,18 +113,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
       ({ id, name, kind, aliases = [] }): Entry => ({
         name,
         path: distantObjectPath(id),
-        kind:
-          kind === 'quasar'
-            ? 'details.quasar'
-            : kind === 'ring-galaxy'
-              ? 'details.ringGalaxy'
-              : kind === 'galaxy-cluster'
-                ? 'details.galaxyCluster'
-                : kind === 'galaxy-group'
-                  ? 'details.galaxyGroup'
-                  : kind === 'galaxy-merger'
-                    ? 'details.galaxyMerger'
-                    : 'details.earlyGalaxy',
+        kind: distantKindLabel[kind],
         aliases: [id, ...aliases],
       }),
     ),
@@ -144,7 +134,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
         context: system.name,
         parentContext: galaxies.find((galaxy) => galaxy.id === galaxyId)?.name,
         path: systemPath(galaxyId, system.id, body.id),
-        kind: body.kind === 'dwarf-planet' ? 'body.dwarfPlanet' : body.kind === 'small-body' ? 'body.smallBody' : `body.${body.kind}`,
+        kind: kindLabel[body.kind],
         aliases: [body.id],
       });
     }
