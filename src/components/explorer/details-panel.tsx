@@ -99,5 +99,5 @@ export function DetailsPanel({
   if (oortView && cloud) return <OortCloudDetails cloud={cloud} />;
   if ((scale === 'outer' || scale === 'distant') && outerRegion)
     return <OuterRegionDetails system={system} distant={scale === 'distant'} onToggle={() => onNavigate(null, scale === 'distant' ? 'outer' : 'distant')} />;
-  return <SystemDetails system={system} />;
+  return <SystemDetails system={system} onSelect={onNavigate} />;
 }

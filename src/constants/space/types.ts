@@ -30,6 +30,7 @@ export type Source = { label: CatalogText; href: string };
 
 export type Body = {
   id: string;
+  aliases?: readonly string[];
   name: CatalogText;
   kind: BodyKind;
   /** null 은 계의 질량중심 기준. 그 외에는 궤도의 부모 천체 id. */
@@ -100,6 +101,7 @@ export type OortCloud = {
 
 export type StarSystem = {
   id: string;
+  aliases?: readonly string[];
   /** 모항성계: 천체 이름표와 크기 비교를 켠다. */
   home?: boolean;
   galaxyId?: string;
@@ -113,6 +115,7 @@ export type StarSystem = {
   /** 먼 궤도까지 보는 추가 시점(예: 프록시마 궤도). */
   wideOverview?: { distance: number; label: CatalogText };
   summary?: CatalogText;
+  observation?: { file: string; width: number; height: number; alt: CatalogText; caption: CatalogText; source: Source };
   neighborhood?: { distanceLightYears: number; rightAscension: number; declination: number; source: Source };
   galacticPath?: { radialAmplitudeKpc: number; minRadiusKpc?: number; periodYears: number; color: string; source: Source };
   /** 바깥 구역(예: 해왕성 너머·카이퍼대). 소속 천체는 region: 'outer'. */

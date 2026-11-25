@@ -126,7 +126,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
       context: galaxies.find((galaxy) => galaxy.id === galaxyId)?.name,
       path: systemPath(galaxyId, system.id),
       kind: 'search.starSystem',
-      aliases: [system.id],
+      aliases: [system.id, ...(system.aliases ?? [])],
     });
     for (const body of system.bodies) {
       entries.push({
@@ -135,7 +135,7 @@ export function createSearchCatalog(systems: readonly StarSystem[]) {
         parentContext: galaxies.find((galaxy) => galaxy.id === galaxyId)?.name,
         path: systemPath(galaxyId, system.id, body.id),
         kind: kindLabel[body.kind],
-        aliases: [body.id],
+        aliases: [body.id, ...(body.aliases ?? [])],
       });
     }
     if (system.oortCloud) {

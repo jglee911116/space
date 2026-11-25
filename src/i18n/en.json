@@ -1,4 +1,12 @@
 {
+  "catalog.bennu.name": "Bennu",
+  "catalog.bennu.note": "A near-Earth asteroid sampled by OSIRIS-REx. The close-up uses NASA’s 3D model of Bennu. The orbital path is a model based on the JPL elements at their reference epoch.",
+  "catalog.hr-8799.summary": "A young system about 134 light-years away with four directly imaged giant planets, b–e. Planet surfaces and starting positions are illustrative. The modeled orbits use published dimensions with circular paths.",
+  "catalog.hr-8799.starName": "HR 8799 star",
+  "catalog.hr-8799.planetNote": "A directly imaged giant exoplanet. Cloud bands and colors in the model are illustrative. Orbital sizes and periods are estimates from the literature.",
+  "catalog.hr-8799.observationAlt": "Webb NIRCam composite showing HR 8799 b, c, d, and e around the obscured central star.",
+  "catalog.hr-8799.observationCaption": "Direct imaging by Webb NIRCam. A coronagraph blocks the central star, and colors represent near-infrared filters.",
+  "details.observedPlanets": "Observed exoplanets",
   "search.allDestinations": "All destinations",
   "search.recent": "Recently visited",
   "search.quickLinks": "Quick destinations",

@@ -31,6 +31,11 @@ function checkRelationships() {
     const external = (system.galaxyId ?? milkyWay.id) !== milkyWay.id;
     requireValue(external ? system.galaxyMarkerKpc && !system.neighborhood : system.neighborhood || system.id === milkyWay.systemId, `${system.id}: not placed on any map`);
 
+    if (system.observation) {
+      const { file, width, height } = system.observation;
+      requireValue(/^\/textures\/.*\.webp$/.test(file) && Number.isInteger(width) && width > 0 && Number.isInteger(height) && height > 0, `${system.id}: invalid observation image`);
+    }
+
     // Orbit calculations visit bodies in catalog order and expect each parent to be available first.
     const seen = new Set<string>();
     for (const body of system.bodies) {

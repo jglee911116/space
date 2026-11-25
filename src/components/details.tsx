@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { CatalogText, MessageKey } from '@/i18n/messages';
 import { useLanguage } from '@/i18n/language';
 import {
@@ -349,16 +350,35 @@ export function OuterRegionDetails({ system, distant, onToggle }: { system: Star
   );
 }
 
-export function SystemDetails({ system }: { system: StarSystem }) {
+export function SystemDetails({ system, onSelect }: { system: StarSystem; onSelect: (target: Target) => void }) {
   const { t, catalogText } = useLanguage();
-  const planetCount = system.bodies.filter((body) => body.kind === 'planet').length;
+  const planets = system.bodies.filter((body) => body.kind === 'planet');
+  const planetCount = planets.length;
+  const observation = system.observation;
   return system.summary ? (
     <section className={styles.details} aria-labelledby="body-name">
       <h2 id="body-name">{catalogText(system.name)}</h2>
       <p>{catalogText(system.summary)}</p>
       <p>{t('details.starAndExoplanetCounts', [system.bodies.filter((body) => body.kind === 'star').length, planetCount])}</p>
+      {observation && (
+        <>
+          <div className={styles.observedPlanets} role="group" aria-label={t('details.observedPlanets')}>
+            {planets.map((planet) => (
+              <button key={planet.id} type="button" onClick={() => onSelect(planet.id)}>
+                {catalogText(planet.name)}
+              </button>
+            ))}
+          </div>
+          <figure className={styles.systemObservation}>
+            <a href={observation.source.href}>
+              <Image unoptimized src={observation.file} alt={catalogText(observation.alt)} width={observation.width} height={observation.height} />
+            </a>
+            <figcaption>{catalogText(observation.caption)}</figcaption>
+          </figure>
+        </>
+      )}
       <ModelNotes>{t('details.auScaleEnlarged')}</ModelNotes>
-      <DetailSources sources={system.sources} />
+      <DetailSources sources={observation ? [...system.sources, observation.source] : system.sources} />
     </section>
   ) : (
     <section className={styles.details} aria-labelledby="body-name">

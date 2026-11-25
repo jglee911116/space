@@ -1,4 +1,12 @@
 {
+  "catalog.bennu.name": "베누",
+  "catalog.bennu.note": "OSIRIS-REx가 방문해 표본을 채취한 근지구 소행성입니다. 확대 화면은 NASA의 베누 3D 모델을 사용합니다. 공전 궤도는 JPL의 기준 시점 궤도 요소로 계산한 모형입니다.",
+  "catalog.hr-8799.summary": "약 134광년 떨어진 젊은 항성계로, 직접 촬영된 거대 외계행성 b·c·d·e가 있습니다. 3D 장면의 행성 표면과 궤도 시작 위치는 시각화용이며, 궤도는 논문 값을 바탕으로 원형으로 단순화했습니다.",
+  "catalog.hr-8799.starName": "HR 8799 항성",
+  "catalog.hr-8799.planetNote": "직접 촬영된 거대 외계행성입니다. 화면의 구름 무늬와 색은 시각화 모형입니다. 궤도 크기와 주기는 연구에서 추정한 값입니다.",
+  "catalog.hr-8799.observationAlt": "제임스웹 NIRCam 직접 촬영 합성 이미지. 중앙 별빛을 가린 위치 주위에 HR 8799 b, c, d, e가 표시됨.",
+  "catalog.hr-8799.observationCaption": "제임스웹 NIRCam 직접 촬영. 중앙 항성의 빛을 코로나그래프로 가렸으며, 근적외선 필터별로 색을 입혔습니다.",
+  "details.observedPlanets": "관측된 외계행성",
   "search.allDestinations": "전체 목록",
   "search.recent": "최근 방문",
   "search.quickLinks": "빠른 이동",
