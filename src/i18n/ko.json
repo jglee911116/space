@@ -668,5 +668,16 @@
   "units.days": "{0}일",
   "units.hours": "{0}시간",
   "units.lightYears": "{0}광년",
-  "units.years": "{0}년"
+  "units.years": "{0}년",
+  "body.spacecraft": "탐사선",
+  "catalog.spacecraft.voyager-1.name": "보이저 1호",
+  "catalog.spacecraft.voyager-1.note": "1977년 발사. 2012년 태양권계면을 넘어 성간 공간에 들어선 첫 탐사선이며, 지금 가장 멀리 있는 인공물입니다. 위치는 2026년 1월 1일 값에서 등속으로 외삽했습니다.",
+  "catalog.spacecraft.voyager-2.name": "보이저 2호",
+  "catalog.spacecraft.voyager-2.note": "1977년 발사. 천왕성과 해왕성을 방문한 유일한 탐사선이며 2018년 성간 공간에 들어섰습니다. 위치는 2026년 1월 1일 값에서 등속으로 외삽했습니다.",
+  "catalog.spacecraft.new-horizons.name": "뉴호라이즌스",
+  "catalog.spacecraft.new-horizons.note": "2006년 발사. 2015년 명왕성, 2019년 카이퍼대 천체 아로코스를 지나쳤습니다. 위치는 2026년 1월 1일 값에서 등속으로 외삽했습니다.",
+  "catalog.spacecraft.jwst.name": "제임스 웹 우주망원경",
+  "catalog.spacecraft.jwst.note": "지구에서 태양 반대쪽 약 150만 km 의 L2 점 주위를 헤일로 궤도로 돕니다. 여기서는 L2 점에 고정해 지구와 함께 도는 단순 모형으로 그렸습니다(크기·거리 확대).",
+  "units.minutesSeconds": "{0}분 {1}초",
+  "units.hoursMinutes": "{0}시간 {1}분"
 }

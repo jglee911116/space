@@ -36,6 +36,16 @@ function checkRelationships() {
       requireValue(/^\/textures\/.*\.webp$/.test(file) && Number.isInteger(width) && width > 0 && Number.isInteger(height) && height > 0, `${system.id}: invalid observation image`);
     }
 
+    // 날짜 이동은 정렬된 목록에서 다음 현상을 찾는다.
+    system.events?.forEach((event, index, events) => {
+      const ms = Date.parse(event.instant);
+      requireValue(/Z$/.test(event.instant) && Number.isFinite(ms) && (index === 0 || Date.parse(events[index - 1].instant) <= ms), `${system.id}.events[${index}]: invalid or unsorted instant`);
+      requireValue(
+        system.bodies.some((body) => body.id === event.bodyId),
+        `${system.id}.events[${index}]: unknown body ${event.bodyId}`,
+      );
+    });
+
     // Orbit calculations visit bodies in catalog order and expect each parent to be available first.
     const seen = new Set<string>();
     for (const body of system.bodies) {
@@ -45,7 +55,11 @@ function checkRelationships() {
         requireValue(body.kind === 'star' || (body.kind === 'planet' && body.orbit), `${location}: invalid root body`);
       } else {
         requireValue(seen.has(body.parent), `${location}: parent ${body.parent} is missing or listed later`);
-        requireValue(body.orbit, `${location}: missing orbit`);
+        requireValue(Boolean(body.orbit) !== Boolean(body.trajectory), `${location}: needs exactly one of orbit or trajectory`);
+      }
+      if (body.trajectory) {
+        const { epoch, positionAu, velocityAuPerDay } = body.trajectory;
+        requireValue(/Z$/.test(epoch) && Number.isFinite(Date.parse(epoch)) && [...positionAu, ...velocityAuPerDay].every(Number.isFinite), `${location}: invalid trajectory`);
       }
       // 궤도 계산(orbit.ts)이 타원 궤도만 다룬다 — e ≥ 1 이면 NaN 위치가 된다.
       if (body.orbit) requireValue(body.orbit.eccentricity >= 0 && body.orbit.eccentricity < 1 && body.orbit.axisAu > 0 && body.orbit.periodDays > 0, `${location}: invalid orbit elements`);

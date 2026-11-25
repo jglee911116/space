@@ -2,6 +2,9 @@ import { MathUtils, Matrix4, Quaternion, Vector3 } from 'three';
 import type { Body, StarSystem } from '@/constants/space';
 
 export const REALTIME_DAYS_PER_SECOND = 1 / 86_400;
+export const MS_PER_DAY = 86_400_000;
+/** 궤도 요소의 기준 시점 J2000(2000-01-01 12:00). TT 와 UTC 의 약 1분 차이는 무시한다. */
+export const J2000_UTC_MS = Date.UTC(2000, 0, 1, 12);
 
 /** 재생 시간에 맞춰 움직이는 관측 볼륨 형태 — NebulaVolume 애니메이션과 재생 패널 안내가 함께 쓴다. */
 export const animatedVolumeShapes: ReadonlySet<string> = new Set(['bipolar-jet', 'shocked-shell', 'dust-spiral', 'edge-on-disk', 'light-echo', 'vela-wind', 'symbiotic-outflow', 'protostar-bows']);
@@ -49,7 +52,26 @@ function referenceRotation(plane: NonNullable<Body['orbit']>['referencePlane'], 
   return new Matrix4().makeRotationFromQuaternion(new Quaternion().setFromUnitVectors(NORTH, pole));
 }
 
+// 탈출 궤적 선: 기준 시점 30년 전부터 10년 뒤까지(직선이라 lineLoop 로 닫혀도 같은 선 위를 되돌아간다).
+const TRAJECTORY_SPAN_DAYS = [-30 * 365.25, 10 * 365.25] as const;
+
+function createTrajectoryMotion(trajectory: NonNullable<Body['trajectory']>, scale: number): Motion {
+  const epochDays = (Date.parse(trajectory.epoch) - J2000_UTC_MS) / MS_PER_DAY;
+  const [x, y, z] = trajectory.positionAu;
+  const [vx, vy, vz] = trajectory.velocityAuPerDay;
+  // 황도 (x, y, z) → 장면 (x, z, −y): 황도면은 X/−Z, +Y 가 북쪽.
+  const setAt = (position: Vector3, days: number) => {
+    const elapsed = days - epochDays;
+    return position.set(x + vx * elapsed, z + vz * elapsed, -(y + vy * elapsed)).multiplyScalar(scale);
+  };
+  const points = new Float64Array(6);
+  const point = new Vector3();
+  TRAJECTORY_SPAN_DAYS.forEach((offset, index) => setAt(point, epochDays + offset).toArray(points, index * 3));
+  return { orientation: new Quaternion(), points, unitsPerAu: scale, setLocalPosition: setAt };
+}
+
 function createMotion(body: Body, scale: number, parentOrientation?: Quaternion): Motion {
+  if (body.trajectory) return createTrajectoryMotion(body.trajectory, scale);
   if (!body.orbit) {
     return {
       orientation: new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), radians(body.tilt)),

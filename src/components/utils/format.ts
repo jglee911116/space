@@ -1,12 +1,38 @@
-import type { Body, DistantObject } from '@/constants/space';
+import type { Body, DistantObject, StarSystem } from '@/constants/space';
 import type { CatalogText, FormatNumber, MessageKey, Translator } from '@/i18n/messages';
-import { DAYS_PER_YEAR, KM_PER_AU } from '@/constants/space/units';
+import { DAYS_PER_YEAR, KM_PER_AU, KM_PER_LIGHT_DAY } from '@/constants/space/units';
+
+const KM_PER_LIGHT_SECOND = KM_PER_LIGHT_DAY / 86_400;
+
+/** 별빛이 이 천체(위성이면 그 모행성)까지 오는 시간(초) — 별을 도는 궤도의 장반경, 곧 평균 거리 기준. */
+export function starlightSeconds(system: StarSystem, body: Body) {
+  for (let current = body; current.parent; ) {
+    const parent = system.bodies.find((other) => other.id === current.parent);
+    if (!parent) return null;
+    // 탈출 궤적은 자료 기준 시점의 거리.
+    const au = current.orbit?.axisAu ?? (current.trajectory && Math.hypot(...current.trajectory.positionAu));
+    if (parent.kind === 'star') return au === undefined ? null : (au * KM_PER_AU) / KM_PER_LIGHT_SECOND;
+    current = parent;
+  }
+  return null;
+}
+
+/** 초 → '8분 19초' · '4시간 10분' · '1.2일'. */
+export function formatDuration(seconds: number, t: Translator, number: FormatNumber) {
+  if (seconds < 3_600) return t('units.minutesSeconds', [Math.floor(seconds / 60), Math.round(seconds % 60)]);
+  if (seconds < 2 * 86_400) return t('units.hoursMinutes', [Math.floor(seconds / 3_600), Math.round((seconds % 3_600) / 60)]);
+  return t('units.days', [number(seconds / 86_400, 1)]);
+}
 
 // 종류 → 문구 표. 종류를 추가하고 여기를 빠뜨리면 typecheck 가 잡는다(정보 패널과 검색이 함께 쓴다).
-export const kindLabel = { star: 'body.star', planet: 'body.planet', 'dwarf-planet': 'body.dwarfPlanet', 'small-body': 'body.smallBody', moon: 'body.moon' } as const satisfies Record<
-  Body['kind'],
-  MessageKey
->;
+export const kindLabel = {
+  star: 'body.star',
+  planet: 'body.planet',
+  'dwarf-planet': 'body.dwarfPlanet',
+  'small-body': 'body.smallBody',
+  moon: 'body.moon',
+  spacecraft: 'body.spacecraft',
+} as const satisfies Record<Body['kind'], MessageKey>;
 
 export const distantKindLabel = {
   quasar: 'details.quasar',

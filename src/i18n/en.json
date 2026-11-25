@@ -668,5 +668,16 @@
   "units.days": "{0} days",
   "units.hours": "{0} h",
   "units.lightYears": "{0} light-years",
-  "units.years": "{0} years"
+  "units.years": "{0} years",
+  "body.spacecraft": "Spacecraft",
+  "catalog.spacecraft.voyager-1.name": "Voyager 1",
+  "catalog.spacecraft.voyager-1.note": "Launched in 1977, it crossed the heliopause in 2012 as the first probe in interstellar space and is the most distant human-made object. Its position is extrapolated at constant velocity from 1 January 2026.",
+  "catalog.spacecraft.voyager-2.name": "Voyager 2",
+  "catalog.spacecraft.voyager-2.note": "Launched in 1977, the only probe to visit Uranus and Neptune; it entered interstellar space in 2018. Its position is extrapolated at constant velocity from 1 January 2026.",
+  "catalog.spacecraft.new-horizons.name": "New Horizons",
+  "catalog.spacecraft.new-horizons.note": "Launched in 2006, it flew past Pluto in 2015 and the Kuiper belt object Arrokoth in 2019. Its position is extrapolated at constant velocity from 1 January 2026.",
+  "catalog.spacecraft.jwst.name": "James Webb Space Telescope",
+  "catalog.spacecraft.jwst.note": "It flies a halo orbit around the L2 point, about 1.5 million km from Earth on the side away from the Sun. Here it is simplified to a point fixed at L2 that circles with Earth (size and distance enlarged).",
+  "units.minutesSeconds": "{0} min {1} s",
+  "units.hoursMinutes": "{0} h {1} min"
 }

@@ -1,6 +1,6 @@
 import type { CatalogText } from '@/i18n/messages';
 
-export type BodyKind = 'star' | 'planet' | 'dwarf-planet' | 'small-body' | 'moon';
+export type BodyKind = 'star' | 'planet' | 'dwarf-planet' | 'small-body' | 'moon' | 'spacecraft';
 export type ClusterLayer = 'galaxies' | 'gas' | 'mass';
 
 export type BodySilhouette = 'irregular' | 'lobed' | 'rounded-box';
@@ -52,6 +52,8 @@ export type Body = {
   colors: readonly [string, string, string];
   appearance?: Appearance;
   orbit?: OrbitElements;
+  /** 궤도 대신 직선 탈출 궤적: epoch 의 일심 황도(J2000) 위치·속도에서 등속으로 외삽한다. */
+  trajectory?: { epoch: string; positionAu: readonly [number, number, number]; velocityAuPerDay: readonly [number, number, number] };
   rings?: readonly Ring[];
   ringMap?: { file: string; inner: number; outer: number };
   shapeModel?: string;
@@ -99,6 +101,16 @@ export type OortCloud = {
   source: Source;
 };
 
+/** 날짜로 건너뛸 수 있는 천문 현상. bodyId 는 같은 계의 천체(초점을 옮길 대상). */
+export type SkyEvent = {
+  kind: 'solar-eclipse' | 'lunar-eclipse' | 'opposition';
+  subtype?: 'total' | 'annular' | 'partial' | 'penumbral';
+  /** ISO 8601 UTC. */
+  instant: string;
+  bodyId: string;
+  source: Source;
+};
+
 export type StarSystem = {
   id: string;
   aliases?: readonly string[];
@@ -121,6 +133,8 @@ export type StarSystem = {
   /** 바깥 구역(예: 해왕성 너머·카이퍼대). 소속 천체는 region: 'outer'. */
   outerRegion?: { name: CatalogText; beltName: CatalogText; overviewDistance: number; beltAu: readonly [number, number]; source: Source };
   oortCloud?: OortCloud;
+  /** 시각 순으로 정렬. */
+  events?: readonly SkyEvent[];
   /** 부모가 자식보다 먼저 오도록 정렬. */
   bodies: readonly Body[];
   sources: readonly Source[];
