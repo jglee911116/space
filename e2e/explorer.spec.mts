@@ -1108,3 +1108,29 @@ test('Shift+방향키와 +/−로 확대·축소하고 끝까지 축소하면 �
   }
   await expect(page).toHaveURL(/\?system=solar&view=galaxy$/);
 });
+
+test('베누를 소행성 번호로 찾아 NASA 관측 모델을 로드한다', async ({ page }) => {
+  await page.goto('/ko');
+  const model = page.waitForResponse((response) => response.ok() && response.url().endsWith('/bennu/bennu-nasa.glb'));
+  await search(page, '101955', /^베누 /);
+  await expect(page).toHaveURL(`${milkyWay}?system=solar&target=bennu`);
+  await model;
+  await expect(details(page).getByRole('heading', { name: '베누', exact: true })).toBeVisible();
+  await waitForRenderedMap(page);
+});
+
+test('태양계 이웃에서 HR 8799를 열어 Webb 이미지와 외계행성을 본다', async ({ page }) => {
+  await page.goto('/ko');
+  const image = page.waitForResponse((response) => response.ok() && response.url().endsWith('/hr-8799/webb-nircam.webp'));
+  await expect(page.getByRole('button', { name: /^HR 8799 / })).toBeVisible();
+  await page.getByRole('button', { name: /^HR 8799 / }).click();
+  await expect(page).toHaveURL(`${milkyWay}?system=hr-8799`);
+  await image;
+  await expect(details(page).getByRole('img', { name: /NIRCam/ })).toBeVisible();
+  const planets = details(page).getByRole('group', { name: '관측된 외계행성' });
+  await expect(planets.getByRole('button')).toHaveCount(4);
+  await planets.getByRole('button', { name: 'HR 8799 e' }).click();
+  await expect(page).toHaveURL(`${milkyWay}?system=hr-8799&target=hr-8799-e`);
+  await expect(details(page).getByRole('heading', { name: 'HR 8799 e', exact: true })).toBeVisible();
+  await waitForRenderedMap(page);
+});

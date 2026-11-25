@@ -3,6 +3,7 @@ import { pegasi51 } from './51-pegasi';
 import { alphaCentauri } from './alpha-centauri';
 import { barnardStar } from './barnard-star';
 import { epsilonEridani } from './epsilon-eridani';
+import { hr8799 } from './hr-8799';
 import { kepler16 } from './kepler-16';
 import { m31EclipsingBinary } from './m31-eclipsing-binary';
 import { gliese12, lhs1140 } from './nearby-exoplanets';
@@ -26,6 +27,7 @@ export const systems: readonly StarSystem[] = [
   gliese12,
   lhs1140,
   pegasi51,
+  hr8799,
   kepler16,
   arScorpii,
   m31EclipsingBinary,
