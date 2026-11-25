@@ -26,8 +26,7 @@ export function legacyDestination(current: URL, acceptLanguage: string | null = 
   const next = new URL(current);
   const requested = next.searchParams.get('lang');
   const locale = isLocale(requested) ? requested : preferredLocale(acceptLanguage);
-  const path = next.pathname.replace(/^\/explore(?=\/|$)/, '') || '/';
-  next.pathname = withLocale(path, locale);
+  next.pathname = withLocale(next.pathname, locale);
   next.searchParams.delete('lang');
   return next;
 }

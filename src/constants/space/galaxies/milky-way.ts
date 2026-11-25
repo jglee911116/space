@@ -25,7 +25,6 @@ export const milkyWay: HostGalaxy = {
     name: message('catalog.milky-way.neighborhood.name'),
     summary: message('catalog.milky-way.neighborhood.summary'),
     source: { label: message('catalog.sources.nasa-stars-near-the-sun'), href: 'https://science.nasa.gov/sun/facts/' },
-    gaiaSource: { label: 'ESA/Gaia/DPAC · Gaia DR3', href: 'https://gea.esac.esa.int/archive/' },
   },
   notes: [message('catalog.milky-way.milky-way.notes'), message('catalog.milky-way.milky-way.diskNote')],
   demoYearsPerSecond: 10_000_000,

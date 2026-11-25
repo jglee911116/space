@@ -851,147 +851,6 @@ test('태양계는 가까이 보거나 선택한 천체의 텍스처를 로드�
   await expect(details(page).getByRole('heading', { name: '수성', exact: true })).toBeVisible();
 });
 
-test('Gaia 표본은 확대할 때 타일을 읽고 축소 후 재사용한다', async ({ page }) => {
-  const catalogRequests: string[] = [];
-  page.on('request', (request) => {
-    const path = new URL(request.url()).pathname;
-    if (path.includes('/catalog/gaia-dr3-nearby/')) catalogRequests.push(path);
-  });
-
-  await page.goto('/ko');
-  await waitForRenderedMap(page);
-  const layer = details(page).getByRole('checkbox', { name: '확대할 때 Gaia DR3 관측원 보기' });
-  await expect(layer).toBeChecked();
-  expect(catalogRequests.filter((path) => path.endsWith('.bin'))).toHaveLength(0);
-
-  const canvas = page.locator('main canvas');
-  const bounds = await canvas.boundingBox();
-  if (!bounds) throw new Error('Neighborhood canvas not mounted');
-  const zoom = (deltaY: number) =>
-    canvas.dispatchEvent('wheel', {
-      deltaY,
-      clientX: bounds.x + bounds.width / 2,
-      clientY: bounds.y + bounds.height / 2,
-      bubbles: true,
-      cancelable: true,
-    });
-  const bright = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith('.bright.bin') && response.ok());
-  for (let step = 0; step < 5; step++) await zoom(-100);
-  await bright;
-  expect(catalogRequests.filter((path) => path.endsWith('.bright.bin')).length).toBeLessThanOrEqual(16);
-  expect(catalogRequests.some((path) => path.endsWith('.detail.bin'))).toBe(false);
-  const detail = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith('.detail.bin') && response.ok());
-  for (let step = 0; step < 7; step++) await zoom(-100);
-  await detail;
-
-  for (let step = 0; step < 12; step++) await zoom(100);
-  await expect(page).toHaveURL('/ko');
-  // Allow the periodic visibility update to unmount the point geometries.
-  await page.waitForTimeout(350);
-  const requestCount = catalogRequests.length;
-  for (let step = 0; step < 12; step++) await zoom(-100);
-  await page.waitForTimeout(350);
-  expect(catalogRequests).toHaveLength(requestCount);
-  await layer.uncheck();
-  await expect(layer).not.toBeChecked();
-});
-
-test('Gaia 점을 선택하면 64비트 관측원 식별자와 측정값을 표시한다', async ({ page }) => {
-  const sourceId = BigInt('4683897617110115200');
-  const tile = Buffer.alloc(24);
-  tile.writeFloatLE(6.5, 12);
-  tile.writeBigUInt64LE(sourceId, 16);
-  await page.route('**/catalog/gaia-dr3-nearby/manifest.json?*', (route) =>
-    route.fulfill({
-      json: { tileSize: 40, tiles: [{ id: '0_0_0', center: [0, 0, 0], bright: 1, detail: 0 }] },
-    }),
-  );
-  await page.route('**/catalog/gaia-dr3-nearby/0_0_0.bright.bin?*', (route) =>
-    route.fulfill({
-      body: tile,
-      contentType: 'application/octet-stream',
-    }),
-  );
-  await page.goto('/ko');
-  await waitForRenderedMap(page);
-  const canvas = page.locator('main canvas');
-  const bounds = await canvas.boundingBox();
-  if (!bounds) throw new Error('Neighborhood canvas not mounted');
-  const x = bounds.x + bounds.width / 2;
-  const y = bounds.y + bounds.height / 2;
-  const loaded = page.waitForResponse((response) => response.url().includes('0_0_0.bright.bin'));
-  for (let step = 0; step < 5; step++) {
-    await canvas.dispatchEvent('wheel', { deltaY: -100, clientX: x, clientY: y, bubbles: true, cancelable: true });
-  }
-  await loaded;
-  const info = page.getByRole('complementary', { name: 'Gaia DR3 관측원' });
-  await expect
-    .poll(async () => {
-      await page.mouse.click(x, y);
-      return info.isVisible();
-    })
-    .toBe(true);
-  await expect(info).toContainText(`Gaia DR3 ${sourceId}`);
-  await expect(info).toContainText('G 6.5');
-});
-
-test('확장된 Gaia 표본을 ID로 찾아 공유 링크에서 다시 연다', async ({ page, context }) => {
-  const id = '4357027756659697664';
-  const destination = `/ko?view=neighborhood&gaia=${id}`;
-  const packets: string[] = [];
-  page.on('request', (request) => {
-    if (request.url().includes('/gaia-dr3-nearby/index/')) packets.push(request.url());
-  });
-  await page.goto(milkyWay);
-  expect(packets).toHaveLength(0);
-  await search(page, `Gaia DR3 ${id}`, new RegExp(`^Gaia DR3 ${id}`));
-  await expect(page).toHaveURL(destination);
-  const card = page.getByRole('complementary', { name: 'Gaia DR3 관측원' });
-  await expect(card).toContainText(`Gaia DR3 ${id}`);
-  await expect(card).toContainText('159.79광년');
-  expect(new Set(packets).size).toBe(1);
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await card.getByRole('button', { name: '공유 링크 복사' }).click();
-  await expect(card.getByRole('status')).toHaveText('공유 링크를 복사했습니다.');
-  const copied = await page.evaluate(() => navigator.clipboard.readText());
-  expect(new URL(copied).pathname + new URL(copied).search).toBe(destination);
-  await page.reload();
-  await expect(card).toContainText(`Gaia DR3 ${id}`);
-  await card.getByRole('button', { name: '천체 정보 닫기' }).click();
-  await expect(page).toHaveURL('/ko?view=neighborhood');
-});
-
-test('시리우스 중심으로 10광년 이내 Gaia 표본을 거리순으로 연다', async ({ page }) => {
-  const id = '2947050466531873024';
-  await page.goto(`${milkyWay}?system=sirius`);
-  await details(page).getByRole('button', { name: '항성계 주변 Gaia 관측원 보기' }).click();
-  await expect(page).toHaveURL('/ko?view=neighborhood&around=sirius');
-  await expect(details(page).getByRole('heading', { level: 2 })).toHaveText('시리우스 주변 Gaia 관측원');
-  const linked = details(page).getByRole('group', { name: '연결된 Gaia 관측 기록' });
-  const siriusB = linked.getByRole('button', { name: /시리우스 B/ });
-  await expect(siriusB).toContainText(`Gaia DR3 ${id}`);
-  const nearby = details(page).getByRole('list').nth(1);
-  await expect(nearby.getByRole('button').first()).toContainText('5.74광년');
-  await expect(nearby.getByRole('button', { name: /프록시마 센타우리/ })).toContainText('Gaia DR3 5853498713190525696');
-  await expect(nearby.getByRole('button', { name: new RegExp(id) })).toHaveCount(0);
-  await siriusB.click();
-  await expect(page).toHaveURL(`/ko?view=neighborhood&gaia=${id}&around=sirius`);
-  const card = page.getByRole('complementary', { name: 'Gaia DR3 관측원' });
-  await expect(card).toContainText(id);
-  await expect(card).toContainText('시리우스 B');
-  await expect(card.getByRole('link', { name: '등록된 천체 보기' })).toHaveAttribute('href', `${milkyWay}?system=sirius&target=sirius-b`);
-  await card.getByRole('button', { name: '이 관측원 주변 보기' }).click();
-  await expect(page).toHaveURL(`/ko?view=neighborhood&around=${id}`);
-  await expect(details(page).getByRole('heading', { level: 2 })).toContainText('시리우스 B 주변');
-  await expect(details(page).getByRole('status')).toContainText('개 표시');
-  await expect(
-    details(page)
-      .getByRole('list')
-      .nth(1)
-      .getByRole('button', { name: new RegExp(id) }),
-  ).toHaveCount(0);
-});
-
 test('모바일 찾기 패널에서 빠른 이동, 전체 목록, 검색, 최근 방문을 사용할 수 있다', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(milkyWay);
@@ -1022,37 +881,6 @@ test('모바일 찾기 패널에서 빠른 이동, 전체 목록, 검색, 최근
   await page.keyboard.press('Escape');
   await expect(panel).toBeHidden();
   await expect(trigger).toBeFocused();
-});
-
-test('Gaia 반경을 바꾸고 관측원 선택 및 새로고침 후에도 유지한다', async ({ page }) => {
-  await page.goto('/ko?view=neighborhood&around=sirius');
-  const panel = details(page);
-  const radii = panel.getByRole('group', { name: 'Gaia 검색 반경' });
-  const total = panel.getByRole('status');
-  await expect(radii.getByRole('button', { name: '10광년', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(total).toContainText('표본 8개');
-  await radii.getByRole('button', { name: '5광년', exact: true }).click();
-  await expect(page).toHaveURL('/ko?view=neighborhood&around=sirius&radius=5');
-  await expect(total).toHaveText('이 범위에 표시할 Gaia 표본이 없습니다.');
-  await radii.getByRole('button', { name: '25광년', exact: true }).click();
-  await expect(total).toHaveText('표본 145개 중 가까운 20개 표시');
-
-  const scale = page.getByRole('group', { name: '화면 거리 축척' });
-  await expect(scale).toContainText('화면 축척');
-  const scaleBefore = await scale.innerText();
-  const neighbor = panel.getByRole('button', { name: /3139847906307949696/ });
-  await neighbor.click();
-  await expect(page).toHaveURL('/ko?view=neighborhood&gaia=3139847906307949696&around=sirius&radius=25');
-  await expect(neighbor).toHaveAttribute('aria-current', 'true');
-  const card = page.getByRole('complementary', { name: 'Gaia DR3 관측원' });
-  await expect(card).toContainText('3139847906307949696');
-  await expect(scale).toHaveText(scaleBefore);
-
-  await page.reload();
-  await expect(radii.getByRole('button', { name: '25광년', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(card).toBeVisible();
-  await card.getByRole('button', { name: '천체 정보 닫기' }).click();
-  await expect(page).toHaveURL('/ko?view=neighborhood&around=sirius&radius=25');
 });
 
 test('찾기에서 동의어, 카탈로그 번호와 이름이 같은 천체를 구분한다', async ({ page }) => {
@@ -1089,34 +917,6 @@ test('찾기에서 카탈로그 이름만 입력해도 메시에 천체를 찾�
   }
 });
 
-test('Gaia 표본 반경 밖의 항성계에는 주변 관측원 버튼을 두지 않는다', async ({ page }) => {
-  const button = details(page).getByRole('button', { name: '항성계 주변 Gaia 관측원 보기' });
-  await page.goto(`${milkyWay}?system=barnard-star`);
-  await expect(button).toBeVisible();
-  // Kepler-16 은 약 245광년으로 표본(약 163광년) 밖이다.
-  await page.goto(`${milkyWay}?system=kepler-16`);
-  await expect(details(page).getByRole('heading', { level: 2 })).toBeVisible();
-  await expect(button).toHaveCount(0);
-});
-
-test('Gaia 대응 관측원은 자기 항성계의 별이고 주변 목록에서 빠진다', { tag: '@smoke' }, async ({ page }) => {
-  for (const { system, name, id } of [
-    { system: 'epsilon-eridani', name: /에리다누스자리 엡실론/, id: '5164707970261890560' },
-    { system: '51-pegasi', name: /페가수스/, id: '2835207319109249920' },
-  ]) {
-    await page.goto(`/ko?view=neighborhood&around=${system}`);
-    const linked = details(page).getByRole('group', { name: '연결된 Gaia 관측 기록' });
-    await expect(linked.getByRole('button', { name })).toContainText(`Gaia DR3 ${id}`);
-    await expect(details(page).getByRole('status')).toContainText('개 표시');
-    await expect(
-      details(page)
-        .getByRole('list')
-        .nth(1)
-        .getByRole('button', { name: new RegExp(id) }),
-    ).toHaveCount(0);
-  }
-});
-
 test('닫은 정보 패널은 다른 천체로 이동하면 다시 열린다', async ({ page }) => {
   await page.goto(`${milkyWay}?system=barnard-star&target=barnard`);
   await details(page).getByRole('button', { name: '천체 정보 닫기' }).click();
@@ -1124,6 +924,16 @@ test('닫은 정보 패널은 다른 천체로 이동하면 다시 열린다', a
   await search(page, '시리우스', /^시리우스 항성계/);
   await expect(page).toHaveURL(/system=sirius/);
   await expect(details(page)).toBeVisible();
+});
+
+test('태양계 이웃 지도에서 등록된 항성계 거리를 보여 주고 이름을 누르면 그 항성계로 간다', { tag: '@smoke' }, async ({ page }) => {
+  await page.goto('/ko');
+  await expect(page.getByRole('group', { name: '태양계 이웃 3D 거리 지도' })).toBeVisible();
+  await waitForRenderedMap(page);
+  const sirius = page.getByRole('button', { name: /시리우스\s*8\.59광년/ });
+  await expect(sirius).toBeVisible();
+  await sirius.click();
+  await expect(page).toHaveURL(/\/ko\/galaxies\/milky-way\?system=sirius$/);
 });
 
 test('로케일 없는 주소는 브라우저 언어로, lang 지정은 영구 이동으로 보낸다', { tag: '@smoke' }, async ({ request }) => {

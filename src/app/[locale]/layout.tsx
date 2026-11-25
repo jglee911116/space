@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import '@/styles/globals.scss';
-import { ExplorePage } from '@/components/explore/explore-page';
-import { validateCatalog } from '@/components/explore/utils/validate-catalog';
+import { ExplorePage } from '@/components/explore-page';
+import { validateCatalog } from '@/components/utils/validate-catalog';
 import { SITE_NAME_KEY } from '@/constants/site';
 import { LanguageProvider } from '@/i18n/language';
 import { translate } from '@/i18n/messages';

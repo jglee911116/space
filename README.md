@@ -8,7 +8,7 @@
 | --- | --- |
 | `src/constants/space/star-systems`, `galaxies` | 항성계와 은하의 카탈로그 |
 | `src/constants/space/featured-objects` | 성단, 항성, 콤팩트 천체, 성운 카탈로그 |
-| `src/components/explore/three` | 블랙홀, 은하, 성운, 항성·성단, 행성계 렌더러와 지도·공용 코드 |
+| `src/components/three` | 블랙홀, 은하, 성운, 항성·성단, 행성계 렌더러와 지도·공용 코드 |
 | `public/textures` | 은하, 성운, 블랙홀, 퀘이사, 항성계의 텍스처 |
 | `public/models` | 관측 기반 3D 형상 파일 |
 
@@ -25,21 +25,3 @@
 ## 탐색 회귀 테스트
 
 프로덕션 빌드를 만든 뒤 `pnpm exec playwright install chromium`과 `pnpm test:e2e`를 실행합니다. 설치된 Google Chrome을 쓰려면 `PLAYWRIGHT_CHANNEL=chrome pnpm test:e2e`로 실행합니다. 테스트용 서버는 로컬 포트 3328에서 시작합니다. CI는 빌드 뒤 `@smoke` 태그 테스트만 실행합니다. 장면 종류마다 하나 이상과 라우팅(로케일 리다이렉트·404)을 확인합니다(`pnpm exec playwright test --grep @smoke`).
-
-## Gaia DR3 태양 근방 표본
-
-우리은하에서 태양 근방으로 확대하거나 탐색 메뉴에서 태양 근방을 선택합니다. 근방 지도에서 더 확대하면 Gaia 관측원이 표시됩니다. 점을 클릭하거나 탭하면 Gaia DR3 식별자, 추정 거리, G 등급을 볼 수 있습니다. 정보 패널에서 이 표시를 끌 수 있습니다. 탐색 검색창에는 숫자 ID 또는 `Gaia DR3 <ID>`를 입력할 수 있습니다. 관측원 카드에서 공유 링크를 복사하면 해당 점을 중심으로 지도를 열 수 있습니다.
-
-화면에 걸리는 40광년 격자 타일을 최대 16개 표시합니다. 각 타일의 밝은 관측원은 최대 12개입니다. 더 확대하면 가까운 타일 최대 5개에 각각 최대 256개를 추가합니다. 최근에 읽은 패킷은 최대 32개까지 재사용합니다. 관측 자료는 정적 파일로 제공됩니다.
-
-[ESA Gaia Archive](https://gea.esac.esa.int/archive/)에서 아래 쿼리의 결과를 `gaia.csv`로 내보냅니다. `gaia-outer.csv`는 시차 조건을 `parallax >= 30 AND parallax < 40`으로 바꿔 내보냅니다. `gaia-far.csv`는 `TOP 10000`과 `parallax >= 20 AND parallax < 30`을 사용합니다. 세 CSV를 `python3 scripts/build-gaia-preview.py gaia.csv public/catalog/gaia-dr3-nearby --outer-csv gaia-outer.csv --far-csv gaia-far.csv`로 패킹합니다. 표본을 다시 만들면 `src/components/explore/utils/gaia-format.ts`의 `gaiaVersion`을 올립니다. `/catalog`는 1년 동안 바뀌지 않는 캐시로 제공되므로, 올리지 않으면 방문자가 예전 표본을 계속 봅니다.
-
-현재 표본은 약 163광년 이내의 관측원 21,312개입니다. 밝기와 시차 품질 기준으로 선별했습니다. 껍질마다 완전도가 다릅니다. 시차 40mas 이상(약 82광년 이내)은 5,312개로 `TOP` 한도 아래라 `parallax_over_error >= 10`을 만족하는 관측원을 모두 담았습니다. 30~40mas(82~109광년)는 6,000개 한도에 걸려 G 16.4등급까지, 20~30mas(109~163광년)는 10,000개 한도에 걸려 G 12.8등급까지만 담았습니다. 그래서 바깥 껍질은 밀도가 계단처럼 낮아집니다. ID 검색은 정렬된 인덱스 조각 64개 중 필요한 파일 하나를 불러옵니다. 출처는 ESA/Gaia/DPAC입니다.
-
-```sql
-SELECT TOP 6000 source_id, ra, dec, parallax, phot_g_mean_mag
-FROM gaiadr3.gaia_source
-WHERE parallax >= 40 AND parallax_over_error >= 10
-  AND phot_g_mean_mag IS NOT NULL
-ORDER BY phot_g_mean_mag ASC, source_id ASC
-```

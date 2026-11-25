@@ -173,7 +173,7 @@ export type HostGalaxy = Galaxy & {
   /** 은하 공전 기준 항성계(줌인 대상). */
   systemId: string;
   /** 기준 항성계 주변 거리 지도. 계에 `neighborhood` 가 있으면 포함된다. */
-  neighborhood: { name: CatalogText; summary: CatalogText; source: Source; /** Gaia DR3 표본(public/catalog/gaia-dr3-nearby)의 출처. */ gaiaSource: Source };
+  neighborhood: { name: CatalogText; summary: CatalogText; source: Source };
   /** 은하 장면 상세 패널에서 summary 앞에 놓는 문단. */
   notes: readonly CatalogText[];
   demoYearsPerSecond: number;

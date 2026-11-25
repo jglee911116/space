@@ -8,5 +8,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/explore/:path*', '/galaxies/:path*', '/superclusters/:path*', '/universe', '/local-group'],
+  matcher: ['/', '/galaxies/:path*', '/superclusters/:path*', '/universe', '/local-group'],
 };
