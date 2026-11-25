@@ -336,11 +336,6 @@
   outline-offset: 3px;
 }
 
-.distanceComparison button[aria-pressed='true'] {
-  color: #ffc58d;
-  border-color: #ffc58d80;
-}
-
 .distanceReadout {
   width: fit-content;
   padding: 0.5rem 0.75rem;
@@ -777,9 +772,15 @@
   .searchAll summary,
   .playback button,
   .speed select,
+  .clockJump input,
   .languageTrigger {
     min-height: 2.75rem;
     box-sizing: border-box;
+  }
+
+  // 접기 표식(list-item)을 지키려고 높이는 여백으로 맞춘다.
+  .clock summary {
+    padding-block: 0.8rem;
   }
 
   .details .closeDetails {
@@ -862,6 +863,7 @@
 .searchTrigger:focus-visible,
 .searchClose:focus-visible,
 .searchAll summary:focus-visible,
+.clock summary:focus-visible,
 .searchClear:focus-visible,
 .searchInput:focus-visible,
 .searchResults button:focus-visible {
@@ -902,5 +904,142 @@
 
   figcaption {
     margin-top: 0.35rem;
+  }
+}
+
+.clock {
+  margin-bottom: 0.45rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  pointer-events: auto;
+
+  summary {
+    width: fit-content;
+    cursor: pointer;
+  }
+
+  summary span,
+  p span {
+    color: #bab7c4;
+    margin-inline-end: 0.3rem;
+  }
+
+  p {
+    margin: 0.35rem 0;
+  }
+}
+
+.clockBody {
+  padding-inline-start: 1rem;
+}
+
+.clockJump {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  input,
+  button {
+    font: inherit;
+  }
+}
+
+.lightTravel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  pointer-events: auto;
+}
+
+.sizeComparison {
+  margin-block: 0.75rem;
+
+  label {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-block: 0.25rem;
+  }
+
+  select {
+    min-width: 0;
+    flex: 1;
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-top: 0.5rem;
+  }
+
+  text {
+    fill: currentColor;
+    font-size: 9px;
+  }
+}
+
+.transport,
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.4rem;
+}
+
+.transport .speed {
+  margin-inline-start: 0.25rem;
+  margin-bottom: 0.45rem;
+}
+
+.transport button[aria-pressed='true'],
+.tools button[aria-pressed='true'] {
+  color: #ffc58d;
+  border-color: #ffc58d80;
+}
+
+.iconButton {
+  min-width: 2.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tour {
+  flex-basis: 100%;
+  max-width: 32rem;
+
+  p {
+    margin: 0 0 0.4rem;
+  }
+
+  div {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+.skyEvents {
+  ul {
+    margin: 0.4rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    margin-block: 0.3rem;
+  }
+
+  time,
+  a {
+    font-size: 0.85em;
+    opacity: 0.8;
   }
 }

@@ -11,10 +11,11 @@ import { BodyTooltip } from '../details';
 import { createDistanceStore } from '../utils/distance-store';
 import { associationPath, distantObjectPath, featuredObjectPath, galaxyFocusPath, galaxyPath, localGroupPath, superclusterPath, systemPath, UNIVERSE_PATH, universeFocusPath } from '../utils/paths';
 import { featuredOverviewDistanceKpc, type ZoomHandoff, type ZoomScale } from '../utils/zoom';
+import { J2000_UTC_MS, MS_PER_DAY } from '../utils/orbit';
 import type { Target } from '../scenes/system-scene';
 import { DetailsPanel } from './details-panel';
 import { ExplorerHeader } from './explorer-header';
-import { useDistanceBar, useDocumentTitle, useInfoPanel, usePlayback } from './hooks';
+import { useDistanceBar, useDocumentTitle, useInfoPanel, usePlayback, useServerClockOffset } from './hooks';
 import { PlaybackBar } from './playback-bar';
 import { FeaturedObjectScene, GalaxyScene, LocalGroupScene, NeighborhoodScene, SystemScene, UniverseScene } from './scene-loaders';
 import { DEFAULT_SYSTEM_ID, explorerView, recordView, systemNavigation, type CenterZoom, type RecordedView, type WheelView } from './view-state';
@@ -54,9 +55,38 @@ export function Explorer() {
   const [scale, setScale] = useState<ZoomScale>(target === null ? (view.overview ?? 'system') : 'system');
   const nav = useMemo(() => systemNavigation(view, scale), [view, scale]);
   const { oortView } = nav;
-  // 정보 패널 열림/닫힘 선택은 지금 보는 화면에만 적용한다(이동하거나 뒤로 가면 기본값으로).
-  const { infoId, infoButton, infoOpen, infoPreference, setInfoPreference, closeInfo } = useInfoPanel(`${pathname}?${searchParams}`);
+  // 정보 패널 열림/닫힘 선택은 지금 보는 화면에만 적용한다(이동하거나 뒤로 가면 기본값으로). ?date= 는 화면이 아니라 시작 시각이라 뺀다.
+  const viewParams = new URLSearchParams(searchParams);
+  viewParams.delete('date');
+  const currentPath = viewParams.size ? `${pathname}?${viewParams}` : pathname;
+  const { infoId, infoButton, infoOpen, infoPreference, setInfoPreference, closeInfo } = useInfoPanel(currentPath);
   const { simulationDaysRef, accretionPlaybackTime, ...playback } = usePlayback();
+  const serverOffset = useServerClockOffset();
+  // 시뮬레이션 시작 순간(서버 시각)이 J2000 에서 며칠 뒤인지 — 태양계 궤도가 지금 위치에서 출발한다.
+  const epochDays = (playback.startedAt + serverOffset - J2000_UTC_MS) / MS_PER_DAY;
+  // 시뮬레이션 시계는 이 순간(서버 시각)에서 0일로 출발한다 — 날짜 이동은 여기서부터의 날수로 바꾼다.
+  const clockAnchor = playback.startedAt + serverOffset;
+  const { jumpToDays } = playback;
+  const dateParam = searchParams.get('date');
+  useEffect(() => {
+    const ms = dateParam ? Date.parse(dateParam) : Number.NaN;
+    if (Number.isFinite(ms)) jumpToDays((ms - clockAnchor) / MS_PER_DAY);
+  }, [clockAnchor, dateParam, jumpToDays]);
+  const jumpToDate = useCallback(
+    (ms: number) => {
+      jumpToDays((ms - clockAnchor) / MS_PER_DAY);
+      const url = new URL(window.location.href);
+      url.searchParams.set('date', new Date(ms).toISOString());
+      window.history.replaceState(null, '', url);
+    },
+    [clockAnchor, jumpToDays],
+  );
+  const jumpToNow = useCallback(() => {
+    jumpToDays((Date.now() + serverOffset - clockAnchor) / MS_PER_DAY);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('date');
+    window.history.replaceState(null, '', url);
+  }, [clockAnchor, jumpToDays, serverOffset]);
   const { distanceBar, reportDistance } = useDistanceBar();
   const [showCenterPolarization, setShowCenterPolarization] = useState(false);
   const [showCounterjet, setShowCounterjet] = useState(false);
@@ -64,6 +94,9 @@ export function Explorer() {
   const [clusterLayer, setClusterLayer] = useState<ClusterLayer>('galaxies');
   const [spaceEntry, setSpaceEntry] = useState<ZoomHandoff>();
   const [recenter, setRecenter] = useState(0);
+  // 빛의 구면은 출발시킨 항성계에서만 보인다.
+  const [light, setLight] = useState<{ systemId: string; startDays: number } | null>(null);
+  const lightStartDays = light?.systemId === systemId ? light.startDays : null;
   const [hovered, setHovered] = useState<HoveredBody | null>(null);
   const hoveredBody = hovered && system.bodies.find((other) => other.id === hovered.id);
   const [comparison, setComparison] = useState<{ origin: string; destination: Target } | null>(null);
@@ -125,6 +158,19 @@ export function Explorer() {
       if (!recordView(locale, next, nextOverview, nextSystem, systems.find((item) => item.id === nextSystem)?.galaxyId ?? milkyWay.id)) setRecenter((revision) => revision + 1);
     },
     [locale, systemId, setHovered, setComparison],
+  );
+
+  const { readDays } = playback;
+  const eventClock = useMemo(
+    () => ({
+      readMs: () => clockAnchor + readDays() * MS_PER_DAY,
+      // 주소를 먼저 바꾸고(검색 파라미터를 새로 쓴다) 그 위에 날짜를 얹는다.
+      onJump: (ms: number, bodyId: string) => {
+        navigateTo(bodyId);
+        jumpToDate(ms);
+      },
+    }),
+    [clockAnchor, jumpToDate, navigateTo, readDays],
   );
 
   const navigateSpace = useCallback(
@@ -309,6 +355,8 @@ export function Explorer() {
             overview={view.overview}
             paused={playback.paused}
             simulationDaysRef={simulationDaysRef}
+            epochDays={epochDays}
+            lightStartDays={lightStartDays}
             recenter={recenter}
             onSelect={selectSystemBody}
             onScaleChange={setScale}
@@ -325,7 +373,7 @@ export function Explorer() {
         nav={nav}
         scale={scale}
         locationLabel={locationLabel}
-        currentPath={searchParams.size ? `${pathname}?${searchParams}` : pathname}
+        currentPath={currentPath}
         actions={{
           navigateSpace,
           navigateTo,
@@ -346,8 +394,26 @@ export function Explorer() {
       <footer className={styles.footer}>
         <PlaybackBar
           view={view}
+          navigateSpace={navigateSpace}
           playback={playback}
+          clock={{ simulationDaysRef, startedAt: playback.startedAt, serverOffset, onJump: jumpToDate, onNow: jumpToNow }}
+          light={
+            !galaxyView && !neighborhoodView && !extraView && !featuredObject
+              ? {
+                  system,
+                  startDays: lightStartDays,
+                  simulationDaysRef,
+                  onToggle: () => {
+                    if (lightStartDays !== null) return setLight(null);
+                    // 빛은 출발한 뒤로만 퍼지므로 거꾸로 재생 중이면 정방향으로 돌린다.
+                    playback.setSpeed((current) => Math.abs(current));
+                    setLight({ systemId, startDays: playback.readDays() });
+                  },
+                }
+              : undefined
+          }
           pathname={pathname}
+          currentPath={currentPath}
           distanceBar={distanceBar}
           comparison={
             canCompare && target
@@ -399,6 +465,7 @@ export function Explorer() {
               onNavigate={navigateTo}
               onSelectCluster={enterAssociation}
               onSelectGalaxy={selectCatalogGalaxy}
+              eventClock={eventClock}
             />
           </div>
         </div>

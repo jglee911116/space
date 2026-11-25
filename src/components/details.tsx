@@ -24,8 +24,10 @@ const emptyDistanceStore = createDistanceStore();
 import type { CSSProperties, ReactNode } from 'react';
 import { KM_PER_AU, SOLAR_RADIUS_KM, LIGHT_YEARS_PER_KPC } from '@/constants/space/units';
 import { formatLightYearDistance } from './utils/distance-scale';
-import { bodySize, distantKindLabel, formatAxis, formatPeriod, formatSpin, kindLabel } from './utils/format';
+import { bodySize, distantKindLabel, formatAxis, formatDuration, formatPeriod, formatSpin, kindLabel, starlightSeconds } from './utils/format';
 import type { Target } from './scenes/system-scene';
+import { SizeComparison } from './size-comparison';
+import { SkyEvents, type SkyEventClock } from './sky-events';
 import styles from './explore.module.scss';
 
 /** 항성이 둘 이상이면 행성의 모항성 링크·항성의 행성 목록을 보여준다. */
@@ -147,6 +149,7 @@ function DetailPanel({ name, onClose, children }: { name: CatalogText; onClose: 
 export function BodyDetails({ system, body, onSelect, onClose }: { system: StarSystem; body: Body; onSelect: (target: Target) => void; onClose: () => void }) {
   const { t, catalogText, number, measurement } = useLanguage();
   const parent = system.bodies.find((other) => other.id === body.parent);
+  const starlight = body.kind === 'star' ? null : starlightSeconds(system, body);
   const children = system.bodies.filter((other) => other.parent === body.id && (other.kind === 'moon' || isMultiStar(system)));
   const systemDistance = system.neighborhood;
   const size = bodySize(body, t, number);
@@ -182,6 +185,12 @@ export function BodyDetails({ system, body, onSelect, onClose }: { system: StarS
             <DataRow label={t('details.orbitReference')}>{parent ? catalogText(parent.name) : t('details.binaryBarycenter')}</DataRow>
             <DataRow label={t('details.semimajorAxis')}>{formatAxis(body, parent, number)}</DataRow>
           </>
+        )}
+        {starlight !== null && (
+          <div title={t('details.starlightTimeHint')}>
+            <dt>{t('details.starlightTime')}</dt>
+            <dd>{formatDuration(starlight, t, number)}</dd>
+          </div>
         )}
         {systemDistance && <DataRow label={t('details.systemDistance')}>{t('units.approxLightYears', [number(systemDistance.distanceLightYears, 2)])}</DataRow>}
         {irradiance !== null && (
@@ -238,6 +247,7 @@ export function BodyDetails({ system, body, onSelect, onClose }: { system: StarS
         </p>
       )}
       {body.note && <p>{catalogText(body.note)}</p>}
+      <SizeComparison systemId={system.id} body={body} />
       <ModelNotes>{t('details.systemModelScale')}</ModelNotes>
       <DetailSources sources={systemDistance ? [...body.sources, systemDistance.source] : body.sources} />
     </DetailPanel>
@@ -350,7 +360,7 @@ export function OuterRegionDetails({ system, distant, onToggle }: { system: Star
   );
 }
 
-export function SystemDetails({ system, onSelect }: { system: StarSystem; onSelect: (target: Target) => void }) {
+export function SystemDetails({ system, onSelect, eventClock }: { system: StarSystem; onSelect: (target: Target) => void; eventClock: SkyEventClock }) {
   const { t, catalogText } = useLanguage();
   const planets = system.bodies.filter((body) => body.kind === 'planet');
   const planetCount = planets.length;
@@ -383,6 +393,7 @@ export function SystemDetails({ system, onSelect }: { system: StarSystem; onSele
   ) : (
     <section className={styles.details} aria-labelledby="body-name">
       <h2 id="body-name">{t('details.planetCount', [planetCount])}</h2>
+      {system.events && <SkyEvents system={system} clock={eventClock} />}
       <ModelNotes>
         {t('details.commonScaleEnlarged')} · {t('details.fixedJ2000')}
       </ModelNotes>

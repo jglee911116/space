@@ -35,7 +35,12 @@ export function usePlayback() {
   // 동작 줄이기 설정이면 공전을 멈춘 채 시작한다(Explorer 는 ssr:false 라 window 를 바로 읽는다).
   const [paused, setPaused] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [galacticDemo, setGalacticDemo] = useState(false);
-  const [daysPerSecond, setDaysPerSecond] = useState(REALTIME_DAYS_PER_SECOND);
+  // 부호가 방향(음수는 거꾸로), 크기가 초당 날수. 장면의 시각 효과는 크기만 쓰고 시뮬레이션 시계만 방향을 따른다.
+  const [speed, setSpeed] = useState(REALTIME_DAYS_PER_SECOND);
+  const daysPerSecond = Math.abs(speed);
+  const direction = Math.sign(speed);
+  // 시뮬레이션 시계가 0 에서 출발한 순간(이 브라우저 시계 기준).
+  const [startedAt] = useState(() => Date.now());
   const simulationDaysRef = useRef(0);
   const accretionPlaybackTime = useRef(0);
   useEffect(() => {
@@ -45,15 +50,21 @@ export function usePlayback() {
     let frame: number;
     const tick = (now: number) => {
       const seconds = Math.max(0, now - previous) / 1000;
-      simulationDaysRef.current += elapsedSimulationDays(seconds, daysPerSecond);
+      simulationDaysRef.current += direction * elapsedSimulationDays(seconds, daysPerSecond);
       accretionPlaybackTime.current += Math.min(seconds, 0.1) * accretionRate;
       previous = now;
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [daysPerSecond, paused]);
-  return { paused, setPaused, galacticDemo, setGalacticDemo, daysPerSecond, setDaysPerSecond, simulationDaysRef, accretionPlaybackTime };
+  }, [daysPerSecond, direction, paused]);
+  /** 시뮬레이션 시계를 시작 시점에서 days 만큼 떨어진 순간으로 옮긴다(날짜 이동). */
+  const jumpToDays = useCallback((days: number) => {
+    simulationDaysRef.current = days;
+  }, []);
+  /** 지금 시뮬레이션 날수(이벤트 처리기에서 읽는다). */
+  const readDays = useCallback(() => simulationDaysRef.current, []);
+  return { paused, setPaused, galacticDemo, setGalacticDemo, speed, setSpeed, daysPerSecond, startedAt, jumpToDays, readDays, simulationDaysRef, accretionPlaybackTime };
 }
 
 export type Playback = Omit<ReturnType<typeof usePlayback>, 'simulationDaysRef' | 'accretionPlaybackTime'>;
@@ -81,4 +92,22 @@ export function useDocumentTitle(title: string) {
   useEffect(() => {
     document.title = title;
   }, [title]);
+}
+
+/** 서버 시계와 이 브라우저 시계의 차(ms). 받기 전이나 실패하면 0 — 브라우저 시계를 쓴다. */
+export function useServerClockOffset() {
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    const sent = Date.now();
+    fetch('/api/time', { cache: 'no-store', signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { now?: unknown } | null) => {
+        // 왕복 시간의 절반만큼 늦게 도착했다고 보고 보정한다.
+        if (typeof body?.now === 'number' && Number.isFinite(body.now)) setOffset(body.now - (sent + Date.now()) / 2);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+  return offset;
 }

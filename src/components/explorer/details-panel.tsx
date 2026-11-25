@@ -13,6 +13,7 @@ import {
   SystemDetails,
   UniverseDetails,
 } from '../details';
+import type { SkyEventClock } from '../sky-events';
 import type { Target } from '../scenes/system-scene';
 import type { ZoomScale } from '../utils/zoom';
 import type { ExplorerViewState, RecordedView, SystemNavigation } from './view-state';
@@ -28,6 +29,7 @@ export function DetailsPanel({
   onNavigate,
   onSelectCluster,
   onSelectGalaxy,
+  eventClock,
 }: {
   view: ExplorerViewState;
   nav: SystemNavigation;
@@ -47,6 +49,7 @@ export function DetailsPanel({
   onNavigate: (next: Target, nextOverview?: RecordedView) => void;
   onSelectCluster: (id: string) => void;
   onSelectGalaxy: (id: string) => void;
+  eventClock: SkyEventClock;
 }) {
   const {
     region,
@@ -99,5 +102,5 @@ export function DetailsPanel({
   if (oortView && cloud) return <OortCloudDetails cloud={cloud} />;
   if ((scale === 'outer' || scale === 'distant') && outerRegion)
     return <OuterRegionDetails system={system} distant={scale === 'distant'} onToggle={() => onNavigate(null, scale === 'distant' ? 'outer' : 'distant')} />;
-  return <SystemDetails system={system} onSelect={onNavigate} />;
+  return <SystemDetails system={system} onSelect={onNavigate} eventClock={eventClock} />;
 }

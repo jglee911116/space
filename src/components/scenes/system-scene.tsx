@@ -4,8 +4,8 @@ import { useLanguage } from '@/i18n/language';
 import { OrbitControls, Stars } from '@react-three/drei';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react';
-import { Color, Points, Vector3, MathUtils, Mesh, type Camera, type Group, type LineLoop, type PointsMaterial, type ShaderMaterial } from 'three';
-import { KM_PER_AU } from '@/constants/space/units';
+import { Color, DoubleSide, Points, Vector3, MathUtils, Mesh, type Camera, type Group, type LineLoop, type PointsMaterial, type ShaderMaterial } from 'three';
+import { KM_PER_AU, KM_PER_LIGHT_DAY } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import type { Body, StarSystem } from '@/constants/space';
 import { createMotions, isSatellite, rotationPhase, setOrbitalPositionAu, setWorldPosition, stellarTextureShear, writeOrbitVertices, UNITS_PER_AU } from '../utils/orbit';
@@ -39,6 +39,10 @@ export type SceneProps = {
   overview: Overview;
   paused: boolean;
   simulationDaysRef: RefObject<number>;
+  /** 시뮬레이션 시작 시각까지 J2000 에서 지난 날수 — 궤도 요소가 J2000 기준이라 더해야 지금 위치가 된다. */
+  epochDays: number;
+  /** 빛을 출발시킨 순간의 시뮬레이션 날수 — 별에서 빛의 구면이 광속으로 퍼진다. null 이면 숨긴다. */
+  lightStartDays: number | null;
   recenter: number;
   onSelect: (target: Target) => void;
   onScaleChange: (scale: ZoomScale) => void;
@@ -51,6 +55,7 @@ export type SceneProps = {
 };
 
 const ORIGIN = new Vector3();
+const AU_PER_LIGHT_DAY = KM_PER_LIGHT_DAY / KM_PER_AU;
 const INITIAL_VIEW = new Vector3(0, 0.82, 1).normalize();
 const SPIN_AXIS = new Vector3(0, 1, 0);
 const RED_SPOT_LATITUDE = MathUtils.degToRad(JUPITER_RED_SPOT_LATITUDE);
@@ -198,6 +203,8 @@ function Scene({
   overview,
   paused,
   simulationDaysRef,
+  epochDays,
+  lightStartDays,
   recenter,
   onSelect,
   onScaleChange,
@@ -248,12 +255,20 @@ function Scene({
   const systemVisible = useRef(true);
   const lastScale = useRef<ZoomScale | null>(null);
   const backdrop = useRef<Group>(null);
-  const days = simulationDaysRef;
+  const lightFront = useRef<Mesh>(null);
+  const days = useMemo<RefObject<number>>(
+    () => ({
+      get current() {
+        return epochDays + simulationDaysRef.current;
+      },
+    }),
+    [epochDays, simulationDaysRef],
+  );
   const destination = useRef<number | null>(null);
   const revealRedSpot = useRef(false);
   const distanceAtStart = useRef(0);
   const [initialRequest] = useState(() => ({ target, overview, recenter }));
-  const [initialTarget] = useState(() => (!entry && target ? setWorldPosition(system, motions, target, new Vector3(), 0) : new Vector3()));
+  const [initialTarget] = useState(() => (!entry && target ? setWorldPosition(system, motions, target, new Vector3(), epochDays) : new Vector3()));
   const [scratch] = useState(() => ({ offset: new Vector3(), focus: new Vector3() }));
   const [distanceScratch] = useState(() => ({ origin: new Vector3(), body: new Vector3(), local: new Vector3() }));
   const [labelPoint] = useState(() => new Vector3());
@@ -273,6 +288,16 @@ function Scene({
 
   useFrame(({ camera }, delta) => {
     if (!controls.current) return;
+
+    const front = lightFront.current;
+    if (front) {
+      const elapsedDays = lightStartDays === null ? 0 : simulationDaysRef.current - lightStartDays;
+      front.visible = elapsedDays > 0;
+      if (front.visible) {
+        front.scale.setScalar(elapsedDays * AU_PER_LIGHT_DAY * UNITS_PER_AU);
+        front.position.copy(bodies.current[system.bodies[0].id]?.position ?? ORIGIN);
+      }
+    }
 
     const orbitControls = controls.current;
     const trackedBody = target ? bodies.current[target] : undefined;
@@ -535,6 +560,10 @@ function Scene({
       <group ref={backdrop}>
         <Stars radius={2800} depth={850} count={2800} factor={190} saturation={0} fade speed={0} />
       </group>
+      <mesh ref={lightFront} visible={false} raycast={() => {}}>
+        <sphereGeometry args={[1, 64, 32]} />
+        <meshBasicMaterial color="#ffe9a8" transparent opacity={0.1} depthWrite={false} side={DoubleSide} />
+      </mesh>
       {system.oortCloud && <OortCloudModel cloud={system.oortCloud} opacity={cloudOpacity} />}
       {system.outerRegion && <KuiperBelt beltAu={system.outerRegion.beltAu} opacity={beltOpacity} />}
       <ambientLight intensity={0.65} />
@@ -693,7 +722,7 @@ export default function SystemScene(props: SceneProps) {
     const position = (props.entry ? new Vector3(...props.entry.direction) : props.system.initialView ? new Vector3(...props.system.initialView).normalize() : INITIAL_VIEW.clone()).multiplyScalar(
       radius,
     );
-    if (!props.entry && props.target) position.add(setWorldPosition(props.system, createMotions(props.system), props.target, new Vector3(), 0));
+    if (!props.entry && props.target) position.add(setWorldPosition(props.system, createMotions(props.system), props.target, new Vector3(), props.epochDays));
     const { cloudOpacity } = zoomLayers(props.system, radius, farOverview);
     return { position, fov: 45, ...cameraClipping(props.system, radius, cloudOpacity, farOverview) };
   });

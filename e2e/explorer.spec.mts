@@ -1134,3 +1134,128 @@ test('태양계 이웃에서 HR 8799를 열어 Webb 이미지와 외계행성을
   await expect(details(page).getByRole('heading', { name: 'HR 8799 e', exact: true })).toBeVisible();
   await waitForRenderedMap(page);
 });
+
+test('서버 시각 API는 요청할 때마다 지금 시각을 돌려준다', { tag: '@smoke' }, async ({ request }) => {
+  const response = await request.get('/api/time');
+  expect(response.headers()['cache-control']).toContain('no-store');
+  const { now } = await response.json();
+  expect(Math.abs(now - Date.now())).toBeLessThan(60_000);
+});
+
+test('재생 막대에 서버 시각과 속도대로 흘러간 시뮬레이션 시각을 표시한다', async ({ page }) => {
+  await page.goto(`${milkyWay}?system=solar`);
+  const clockTime = (label: string) =>
+    page
+      .getByText(label, { exact: true })
+      .locator('..')
+      .locator('time')
+      .evaluate((time) => Date.parse(time.getAttribute('datetime') ?? ''));
+  await expect.poll(() => clockTime('서버 현재 시각')).toBeGreaterThan(Date.now() - 60_000);
+  expect(Math.abs((await clockTime('시뮬레이션 시각')) - Date.now())).toBeLessThan(60_000);
+
+  // 하루 500일 속도로 돌리면 시뮬레이션 시각만 앞서 나간다.
+  await page.getByLabel('속도').selectOption('500');
+  const day = 86_400_000;
+  await expect.poll(async () => ((await clockTime('시뮬레이션 시각')) - Date.now()) / day).toBeGreaterThan(200);
+  expect(Math.abs((await clockTime('서버 현재 시각')) - Date.now())).toBeLessThan(60_000);
+
+  // 일시정지하면 시계는 다음 갱신(250ms) 뒤 그 자리에 멈춘다.
+  await page.getByRole('button', { name: '시뮬레이션 일시정지' }).click();
+  await expect
+    .poll(async () => {
+      const before = await clockTime('시뮬레이션 시각');
+      await page.waitForTimeout(600);
+      return (await clockTime('시뮬레이션 시각')) - before;
+    })
+    .toBe(0);
+});
+
+test('주소의 날짜로 시뮬레이션 시각을 옮기고 거꾸로 돌린 뒤 지금으로 돌아온다', async ({ page }) => {
+  await page.goto(`${milkyWay}?system=solar&date=2030-01-01T00:00:00.000Z`);
+  const simulation = () =>
+    page
+      .getByText('시뮬레이션 시각', { exact: true })
+      .locator('..')
+      .locator('time')
+      .evaluate((time) => Date.parse(time.getAttribute('datetime') ?? ''));
+  const target = Date.parse('2030-01-01T00:00:00Z');
+  await expect.poll(async () => Math.abs((await simulation()) - target)).toBeLessThan(86_400_000);
+
+  await page.getByLabel('속도').selectOption('50');
+  await page.getByRole('button', { name: '거꾸로' }).click();
+  await expect.poll(simulation).toBeLessThan(target - 5 * 86_400_000);
+
+  // 날짜 이동·지금은 시계를 펼쳐야 보인다.
+  await page.getByText('시뮬레이션 시각', { exact: true }).click();
+  await page.getByRole('button', { name: '지금', exact: true }).click();
+  await expect(page).not.toHaveURL(/date=/);
+  await expect.poll(async () => Math.abs((await simulation()) - Date.now())).toBeLessThan(30 * 86_400_000);
+});
+
+test('다가오는 천문 현상을 누르면 그 날짜로 건너뛰고 해당 천체를 연다', async ({ page }) => {
+  await page.goto(`${milkyWay}?system=solar&date=2026-12-01T00:00:00.000Z`);
+  const events = page.getByRole('region', { name: '다가오는 천문 현상' });
+  await events.getByRole('button', { name: '금환 일식' }).first().click();
+  await expect(page).toHaveURL(`${milkyWay}?system=solar&target=earth&date=2027-02-06T16%3A00%3A00.000Z`);
+  await expect(details(page).getByRole('heading', { name: '지구', exact: true })).toBeVisible();
+  const simulation = page.getByText('시뮬레이션 시각', { exact: true }).locator('..').locator('time');
+  await expect.poll(async () => Math.abs(Date.parse((await simulation.getAttribute('datetime')) ?? '') - Date.parse('2027-02-06T16:00:00Z'))).toBeLessThan(86_400_000);
+});
+
+test('둘러보기는 항성계에서 관측 가능한 우주까지 차례로 이동한다', async ({ page }) => {
+  await page.goto('/ko');
+  await page.getByRole('button', { name: '둘러보기' }).click();
+  const tour = page.getByRole('region', { name: '둘러보기' });
+  await expect(tour).toContainText('1/');
+  await expect(page).toHaveURL(`${milkyWay}?system=solar`);
+  await tour.getByRole('button', { name: '다음' }).click();
+  await expect(page).toHaveURL(/neighborhood|view=neighborhood/);
+  await tour.getByRole('button', { name: '다음' }).click();
+  await expect(page).toHaveURL(milkyWay);
+  while (await tour.getByRole('button', { name: '다음' }).isVisible()) await tour.getByRole('button', { name: '다음' }).click();
+  await expect(page).toHaveURL('/ko/universe');
+  await waitForRenderedMap(page);
+  await tour.getByRole('button', { name: '끝내기' }).click();
+  await expect(page.getByRole('button', { name: '둘러보기' })).toBeVisible();
+});
+
+test('천체 크기를 같은 축척으로 비교한다', async ({ page }) => {
+  await page.goto(`${milkyWay}?system=solar&target=earth`);
+  await details(page).getByText('크기 비교', { exact: true }).click();
+  await details(page).getByLabel('비교 천체 1').selectOption({ label: '목성' });
+  const chart = details(page).getByRole('img', { name: '크기 비교' });
+  await expect(chart.locator('circle')).toHaveCount(2);
+  await expect(chart).toContainText('목성 · 11.21×');
+});
+
+test('보이저 1호와 웹 망원경을 찾아 열고, 빛이 보이저까지 가는 시간을 본다', async ({ page }) => {
+  await page.goto('/ko');
+  await search(page, '보이저 1호', /^보이저 1호/);
+  await expect(page).toHaveURL(`${milkyWay}?system=solar&target=voyager-1`);
+  await expect(details(page).getByRole('heading', { name: '보이저 1호', exact: true })).toBeVisible();
+  await expect(details(page).getByText('별빛이 닿는 시간')).toBeVisible();
+  await waitForRenderedMap(page);
+
+  await search(page, 'JWST', /^제임스 웹 우주망원경/);
+  await expect(page).toHaveURL(`${milkyWay}?system=solar&target=jwst`);
+  await waitForRenderedMap(page);
+});
+
+test('빛을 출발시키면 시뮬레이션 시간으로 지난 시간과 닿은 천체를 보여 준다', async ({ page }) => {
+  await page.goto(`${milkyWay}?system=solar`);
+  // 초당 10분이면 빛이 1초 안에 수성(약 3분)에 닿는다.
+  await page.getByLabel('속도').selectOption({ label: '초당 10분 (600×)' });
+  await page.getByRole('button', { name: '빛 출발' }).click();
+  await expect(page.getByRole('status').filter({ hasText: '빛 이동' })).toContainText('까지 도달');
+  await page.getByRole('button', { name: '빛 지우기' }).click();
+  await expect(page.getByRole('button', { name: '빛 출발' })).toBeVisible();
+});
+
+test('둘러보기 중 다른 곳으로 이동하면 둘러보기를 끝낸다', async ({ page }) => {
+  await page.goto('/ko');
+  await page.getByRole('button', { name: '둘러보기' }).click();
+  await expect(page).toHaveURL(`${milkyWay}?system=solar`);
+  await search(page, '베누', /^베누 /);
+  await expect(page.getByRole('region', { name: '둘러보기' })).toBeHidden();
+  await expect(page.getByRole('button', { name: '둘러보기' })).toBeVisible();
+});

@@ -4,7 +4,7 @@ import { useLanguage } from '@/i18n/language';
 import { OrbitControls, Stars } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useMemo, useRef, type ComponentRef, type RefObject } from 'react';
-import { AdditiveBlending, Color, type Group, type ShaderMaterial } from 'three';
+import { AdditiveBlending, Color, MathUtils, type Group, type ShaderMaterial } from 'three';
 import type { FeaturedObject } from '@/constants/space';
 import { DAYS_PER_YEAR, KM_PER_LIGHT_YEAR } from '@/constants/space/units';
 import { AccretionModel } from '../three/black-holes/accretion-model';
@@ -253,7 +253,7 @@ function Scene({ object, reportDistance, simulationDaysRef, accretionPlaybackTim
   const limit = object.extentLightYears * 5;
   useFrame(({ camera, size }) => {
     if (material.current && object.expansionPerYear) {
-      const years = Math.min(simulationDaysRef.current / DAYS_PER_YEAR, 25);
+      const years = MathUtils.clamp(simulationDaysRef.current / DAYS_PER_YEAR, 0, 25);
       material.current.uniforms.expansion.value = object.expansionPerYear * years;
     }
     const distance = controls.current?.getDistance();
