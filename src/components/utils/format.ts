@@ -1,16 +1,18 @@
 import type { Body, DistantObject, StarSystem } from '@/constants/space';
 import type { CatalogText, FormatNumber, MessageKey, Translator } from '@/i18n/messages';
 import { DAYS_PER_YEAR, KM_PER_AU, KM_PER_LIGHT_DAY } from '@/constants/space/units';
+import { Vector3 } from 'three';
+import { J2000_UTC_MS, MS_PER_DAY, setTrajectoryPositionAu } from './orbit';
 
 const KM_PER_LIGHT_SECOND = KM_PER_LIGHT_DAY / 86_400;
 
 /** 별빛이 이 천체(위성이면 그 모행성)까지 오는 시간(초) — 별을 도는 궤도의 장반경, 곧 평균 거리 기준. */
-export function starlightSeconds(system: StarSystem, body: Body) {
+/** atDays(J2000 이후 날수)는 비행 경로 천체의 위치를 잴 순간 — 기본은 지금(브라우저 시각). */
+export function starlightSeconds(system: StarSystem, body: Body, atDays = (Date.now() - J2000_UTC_MS) / MS_PER_DAY) {
   for (let current = body; current.parent; ) {
     const parent = system.bodies.find((other) => other.id === current.parent);
     if (!parent) return null;
-    // 탈출 궤적은 자료 기준 시점의 거리.
-    const au = current.orbit?.axisAu ?? (current.trajectory && Math.hypot(...current.trajectory.positionAu));
+    const au = current.orbit?.axisAu ?? (current.trajectory && setTrajectoryPositionAu(current.trajectory.samples, atDays, new Vector3()).length());
     if (parent.kind === 'star') return au === undefined ? null : (au * KM_PER_AU) / KM_PER_LIGHT_SECOND;
     current = parent;
   }
@@ -58,6 +60,8 @@ export function formatSpin(body: Body, t: Translator, number: FormatNumber, cata
 
 export function formatPeriod(body: Body, t: Translator, number: FormatNumber) {
   const days = body.orbit!.periodDays;
+  // 하루가 안 되는 주기(저궤도 망원경·가까운 위성)는 '1시간 34분'처럼.
+  if (days < 1) return formatDuration(days * 86_400, t, number);
   return body.kind === 'star' && days >= DAYS_PER_YEAR ? t('units.years', [number(days / DAYS_PER_YEAR)]) : t('units.days', [number(days, 2)]);
 }
 

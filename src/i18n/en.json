@@ -706,16 +706,18 @@
   "events.penumbral": "Penumbral",
   "body.spacecraft": "Spacecraft",
   "catalog.spacecraft.voyager-1.name": "Voyager 1",
-  "catalog.spacecraft.voyager-1.note": "Launched in 1977, it crossed the heliopause in 2012 as the first probe in interstellar space and is the most distant human-made object. Its position is extrapolated at constant velocity from 1 January 2026.",
+  "catalog.spacecraft.voyager-1.note": "Launched in 1977, it passed Jupiter (1979) and Saturn (1980), crossed the heliopause in 2012 as the first probe in interstellar space, and is the most distant human-made object. Its path is the actual JPL Horizons trajectory (predicted after 2026); up close, NASA's 3D model keeps its high-gain antenna pointed at Earth.",
   "catalog.spacecraft.voyager-2.name": "Voyager 2",
-  "catalog.spacecraft.voyager-2.note": "Launched in 1977, the only probe to visit Uranus and Neptune; it entered interstellar space in 2018. Its position is extrapolated at constant velocity from 1 January 2026.",
+  "catalog.spacecraft.voyager-2.note": "Launched in 1977, the only probe to visit Jupiter, Saturn, Uranus (1986) and Neptune (1989); it entered interstellar space in 2018. Its path is the actual JPL Horizons trajectory (predicted after 2026); up close, NASA's 3D model keeps its high-gain antenna pointed at Earth.",
   "catalog.spacecraft.new-horizons.name": "New Horizons",
-  "catalog.spacecraft.new-horizons.note": "Launched in 2006, it flew past Pluto in 2015 and the Kuiper belt object Arrokoth in 2019. Its position is extrapolated at constant velocity from 1 January 2026.",
+  "catalog.spacecraft.new-horizons.note": "Launched in 2006, it took a gravity assist from Jupiter in 2007, then flew past Pluto in 2015 and the Kuiper belt object Arrokoth in 2019. Its path is the actual JPL Horizons trajectory (predicted after 2026); up close, NASA's 3D model keeps its high-gain antenna pointed at Earth.",
   "catalog.spacecraft.jwst.name": "James Webb Space Telescope",
-  "catalog.spacecraft.jwst.note": "It flies a halo orbit around the L2 point, about 1.5 million km from Earth on the side away from the Sun. Here it is simplified to a point fixed at L2 that circles with Earth (size and distance enlarged).",
+  "catalog.spacecraft.jwst.note": "It flies a halo orbit around the L2 point, about 1.5 million km from Earth on the side away from the Sun. Here it is simplified to a point fixed at L2 that circles with Earth (size and distance enlarged); up close, NASA's 3D model keeps its sunshield facing the Sun.",
   "playback.oneMinute": "1 minute/s (60×)",
   "playback.tenMinutes": "10 minutes/s (600×)",
   "playback.oneHour": "1 hour/s (3600×)",
   "playback.reverse": "Reverse",
-  "playback.reverseHint": "Run time backward"
+  "playback.reverseHint": "Run time backward",
+  "catalog.spacecraft.hubble.name": "Hubble Space Telescope",
+  "catalog.spacecraft.hubble.note": "Launched in 1990, it circles Earth in a low orbit about 483 km up, once every 95 minutes, inclined 28.5° to the equator. Five Space Shuttle servicing missions extended its life. Its position along the orbit is not matched to reality; up close, NASA's 3D model points its aperture at the sky away from Earth (size and distance enlarged)."
 }

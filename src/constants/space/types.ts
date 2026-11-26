@@ -52,11 +52,13 @@ export type Body = {
   colors: readonly [string, string, string];
   appearance?: Appearance;
   orbit?: OrbitElements;
-  /** 궤도 대신 직선 탈출 궤적: epoch 의 일심 황도(J2000) 위치·속도에서 등속으로 외삽한다. */
-  trajectory?: { epoch: string; positionAu: readonly [number, number, number]; velocityAuPerDay: readonly [number, number, number] };
+  /** 궤도 대신 실제 비행 경로(탐사선): 시각순 표본 사이를 직선 보간하고 마지막 표본 뒤로는 마지막 구간 속도로 외삽한다. */
+  trajectory?: { samples: readonly TrajectorySample[] };
   rings?: readonly Ring[];
   ringMap?: { file: string; inner: number; outer: number };
   shapeModel?: string;
+  /** shapeModel 좌표의 axis 를 늘 target(같은 계에서 먼저 나오는 천체 id)으로 향하게 한다 — 예: 망원경 차양막은 태양, 탐사선 고이득 안테나는 지구. 있으면 자전 대신 이 방향을 따른다. */
+  shapeModelPointing?: { axis: readonly [number, number, number]; target: string };
   /** hidden 은 대기에 가려진 지도라 초점일 때 버튼으로만 켠다. */
   surfaceMap?: { file: string; longitudeOffset?: number; fillMissing?: boolean; hidden?: boolean };
   surfaceFeatures?: 'saturn' | 'mars' | 'neptune' | 'io' | 'europa';
@@ -110,6 +112,9 @@ export type SkyEvent = {
   bodyId: string;
   source: Source;
 };
+
+/** [J2000 이후 날수, 일심 황도(J2000) x, y, z(AU)]. */
+export type TrajectorySample = readonly [number, number, number, number];
 
 export type StarSystem = {
   id: string;

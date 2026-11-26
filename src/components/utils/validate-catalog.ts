@@ -58,8 +58,16 @@ function checkRelationships() {
         requireValue(Boolean(body.orbit) !== Boolean(body.trajectory), `${location}: needs exactly one of orbit or trajectory`);
       }
       if (body.trajectory) {
-        const { epoch, positionAu, velocityAuPerDay } = body.trajectory;
-        requireValue(/Z$/.test(epoch) && Number.isFinite(Date.parse(epoch)) && [...positionAu, ...velocityAuPerDay].every(Number.isFinite), `${location}: invalid trajectory`);
+        const { samples } = body.trajectory;
+        requireValue(
+          samples.length >= 2 && samples.every((sample, index) => sample.every(Number.isFinite) && (index === 0 || samples[index - 1][0] < sample[0])),
+          `${location}: trajectory needs 2+ finite samples in time order`,
+        );
+      }
+      if (body.shapeModelPointing) {
+        const { axis, target } = body.shapeModelPointing;
+        // 장면은 bodies 순서대로 위치를 갱신하므로 겨눌 천체가 먼저 나와야 한다.
+        requireValue(body.shapeModel && Math.hypot(...axis) > 0 && seen.has(target), `${location}: shapeModelPointing needs a shapeModel, a non-zero axis and an earlier target body`);
       }
       // 궤도 계산(orbit.ts)이 타원 궤도만 다룬다 — e ≥ 1 이면 NaN 위치가 된다.
       if (body.orbit) requireValue(body.orbit.eccentricity >= 0 && body.orbit.eccentricity < 1 && body.orbit.axisAu > 0 && body.orbit.periodDays > 0, `${location}: invalid orbit elements`);

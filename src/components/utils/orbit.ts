@@ -1,5 +1,5 @@
 import { MathUtils, Matrix4, Quaternion, Vector3 } from 'three';
-import type { Body, StarSystem } from '@/constants/space';
+import type { Body, StarSystem, TrajectorySample } from '@/constants/space';
 
 export const REALTIME_DAYS_PER_SECOND = 1 / 86_400;
 export const MS_PER_DAY = 86_400_000;
@@ -52,26 +52,37 @@ function referenceRotation(plane: NonNullable<Body['orbit']>['referencePlane'], 
   return new Matrix4().makeRotationFromQuaternion(new Quaternion().setFromUnitVectors(NORTH, pole));
 }
 
-// 탈출 궤적 선: 기준 시점 30년 전부터 10년 뒤까지(직선이라 lineLoop 로 닫혀도 같은 선 위를 되돌아간다).
-const TRAJECTORY_SPAN_DAYS = [-30 * 365.25, 10 * 365.25] as const;
+/** 표본 사이 직선 보간한 일심 황도 위치(AU). 첫 표본 이전은 첫 위치, 마지막 이후는 마지막 구간 속도로 외삽한다. */
+export function setTrajectoryPositionAu(samples: readonly TrajectorySample[], days: number, out: Vector3) {
+  let high = 1;
+  if (days >= samples[samples.length - 1][0]) high = samples.length - 1;
+  else if (days > samples[0][0]) {
+    let low = 0;
+    high = samples.length - 1;
+    while (high - low > 1) {
+      const middle = (low + high) >> 1;
+      if (samples[middle][0] <= days) low = middle;
+      else high = middle;
+    }
+  }
+  const [t0, x0, y0, z0] = samples[high - 1];
+  const [t1, x1, y1, z1] = samples[high];
+  // shortcut: 발사 전에는 첫 표본(발사 다음 날 위치)에 머문다 — 발사 전 시각에 숨기려면 표시 여부 필드가 필요하다.
+  const u = Math.max(0, (days - t0) / (t1 - t0));
+  return out.set(x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, z0 + (z1 - z0) * u);
+}
 
-function createTrajectoryMotion(trajectory: NonNullable<Body['trajectory']>, scale: number): Motion {
-  const epochDays = (Date.parse(trajectory.epoch) - J2000_UTC_MS) / MS_PER_DAY;
-  const [x, y, z] = trajectory.positionAu;
-  const [vx, vy, vz] = trajectory.velocityAuPerDay;
+function createTrajectoryMotion(samples: readonly TrajectorySample[], scale: number): Motion {
   // 황도 (x, y, z) → 장면 (x, z, −y): 황도면은 X/−Z, +Y 가 북쪽.
-  const setAt = (position: Vector3, days: number) => {
-    const elapsed = days - epochDays;
-    return position.set(x + vx * elapsed, z + vz * elapsed, -(y + vy * elapsed)).multiplyScalar(scale);
-  };
-  const points = new Float64Array(6);
+  const toScene = (position: Vector3) => position.set(position.x, position.z, -position.y).multiplyScalar(scale);
+  const points = new Float64Array(samples.length * 3);
   const point = new Vector3();
-  TRAJECTORY_SPAN_DAYS.forEach((offset, index) => setAt(point, epochDays + offset).toArray(points, index * 3));
-  return { orientation: new Quaternion(), points, unitsPerAu: scale, setLocalPosition: setAt };
+  samples.forEach(([, x, y, z], index) => toScene(point.set(x, y, z)).toArray(points, index * 3));
+  return { orientation: new Quaternion(), points, unitsPerAu: scale, setLocalPosition: (position, days) => toScene(setTrajectoryPositionAu(samples, days, position)) };
 }
 
 function createMotion(body: Body, scale: number, parentOrientation?: Quaternion): Motion {
-  if (body.trajectory) return createTrajectoryMotion(body.trajectory, scale);
+  if (body.trajectory) return createTrajectoryMotion(body.trajectory.samples, scale);
   if (!body.orbit) {
     return {
       orientation: new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), radians(body.tilt)),
@@ -140,22 +151,29 @@ export function createMotions(system: StarSystem) {
   const bodies = new Map(system.bodies.map((body) => [body.id, body]));
   const satelliteScales = new Map<string, number>();
 
-  for (const body of system.bodies) {
-    if (!body.parent || !body.orbit) continue;
-    const parent = bodies.get(body.parent);
-    if (!parent || parent.kind === 'star') continue;
-
-    // Increase the entire moon system together to clear the enlarged planet and its rings.
+  // 확대된 모행성(고리 포함) 밖으로 위성 궤도를 밀어내는 배율.
+  const clearScale = (body: Body, parent: Body, orbit: NonNullable<Body['orbit']>) => {
     const outerRadius = parent.displayRadius * Math.max(1, ...(parent.rings ?? []).map((ring) => ring.outer));
     const moonRadius = body.displayRadius * Math.max(1, ...(body.shape ?? []));
-    const periapsis = UNITS_PER_AU * body.orbit.axisAu * (1 - body.orbit.eccentricity);
-    const scale = (outerRadius * 1.15 + moonRadius) / periapsis;
-    satelliteScales.set(parent.id, Math.max(satelliteScales.get(parent.id) ?? SATELLITE_DISTANCE_SCALE, scale));
+    // 탐사선은 초점 카메라(표시 반지름의 수 배 거리)가 모행성 안으로 들어가지 않게 더 띄운다.
+    const clearance = body.kind === 'spacecraft' ? 1.6 : 1.15;
+    return (outerRadius * clearance + moonRadius) / (UNITS_PER_AU * orbit.axisAu * (1 - orbit.eccentricity));
+  };
+  for (const body of system.bodies) {
+    // 탐사선(저궤도 망원경 등)은 위성계 전체 배율을 키우지 않는다 — 달이 멀리 밀려나지 않게.
+    if (!body.parent || !body.orbit || body.kind === 'spacecraft') continue;
+    const parent = bodies.get(body.parent);
+    if (!parent || parent.kind === 'star') continue;
+    // Increase the entire moon system together to clear the enlarged planet and its rings.
+    satelliteScales.set(parent.id, Math.max(satelliteScales.get(parent.id) ?? SATELLITE_DISTANCE_SCALE, clearScale(body, parent, body.orbit)));
   }
 
   const motions: Record<string, Motion> = {};
   for (const body of system.bodies) {
-    const scale = body.parent ? (satelliteScales.get(body.parent) ?? 1) : 1;
+    const parent = body.parent ? bodies.get(body.parent) : undefined;
+    const familyScale = body.parent ? (satelliteScales.get(body.parent) ?? 1) : 1;
+    // 위성계 배율로도 모행성 안에 파묻히는 탐사선만 따로 밖으로 꺼낸다.
+    const scale = body.kind === 'spacecraft' && parent && parent.kind !== 'star' && body.orbit ? Math.max(familyScale, clearScale(body, parent, body.orbit)) : familyScale;
     const parentOrientation = body.parent ? motions[body.parent]?.orientation : undefined;
     motions[body.id] = createMotion(body, UNITS_PER_AU * scale, parentOrientation);
   }

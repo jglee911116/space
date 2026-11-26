@@ -706,16 +706,18 @@
   "events.penumbral": "반영",
   "body.spacecraft": "탐사선",
   "catalog.spacecraft.voyager-1.name": "보이저 1호",
-  "catalog.spacecraft.voyager-1.note": "1977년 발사. 2012년 태양권계면을 넘어 성간 공간에 들어선 첫 탐사선이며, 지금 가장 멀리 있는 인공물입니다. 위치는 2026년 1월 1일 값에서 등속으로 외삽했습니다.",
+  "catalog.spacecraft.voyager-1.note": "1977년 발사. 목성(1979)·토성(1980)을 지난 뒤 2012년 태양권계면을 넘어 성간 공간에 들어선 첫 탐사선이며, 지금 가장 멀리 있는 인공물입니다. 경로는 JPL Horizons 의 실제 비행 경로(2026년 이후는 예측)이고, 가까이 보면 NASA 3D 모형의 고이득 안테나가 지구를 향합니다.",
   "catalog.spacecraft.voyager-2.name": "보이저 2호",
-  "catalog.spacecraft.voyager-2.note": "1977년 발사. 천왕성과 해왕성을 방문한 유일한 탐사선이며 2018년 성간 공간에 들어섰습니다. 위치는 2026년 1월 1일 값에서 등속으로 외삽했습니다.",
+  "catalog.spacecraft.voyager-2.note": "1977년 발사. 목성·토성·천왕성(1986)·해왕성(1989)을 모두 방문한 유일한 탐사선이며 2018년 성간 공간에 들어섰습니다. 경로는 JPL Horizons 의 실제 비행 경로(2026년 이후는 예측)이고, 가까이 보면 NASA 3D 모형의 고이득 안테나가 지구를 향합니다.",
   "catalog.spacecraft.new-horizons.name": "뉴호라이즌스",
-  "catalog.spacecraft.new-horizons.note": "2006년 발사. 2015년 명왕성, 2019년 카이퍼대 천체 아로코스를 지나쳤습니다. 위치는 2026년 1월 1일 값에서 등속으로 외삽했습니다.",
+  "catalog.spacecraft.new-horizons.note": "2006년 발사. 2007년 목성의 중력을 빌려 가속한 뒤 2015년 명왕성, 2019년 카이퍼대 천체 아로코스를 지나쳤습니다. 경로는 JPL Horizons 의 실제 비행 경로(2026년 이후는 예측)이고, 가까이 보면 NASA 3D 모형의 고이득 안테나가 지구를 향합니다.",
   "catalog.spacecraft.jwst.name": "제임스 웹 우주망원경",
-  "catalog.spacecraft.jwst.note": "지구에서 태양 반대쪽 약 150만 km 의 L2 점 주위를 헤일로 궤도로 돕니다. 여기서는 L2 점에 고정해 지구와 함께 도는 단순 모형으로 그렸습니다(크기·거리 확대).",
+  "catalog.spacecraft.jwst.note": "지구에서 태양 반대쪽 약 150만 km 의 L2 점 주위를 헤일로 궤도로 돕니다. 여기서는 L2 점에 고정해 지구와 함께 도는 단순 모형으로 그렸고(크기·거리 확대), 가까이 보면 NASA 3D 모형이 차양막을 늘 태양 쪽으로 향합니다.",
   "playback.oneMinute": "초당 1분 (60×)",
   "playback.tenMinutes": "초당 10분 (600×)",
   "playback.oneHour": "초당 1시간 (3600×)",
   "playback.reverse": "거꾸로",
-  "playback.reverseHint": "시간을 거꾸로 돌린다"
+  "playback.reverseHint": "시간을 거꾸로 돌린다",
+  "catalog.spacecraft.hubble.name": "허블 우주망원경",
+  "catalog.spacecraft.hubble.note": "1990년 발사. 고도 약 483 km 의 지구 저궤도를 약 95분에 한 바퀴씩, 적도에 28.5° 기울어진 궤도로 돕니다. 다섯 번의 우주왕복선 정비로 수명을 늘렸습니다. 궤도 위치(위상)는 실제와 맞추지 않은 모형이며, 가까이 보면 NASA 3D 모형의 입구가 지구 반대쪽 하늘을 향합니다(크기·거리 확대)."
 }
