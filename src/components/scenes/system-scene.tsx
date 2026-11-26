@@ -2,9 +2,9 @@
 
 import { useLanguage } from '@/i18n/language';
 import { OrbitControls, Stars } from '@react-three/drei';
-import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
+import { Canvas, extend, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from 'react';
-import { Color, DoubleSide, Points, Vector3, MathUtils, Mesh, type Camera, type Group, type LineLoop, type PointsMaterial, type ShaderMaterial } from 'three';
+import { Color, DoubleSide, Line, Points, Quaternion, Vector3, MathUtils, Mesh, type Camera, type Group, type LineLoop, type PointsMaterial, type ShaderMaterial } from 'three';
 import { KM_PER_AU, KM_PER_LIGHT_DAY } from '@/constants/space/units';
 import { kmPerPixel, type ReportDistanceScale } from '../utils/distance-scale';
 import type { Body, StarSystem } from '@/constants/space';
@@ -57,7 +57,13 @@ export type SceneProps = {
 const ORIGIN = new Vector3();
 const AU_PER_LIGHT_DAY = KM_PER_LIGHT_DAY / KM_PER_AU;
 const INITIAL_VIEW = new Vector3(0, 0.82, 1).normalize();
+// <line> 은 SVG 와 이름이 겹쳐 r3f 가 <threeLine> 으로 쓰게 한다.
+extend({ ThreeLine: Line });
+
 const SPIN_AXIS = new Vector3(0, 1, 0);
+const pointingAxis = new Vector3();
+const towardTarget = new Vector3();
+const inverseOrientation = new Quaternion();
 const RED_SPOT_LATITUDE = MathUtils.degToRad(JUPITER_RED_SPOT_LATITUDE);
 
 const DEFAULT_FOCUS_SCALE = 6.75;
@@ -81,7 +87,8 @@ function distantDistance(system: StarSystem) {
 
 function cameraClipping(system: StarSystem, radius: number, cloudOpacity: number, farOverview: number) {
   return {
-    near: MathUtils.clamp(radius * 0.001, Math.min(0.035, system.overviewDistance * 0.02), 1200),
+    // 아주 작은 천체(우주망원경 모형)에 바짝 다가가도 앞면이 잘리지 않게 하한을 카메라 거리에 맞춰 낮춘다.
+    near: MathUtils.clamp(radius * 0.001, Math.min(0.035, system.overviewDistance * 0.02, radius * 0.2), 1200),
     far: Math.max(6500, farOverview * 4, radius * 1.3 + (cloudOpacity > 0 ? oortRadius(system) * 1.2 : 0)),
   };
 }
@@ -269,7 +276,7 @@ function Scene({
   const distanceAtStart = useRef(0);
   const [initialRequest] = useState(() => ({ target, overview, recenter }));
   const [initialTarget] = useState(() => (!entry && target ? setWorldPosition(system, motions, target, new Vector3(), epochDays) : new Vector3()));
-  const [scratch] = useState(() => ({ offset: new Vector3(), focus: new Vector3() }));
+  const [scratch] = useState(() => ({ offset: new Vector3(), focus: new Vector3(), lastFocus: new Vector3(), lastTarget: undefined as Target | undefined, moved: new Vector3() }));
   const [distanceScratch] = useState(() => ({ origin: new Vector3(), body: new Vector3(), local: new Vector3() }));
   const [labelPoint] = useState(() => new Vector3());
   const [surfacePoint] = useState(() => new Vector3());
@@ -328,7 +335,16 @@ function Scene({
       light.offset.subVectors(bodies.current[light.host]?.position ?? ORIGIN, group.position);
 
       const spin = spins.current[body.id];
-      if (spin && body.spinDays) spin.rotation.y = rotationPhase(days.current, body.spinDays);
+      const pointing = body.shapeModelPointing;
+      const pointAt = pointing && bodies.current[pointing.target];
+      if (spin && pointing && pointAt) {
+        // 대상 쪽 방향(장면 좌표)을 궤도 방향 그룹 안의 좌표로 옮겨 모형 축을 맞춘다. 대상은 bodies 순서상 이미 갱신돼 있다.
+        towardTarget.subVectors(pointAt.position, group.position);
+        if (towardTarget.lengthSq() > 0) {
+          towardTarget.normalize().applyQuaternion(inverseOrientation.copy(motion.orientation).invert());
+          spin.quaternion.setFromUnitVectors(pointingAxis.fromArray(pointing.axis).normalize(), towardTarget);
+        }
+      } else if (spin && body.spinDays) spin.rotation.y = rotationPhase(days.current, body.spinDays);
     }
     scratch.offset.subVectors(camera.position, orbitControls.target);
     const currentRadius = scratch.offset.length();
@@ -349,11 +365,15 @@ function Scene({
     const layers = zoomLayers(system, radius, farOverview);
     const bodyPosition = trackedBody?.position ?? ORIGIN;
     const focus = scratch.focus.copy(bodyPosition).multiplyScalar(layers.systemOpacity);
+    // 같은 대상을 쫓는 동안 이번 프레임에 대상이 움직인 만큼 — 빠른 궤도(저궤도 망원경)도 따라잡게 한다.
+    const moved = scratch.lastTarget === target ? scratch.moved.subVectors(focus, scratch.lastFocus) : scratch.moved.set(0, 0, 0);
+    scratch.lastFocus.copy(focus);
+    scratch.lastTarget = target;
     if (goal === null) {
       focus.lerp(ORIGIN, MathUtils.smoothstep(radius, farOverview, farOverview * 2.8));
       orbitControls.target.copy(focus);
     } else {
-      orbitControls.target.lerp(focus, weight);
+      orbitControls.target.add(moved).lerp(focus, weight);
       if (orbitControls.target.distanceToSquared(focus) < 0.0001 && Math.abs(Math.log(radius / goal)) < 0.0001) {
         orbitControls.target.copy(focus);
         destination.current = null;
@@ -576,12 +596,22 @@ function Scene({
               }}
               visible={bodyVisible(body)}
             >
-              <lineLoop raycast={() => {}}>
-                <bufferGeometry>
-                  <bufferAttribute attach="attributes-position" args={[orbitPaths[body.id].vertices, 3]} />
-                </bufferGeometry>
-                <lineBasicMaterial color={body.colors[2]} transparent depthWrite={false} opacity={ORBIT_OPACITY} />
-              </lineLoop>
+              {body.trajectory ? (
+                // 비행 경로는 열린 선(발사 → 마지막 표본).
+                <threeLine raycast={() => {}}>
+                  <bufferGeometry>
+                    <bufferAttribute attach="attributes-position" args={[orbitPaths[body.id].vertices, 3]} />
+                  </bufferGeometry>
+                  <lineBasicMaterial color={body.colors[2]} transparent depthWrite={false} opacity={ORBIT_OPACITY} />
+                </threeLine>
+              ) : (
+                <lineLoop raycast={() => {}}>
+                  <bufferGeometry>
+                    <bufferAttribute attach="attributes-position" args={[orbitPaths[body.id].vertices, 3]} />
+                  </bufferGeometry>
+                  <lineBasicMaterial color={body.colors[2]} transparent depthWrite={false} opacity={ORBIT_OPACITY} />
+                </lineLoop>
+              )}
             </group>
           )}
           <group
@@ -613,16 +643,20 @@ function Scene({
                     >
                       <Suspense
                         fallback={
-                          <mesh>
-                            <sphereGeometry args={[body.displayRadius, 32, 24]} />
-                            <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={false} />
-                          </mesh>
+                          // 탐사선은 모형이 준비되기 전에 행성 같은 구로 보이지 않게 아무것도 그리지 않는다.
+                          body.kind === 'spacecraft' ? null : (
+                            <mesh>
+                              <sphereGeometry args={[body.displayRadius, 32, 24]} />
+                              <PlanetMaterial body={body} lightOffset={illumination[body.id].offset} loadSurfaceMap={false} />
+                            </mesh>
+                          )
                         }
                       >
                         <ObservedBodyModel file={body.shapeModel} radius={body.displayRadius} />
                       </Suspense>
                     </group>
-                  ) : (
+                  ) : body.kind === 'spacecraft' ? null : (
+                    // 탐사선은 모형만 그린다 — 멀리서는 화면 마커와 이름표로 보인다.
                     (body.lobes ?? [{ offset: [0, 0, 0] as const, shape: body.shape }]).map((part, index) => (
                       <mesh
                         key={index}

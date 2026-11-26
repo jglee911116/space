@@ -401,6 +401,7 @@ export function Explorer() {
             !galaxyView && !neighborhoodView && !extraView && !featuredObject
               ? {
                   system,
+                  epochDays,
                   startDays: lightStartDays,
                   simulationDaysRef,
                   onToggle: () => {

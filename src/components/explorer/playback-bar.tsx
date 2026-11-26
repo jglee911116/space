@@ -26,7 +26,7 @@ export function PlaybackBar({
   view: ExplorerViewState;
   playback: Playback;
   clock: { simulationDaysRef: RefObject<number>; startedAt: number; serverOffset: number; onJump: (ms: number) => void; onNow: () => void };
-  light?: { system: StarSystem; startDays: number | null; simulationDaysRef: RefObject<number>; onToggle: () => void };
+  light?: { system: StarSystem; epochDays: number; startDays: number | null; simulationDaysRef: RefObject<number>; onToggle: () => void };
   pathname: string;
   currentPath: string;
   distanceBar: RefObject<HTMLDivElement | null>;

@@ -918,6 +918,11 @@
     cursor: pointer;
   }
 
+  // 좁아지면 시각 전체를 다음 줄로 넘긴다.
+  time {
+    white-space: nowrap;
+  }
+
   summary span,
   p span {
     color: #bab7c4;

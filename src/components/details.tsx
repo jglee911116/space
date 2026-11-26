@@ -99,7 +99,8 @@ export function BodyTooltip({ body, x, y, distanceFrom }: { body: Body; x: numbe
         </span>
       )}
       {body.orbit && <span>{t('details.orbitValue', [formatPeriod(body, t, number)])}</span>}
-      <span>{t('details.rotationValue', [formatSpin(body, t, number, catalogText)])}</span>
+      {/* 탐사선은 자전하지 않고 자세를 제어한다. */}
+      {body.kind !== 'spacecraft' && <span>{t('details.rotationValue', [formatSpin(body, t, number, catalogText)])}</span>}
       {distanceFrom && au !== undefined && <BodyDistance origin={distanceFrom.origin} au={au} />}
     </aside>
   );
@@ -176,10 +177,12 @@ export function BodyDetails({ system, body, onSelect, onClose }: { system: StarS
             <dd>{formatPeriod(body, t, number)}</dd>
           </div>
         )}
-        <div>
-          <dt>{t('details.rotationPeriod')}</dt>
-          <dd>{formatSpin(body, t, number, catalogText)}</dd>
-        </div>
+        {body.kind !== 'spacecraft' && (
+          <div>
+            <dt>{t('details.rotationPeriod')}</dt>
+            <dd>{formatSpin(body, t, number, catalogText)}</dd>
+          </div>
+        )}
         {body.orbit && (
           <>
             <DataRow label={t('details.orbitReference')}>{parent ? catalogText(parent.name) : t('details.binaryBarycenter')}</DataRow>

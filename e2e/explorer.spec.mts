@@ -1230,14 +1230,22 @@ test('천체 크기를 같은 축척으로 비교한다', async ({ page }) => {
 
 test('보이저 1호와 웹 망원경을 찾아 열고, 빛이 보이저까지 가는 시간을 본다', async ({ page }) => {
   await page.goto('/ko');
+  // 탐사선 모형은 Draco 로 압축된 NASA 3D 모형이라 디코더와 함께 불러온다.
+  const voyagerModel = page.waitForResponse((response) => response.ok() && response.url().endsWith('/voyager/voyager-nasa.glb'));
+  const decoder = page.waitForResponse((response) => response.ok() && response.url().endsWith('/draco/draco_decoder.wasm'));
   await search(page, '보이저 1호', /^보이저 1호/);
   await expect(page).toHaveURL(`${milkyWay}?system=solar&target=voyager-1`);
+  await Promise.all([voyagerModel, decoder]);
   await expect(details(page).getByRole('heading', { name: '보이저 1호', exact: true })).toBeVisible();
   await expect(details(page).getByText('별빛이 닿는 시간')).toBeVisible();
+  // 탐사선은 자전하지 않으므로 자전 주기를 보여 주지 않는다.
+  await expect(details(page).getByText('자전 주기')).toHaveCount(0);
   await waitForRenderedMap(page);
 
+  const model = page.waitForResponse((response) => response.ok() && response.url().endsWith('/jwst/jwst-nasa.glb'));
   await search(page, 'JWST', /^제임스 웹 우주망원경/);
   await expect(page).toHaveURL(`${milkyWay}?system=solar&target=jwst`);
+  await model;
   await waitForRenderedMap(page);
 });
 
@@ -1258,4 +1266,94 @@ test('둘러보기 중 다른 곳으로 이동하면 둘러보기를 끝낸다',
   await search(page, '베누', /^베누 /);
   await expect(page.getByRole('region', { name: '둘러보기' })).toBeHidden();
   await expect(page.getByRole('button', { name: '둘러보기' })).toBeVisible();
+});
+
+test('탐사선 위치는 JPL 비행 경로 표본 사이를 보간한다', async () => {
+  const { setTrajectoryPositionAu } = await import('../src/components/utils/orbit');
+  const { VOYAGER_1_TRAJECTORY } = await import('../src/constants/space/star-systems/solar-system/trajectories');
+  const day = (iso: string) => (Date.parse(iso) - Date.UTC(2000, 0, 1, 12)) / 86_400_000;
+  const at = (iso: string) => setTrajectoryPositionAu(VOYAGER_1_TRAJECTORY, day(iso), new Vector3());
+  // 발사 직후는 지구 근처(약 1 AU), 목성 근접(1979-03-05)은 약 5.2 AU, 2026-01-01 은 Horizons 값.
+  expect(at('1977-09-10T00:00:00Z').length()).toBeCloseTo(1, 0);
+  expect(at('1979-03-05T12:00:00Z').length()).toBeCloseTo(5.2, 0);
+  expect(at('2026-01-01T00:00:00Z').distanceTo(new Vector3(-31.8364, -134.6785, 97.4448))).toBeLessThan(0.002);
+  // 발사 전에는 첫 표본에, 마지막 표본 뒤로는 계속 멀어진다.
+  expect(at('1970-01-01T00:00:00Z').toArray()).toEqual(VOYAGER_1_TRAJECTORY[0].slice(1));
+  expect(at('2040-01-01T00:00:00Z').length()).toBeGreaterThan(at('2030-12-31T00:00:00Z').length() + 30);
+});
+
+test('1979년에 빛을 출발시키면 보이저 1호까지 1시간 안에 닿는다', async ({ page }) => {
+  // 목성 근처(약 5 AU)를 지나던 때라 해왕성(약 4시간)보다 먼저 닿아야 한다.
+  await page.goto(`${milkyWay}?system=solar&date=1979-03-05T12:00:00.000Z`);
+  await page.getByRole('button', { name: '시뮬레이션 일시정지' }).click();
+  await page.getByRole('button', { name: '빛 출발' }).click();
+  await page.getByText('시뮬레이션 시각', { exact: true }).click();
+  // 날짜 입력은 브라우저 지역 시각이라 13:00 UTC 를 지역 시각 문자열로 바꿔 넣는다.
+  const local = await page.evaluate(() => {
+    const date = new Date(Date.UTC(1979, 2, 5, 13));
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  });
+  await page.getByLabel('날짜로 이동').fill(local);
+  await expect(page.getByRole('status').filter({ hasText: '빛 이동' })).toContainText('보이저 1호까지 도달');
+});
+
+test('허블을 찾아 지구 저궤도의 NASA 3D 모형을 열고, 달 궤도 표시는 그대로다', async ({ page }) => {
+  await page.goto('/ko');
+  const model = page.waitForResponse((response) => response.ok() && response.url().endsWith('/hubble/hubble-nasa.glb'));
+  await search(page, 'HST', /^허블 우주망원경/);
+  await expect(page).toHaveURL(`${milkyWay}?system=solar&target=hubble`);
+  await model;
+  await expect(details(page).getByRole('heading', { name: '허블 우주망원경', exact: true })).toBeVisible();
+  await expect(details(page)).toContainText('1시간 34분');
+  await expect(details(page).getByText('자전 주기')).toHaveCount(0);
+  await waitForRenderedMap(page);
+});
+
+test('저궤도 탐사선은 위성계 표시 배율을 키우지 않는다', async () => {
+  const { createMotions } = await import('../src/components/utils/orbit');
+  // 지구·달·저궤도 망원경만 둔 작은 계(카탈로그는 @/ 별칭 때문에 Node 에서 바로 못 읽는다).
+  const circular = (axisAu: number, periodDays: number) => ({ axisAu, eccentricity: 0, inclination: 0, meanLongitude: 0, perihelionLongitude: 0, ascendingNode: 0, periodDays });
+  const body = (id: string, kind: 'star' | 'planet' | 'moon' | 'spacecraft', parent: string | null, displayRadius: number, orbit?: ReturnType<typeof circular>) =>
+    ({ id, name: id, kind, parent, tilt: 0, displayRadius, colors: ['#000', '#000', '#000'], sources: [], ...(orbit && { orbit }) }) as const;
+  const system = {
+    id: 'test',
+    name: 'test',
+    overviewDistance: 10,
+    sources: [],
+    bodies: [
+      body('sun', 'star', null, 1),
+      body('earth', 'planet', 'sun', 0.28, circular(1, 365.25)),
+      body('moon', 'moon', 'earth', 0.08, circular(0.00257, 27.3)),
+      body('hubble', 'spacecraft', 'earth', 0.012, circular(4.6e-5, 0.0655)),
+    ],
+  };
+  const motions = createMotions(system);
+  // 달은 위성계 배율 그대로, 망원경만 지구 표시 반지름 밖으로 꺼내는 자기 배율을 쓴다.
+  // 달 기준 배율은 최솟값 30(장면 단위 10/AU 에서 300). 망원경이 끼어들면 약 7,000 으로 커진다.
+  expect(motions.moon.unitsPerAu).toBe(300);
+  const hubbleDistance = motions.hubble.setLocalPosition(new Vector3(), 0).length();
+  // 초점 카메라(약 0.08~0.14 떨어짐)가 지구(0.28) 안으로 들어가지 않을 만큼 띄운다.
+  expect(hubbleDistance).toBeGreaterThan(0.28 + 0.14);
+  expect(hubbleDistance).toBeLessThan(0.28 * 2);
+});
+
+test('빠르게 재생해도 허블에 초점을 맞추면 화면 가운데로 따라간다', async ({ page }) => {
+  await page.goto(`${milkyWay}?system=solar&target=earth`);
+  await page.getByLabel('속도').selectOption({ label: '초당 1시간 (3600×)' });
+  await search(page, 'HST', /^허블 우주망원경/);
+  const scene = page.getByLabel('회전하고 확대할 수 있는 태양계 3D 모델');
+  const label = scene.getByRole('button', { name: '허블 우주망원경', exact: true });
+  const canvas = page.locator('main canvas');
+  // 이름표는 천체 옆에 붙으므로 화면 중심에서 크게 벗어나지 않는지만 본다(초당 1시간이면 약 1.6초에 한 바퀴).
+  await expect
+    .poll(
+      async () => {
+        const [box, view] = await Promise.all([label.boundingBox(), canvas.boundingBox()]);
+        if (!box || !view) return Number.POSITIVE_INFINITY;
+        return Math.hypot(box.x + box.width / 2 - (view.x + view.width / 2), box.y + box.height / 2 - (view.y + view.height / 2));
+      },
+      { timeout: 15_000 },
+    )
+    .toBeLessThan(220);
 });
